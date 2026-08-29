@@ -36,6 +36,7 @@ let battle = null;
 let nextId = 10;
 let representativeDraft = { name: "서대표", appearance: appearance(1103) };
 let representativeMode = "basic";
+let openingPage = 0;
 
 const state = {
   companyName: "",
@@ -79,6 +80,39 @@ function employee(name, department, trait, work, collaboration, speed, look, ran
 
 function header(title, notice) {
   return `<header class="header"><p class="eyebrow">OFFICE RAID · LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
+}
+
+function renderOpening() {
+  currentView = "opening";
+  const scenes = [
+    { kicker: "창업 첫날 · 오전 8:57", title: "책상은 세 개.\n회사 이름은 아직 없다." },
+    { kicker: "띵! · 새 메일 1", title: "첫 프로젝트가\n도착했다." },
+    { kicker: "수정 요청 47건 · 마감 D-8", title: "혼자는 무리다.\n하지만 우리는 셋이다." }
+  ];
+  const scene = scenes[openingPage];
+  const dots = scenes.map((_, index) => `<i class="${index === openingPage ? "active" : ""}"></i>`).join("");
+  let visual = `<div class="empty-office">${[0, 1, 2].map(() => `<span class="empty-desk"><b></b></span>`).join("")}</div>`;
+  if (openingPage === 1) {
+    visual = `<div class="opening-mail"><canvas id="opening-boss" width="64" height="64" aria-label="프로젝트 메일 도트 그림"></canvas><div><small>보낸 사람 · 대형 고객</small><strong>“오늘 안에 가능하시죠?”</strong></div></div>`;
+  } else if (openingPage === 2) {
+    visual = `<div class="opening-raid"><canvas id="opening-boss" width="64" height="64" aria-label="거대한 프로젝트"></canvas><div class="opening-team"><canvas width="24" height="24" data-opening-member="pm"></canvas><canvas width="24" height="24" data-opening-member="dev"></canvas><canvas width="24" height="24" data-opening-member="sales"></canvas></div></div>`;
+  }
+  app.innerHTML = `<section class="opening-screen">
+    <div class="opening-top"><strong>OFFICE RAID</strong><button id="skip-opening">건너뛰기</button></div>
+    <article class="opening-card panel"><p>${escapeHtml(scene.kicker)}</p><h1>${escapeHtml(scene.title).replace("\n", "<br>")}</h1>${visual}</article>
+    <div class="opening-dots">${dots}</div>
+    <button id="next-opening" class="teal">${openingPage < 2 ? "다음" : "회사 이름 정하기"}</button>
+  </section>`;
+  if (openingPage > 0) drawBoss(document.querySelector("#opening-boss"));
+  if (openingPage === 2) {
+    const looks = { pm: appearance(1103), dev: appearance(3817), sales: appearance(2471) };
+    document.querySelectorAll("[data-opening-member]").forEach(canvas => drawBackPortrait(canvas, { department: canvas.dataset.openingMember, appearance: looks[canvas.dataset.openingMember] }));
+  }
+  document.querySelector("#skip-opening").addEventListener("click", renderSetup);
+  document.querySelector("#next-opening").addEventListener("click", () => {
+    if (openingPage < 2) { openingPage += 1; renderOpening(); }
+    else renderSetup();
+  });
 }
 
 function renderSetup() {
@@ -579,4 +613,4 @@ function drawBoss(canvas) {
   rect(context, COLORS.paper, 49, 31, 6, 2);
 }
 
-renderSetup();
+renderOpening();

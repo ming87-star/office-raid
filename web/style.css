@@ -82,6 +82,29 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   gap: 10px;
 }
 
+.opening-screen { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
+.opening-top { display: flex; align-items: center; justify-content: space-between; color: var(--teal); font-size: 13px; letter-spacing: 1.5px; }
+.opening-top button { min-height: 34px; padding: 0 12px; background: var(--paper-dark); color: var(--ink); font-size: 10px; }
+.opening-card { min-height: 0; flex: 1 1 auto; padding: 18px 16px; }
+.opening-card > p { margin: 0 0 8px; color: var(--mustard); font-size: 12px; font-weight: 900; }
+.opening-card > h1 { margin: 0; font-size: clamp(25px, 7vw, 31px); line-height: 1.25; }
+.empty-office { height: 56%; margin-top: 20px; padding: 20px 10px; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 8px; border: 2px solid var(--ink); background: var(--paper-dark); }
+.empty-desk { position: relative; height: 42px; border: 2px solid var(--ink); background: #a8734f; }
+.empty-desk b { position: absolute; width: 42px; height: 34px; left: 50%; bottom: 24px; transform: translateX(-50%); border: 4px solid var(--ink); background: var(--teal); }
+.opening-mail { height: 57%; margin-top: 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-around; }
+.opening-mail canvas, .opening-raid > canvas { width: 150px; height: 150px; image-rendering: pixelated; }
+.opening-mail div { width: 100%; padding: 12px; border: 2px solid var(--ink); background: white; box-shadow: 3px 3px 0 var(--ink); }
+.opening-mail small { display: block; color: var(--teal); font-size: 10px; font-weight: 900; }
+.opening-mail strong { display: block; margin-top: 6px; font-size: 17px; }
+.opening-raid { height: 58%; margin-top: 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+.opening-team { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; }
+.opening-team canvas { width: 80px; max-width: 100%; margin: 0 auto; image-rendering: pixelated; }
+.opening-team canvas:nth-child(2) { transform: translateY(10px); }
+.opening-dots { display: flex; justify-content: center; gap: 9px; }
+.opening-dots i { width: 8px; height: 8px; border: 1px solid var(--teal); border-radius: 50%; }
+.opening-dots i.active { background: var(--teal); }
+#next-opening { width: 100%; color: white; }
+
 .panel {
   border: 2px solid var(--ink);
   background: var(--panel);
@@ -229,4 +252,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   #boss-canvas { width: 92px; height: 92px; }
   .representative > canvas { width: 82px; height: 82px; }
   .custom-row button { min-height: 29px; }
+  .opening-card { padding: 10px 12px; }
+  .opening-mail canvas, .opening-raid > canvas { width: 100px; height: 100px; }
+  .opening-team canvas { width: 58px; }
 }

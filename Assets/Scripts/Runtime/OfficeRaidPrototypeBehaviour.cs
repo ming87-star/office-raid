@@ -10,7 +10,7 @@ namespace OfficeRaid.Runtime
 {
     public sealed class OfficeRaidPrototypeBehaviour : MonoBehaviour
     {
-        private enum View { CompanySetup, RepresentativeSetup, Office, Interview, TeamSelection, Battle }
+        private enum View { Opening, CompanySetup, RepresentativeSetup, Office, Interview, TeamSelection, Battle }
 
         private static readonly Color Ink = Hex("17364A");
         private static readonly Color Paper = Hex("F3EBD7");
@@ -27,6 +27,7 @@ namespace OfficeRaid.Runtime
 
         private OfficeRaidGame game;
         private View currentView;
+        private int openingPage;
         private string companyName = "오피스 레이드 주식회사";
         private string representativeName = "서대표";
         private AppearanceProfile representativeAppearance = new AppearanceProfile { Face = 1, Skin = 2, Hair = 3, Eyes = 2, Eyebrows = 1, Nose = 2, Mouth = 1, Accessory = 0, Outfit = 0 };
@@ -70,7 +71,7 @@ namespace OfficeRaid.Runtime
             if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             EnsureEventSystem();
             BuildCanvas();
-            ShowCompanySetup();
+            ShowOpening();
         }
 
         private void Update()
@@ -104,6 +105,72 @@ namespace OfficeRaid.Runtime
             safeRoot.gameObject.AddComponent<SafeAreaFitter>();
             screenRoot = CreateRect(safeRoot, "Screen");
             Stretch(screenRoot);
+        }
+
+        private void ShowOpening()
+        {
+            currentView = View.Opening;
+            ClearScreen();
+            CreateBackground();
+            CreateText(screenRoot, "OpeningBrand", "OFFICE RAID", 16, FontStyle.Bold, Teal,
+                new Vector2(0.06f, 0.92f), new Vector2(0.56f, 0.98f), TextAnchor.MiddleLeft);
+            CreateButton(screenRoot, "건너뛰기", PaperDark, Ink, new Vector2(0.72f, 0.92f), new Vector2(0.95f, 0.98f), ShowCompanySetup);
+
+            var card = CreatePanel(screenRoot, "OpeningCard", Panel, new Vector2(0.06f, 0.20f), new Vector2(0.94f, 0.90f));
+            AddOutline(card.gameObject, Ink, new Vector2(3f, -3f));
+            if (openingPage == 0)
+            {
+                CreateText(card, "Kicker", "창업 첫날 · 오전 8:57", 13, FontStyle.Bold, Mustard,
+                    new Vector2(0.07f, 0.84f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
+                CreateText(card, "Title", "책상은 세 개.\n회사 이름은 아직 없다.", 25, FontStyle.Bold, Ink,
+                    new Vector2(0.07f, 0.66f), new Vector2(0.93f, 0.84f), TextAnchor.MiddleLeft);
+                var room = CreatePanel(card, "EmptyOffice", PaperDark, new Vector2(0.07f, 0.10f), new Vector2(0.93f, 0.61f));
+                AddOutline(room.gameObject, Ink, new Vector2(2f, -2f));
+                CreateOfficeTiles(room);
+                foreach (var position in new[] { 0.20f, 0.50f, 0.80f }) CreateDesk(room, position, 0.14f);
+            }
+            else if (openingPage == 1)
+            {
+                CreateText(card, "Kicker", "띵! · 새 메일 1", 13, FontStyle.Bold, Mustard,
+                    new Vector2(0.07f, 0.84f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
+                CreateText(card, "Title", "첫 프로젝트가\n도착했다.", 27, FontStyle.Bold, Ink,
+                    new Vector2(0.07f, 0.66f), new Vector2(0.93f, 0.84f), TextAnchor.MiddleLeft);
+                CreateSprite(card, "MailProject", PixelArtFactory.ProjectBoss(), new Vector2(0.27f, 0.31f), new Vector2(0.73f, 0.65f));
+                var mail = CreatePanel(card, "MailMessage", Color.white, new Vector2(0.08f, 0.09f), new Vector2(0.92f, 0.30f));
+                AddOutline(mail.gameObject, Ink, new Vector2(2f, -2f));
+                CreateText(mail, "From", "보낸 사람 · 대형 고객", 11, FontStyle.Bold, Teal,
+                    new Vector2(0.05f, 0.58f), new Vector2(0.95f, 0.92f), TextAnchor.MiddleLeft);
+                CreateText(mail, "Subject", "“오늘 안에 가능하시죠?”", 17, FontStyle.Bold, Ink,
+                    new Vector2(0.05f, 0.10f), new Vector2(0.95f, 0.62f), TextAnchor.MiddleLeft);
+            }
+            else
+            {
+                CreateText(card, "Kicker", "수정 요청 47건 · 마감 D-8", 13, FontStyle.Bold, Red,
+                    new Vector2(0.07f, 0.84f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
+                CreateText(card, "Title", "혼자는 무리다.\n하지만 우리는 셋이다.", 25, FontStyle.Bold, Ink,
+                    new Vector2(0.07f, 0.66f), new Vector2(0.93f, 0.84f), TextAnchor.MiddleLeft);
+                CreateSprite(card, "OpeningBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.34f, 0.38f), new Vector2(0.66f, 0.65f));
+                CreateSprite(card, "OpeningPM", PixelArtFactory.EmployeeBack(Department.ProjectManagement), new Vector2(0.09f, 0.09f), new Vector2(0.35f, 0.37f));
+                CreateSprite(card, "OpeningDeveloper", PixelArtFactory.EmployeeBack(Department.Development), new Vector2(0.37f, 0.06f), new Vector2(0.63f, 0.34f));
+                CreateSprite(card, "OpeningSales", PixelArtFactory.EmployeeBack(Department.Sales), new Vector2(0.65f, 0.09f), new Vector2(0.91f, 0.37f));
+            }
+
+            var progress = openingPage == 0 ? "●  ○  ○" : openingPage == 1 ? "○  ●  ○" : "○  ○  ●";
+            CreateText(screenRoot, "OpeningProgress", progress, 16, FontStyle.Bold, Teal,
+                new Vector2(0.30f, 0.14f), new Vector2(0.70f, 0.20f), TextAnchor.MiddleCenter);
+            CreateButton(screenRoot, openingPage < 2 ? "다음" : "회사 이름 정하기", Teal, Color.white,
+                new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.13f), NextOpeningPage);
+        }
+
+        private void NextOpeningPage()
+        {
+            if (openingPage < 2)
+            {
+                openingPage++;
+                ShowOpening();
+                return;
+            }
+            ShowCompanySetup();
         }
 
         private void ShowCompanySetup()

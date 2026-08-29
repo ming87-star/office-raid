@@ -91,11 +91,26 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .empty-office { height: 56%; margin-top: 20px; padding: 20px 10px; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 8px; border: 2px solid var(--ink); background: var(--paper-dark); }
 .empty-desk { position: relative; height: 42px; border: 2px solid var(--ink); background: #a8734f; }
 .empty-desk b { position: absolute; width: 42px; height: 34px; left: 50%; bottom: 24px; transform: translateX(-50%); border: 4px solid var(--ink); background: var(--teal); }
-.opening-mail { height: 57%; margin-top: 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-around; }
-.opening-mail canvas, .opening-raid > canvas { width: 150px; height: 150px; image-rendering: pixelated; }
-.opening-mail div { width: 100%; padding: 12px; border: 2px solid var(--ink); background: white; box-shadow: 3px 3px 0 var(--ink); }
-.opening-mail small { display: block; color: var(--teal); font-size: 10px; font-weight: 900; }
-.opening-mail strong { display: block; margin-top: 6px; font-size: 17px; }
+.opening-mail-window { height: 59%; margin-top: 10px; overflow: hidden; border: 2px solid var(--ink); background: white; box-shadow: 3px 3px 0 var(--ink); }
+.mail-toolbar { height: 12%; padding: 0 9px; display: flex; align-items: center; justify-content: space-between; background: var(--ink); color: white; font-size: 9px; }
+.mail-toolbar time { color: var(--mustard); font-weight: 900; }
+.mail-sender { height: 13%; padding: 5px 9px 2px; display: flex; align-items: baseline; gap: 5px; border-bottom: 1px solid rgba(23,54,74,.2); }
+.mail-sender b { color: var(--teal); font-size: 11px; }
+.mail-sender small { overflow: hidden; color: #6d7c8c; font-size: 8px; white-space: nowrap; text-overflow: ellipsis; }
+.mail-subject { height: 15%; padding: 5px 9px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid rgba(23,54,74,.2); }
+.mail-subject small { color: #6d7c8c; font-size: 8px; font-weight: 900; }
+.mail-subject strong { font-size: 12px; }
+.mail-body { height: 28%; padding: 7px 9px; font-size: 10px; line-height: 1.35; }
+.mail-body p { margin: 0 0 3px; }
+.mail-body strong { color: var(--red); }
+.mail-attachment { height: 21%; margin: 0 8px; padding: 4px 7px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--ink); background: var(--paper-dark); }
+.mail-attachment canvas { width: 44px; height: 44px; image-rendering: pixelated; }
+.mail-attachment span { min-width: 0; }
+.mail-attachment b, .mail-attachment small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mail-attachment b { font-size: 9px; }
+.mail-attachment small { margin-top: 3px; color: #6d7c8c; font-size: 8px; }
+.mail-actions { height: 11%; padding: 0 9px; display: flex; align-items: center; gap: 16px; color: var(--teal); font-size: 9px; font-weight: 900; }
+.opening-raid > canvas { width: 150px; height: 150px; image-rendering: pixelated; }
 .opening-raid { height: 58%; margin-top: 12px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
 .opening-team { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; }
 .opening-team canvas { width: 80px; max-width: 100%; margin: 0 auto; image-rendering: pixelated; }
@@ -120,6 +135,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .setup-boss { width: 128px; height: 128px; margin: 0 auto 10px; image-rendering: pixelated; }
 .setup h2 { margin: 0 0 8px; font-size: 25px; }
 .setup p { margin: 0 0 20px; font-size: 13px; line-height: 1.55; }
+.genre-tag { display: inline-block; margin: -8px 0 15px; padding: 4px 8px; border: 1px solid var(--teal); color: var(--teal); font-size: 10px; font-weight: 900; }
 .setup input { width: 100%; height: 50px; padding: 0 12px; border: 2px solid var(--ink); background: white; color: var(--ink); font-weight: 800; text-align: center; }
 .setup button { width: 100%; margin-top: 12px; background: var(--mustard); color: var(--ink); }
 
@@ -253,6 +269,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .representative > canvas { width: 82px; height: 82px; }
   .custom-row button { min-height: 29px; }
   .opening-card { padding: 10px 12px; }
-  .opening-mail canvas, .opening-raid > canvas { width: 100px; height: 100px; }
+  .opening-raid > canvas { width: 100px; height: 100px; }
+  .opening-mail-window { height: 61%; }
+  .mail-body { font-size: 9px; }
+  .mail-attachment canvas { width: 34px; height: 34px; }
   .opening-team canvas { width: 58px; }
 }

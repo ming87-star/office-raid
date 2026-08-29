@@ -93,7 +93,14 @@ function renderOpening() {
   const dots = scenes.map((_, index) => `<i class="${index === openingPage ? "active" : ""}"></i>`).join("");
   let visual = `<div class="empty-office">${[0, 1, 2].map(() => `<span class="empty-desk"><b></b></span>`).join("")}</div>`;
   if (openingPage === 1) {
-    visual = `<div class="opening-mail"><canvas id="opening-boss" width="64" height="64" aria-label="프로젝트 메일 도트 그림"></canvas><div><small>보낸 사람 · 대형 고객</small><strong>“오늘 안에 가능하시죠?”</strong></div></div>`;
+    visual = `<div class="opening-mail-window">
+      <div class="mail-toolbar"><strong>MAIL · 받은편지함</strong><time>오전 8:57</time></div>
+      <div class="mail-sender"><b>대형 고객사</b><small>&lt;project@bigclient.co.kr&gt;</small></div>
+      <div class="mail-subject"><small>제목</small><strong>긴급 프로젝트 의뢰드립니다</strong></div>
+      <div class="mail-body"><p>안녕하세요, 대표님.</p><p>첨부드린 프로젝트를 검토 부탁드립니다.</p><strong>오늘 안에 가능하시죠?</strong></div>
+      <div class="mail-attachment"><canvas id="opening-boss" width="64" height="64" aria-label="첨부 프로젝트 미리보기"></canvas><span><b>project_final_FINAL_v7.zip</b><small>수정사항 47개 · 12.8MB</small></span></div>
+      <div class="mail-actions"><span>↩ 답장</span><span>→ 전달</span></div>
+    </div>`;
   } else if (openingPage === 2) {
     visual = `<div class="opening-raid"><canvas id="opening-boss" width="64" height="64" aria-label="거대한 프로젝트"></canvas><div class="opening-team"><canvas width="24" height="24" data-opening-member="pm"></canvas><canvas width="24" height="24" data-opening-member="dev"></canvas><canvas width="24" height="24" data-opening-member="sales"></canvas></div></div>`;
   }
@@ -120,8 +127,9 @@ function renderSetup() {
   app.innerHTML = `${header("OFFICE RAID", "프로젝트는 거대하고, 퇴근은 멀었다.")}
     <section class="screen"><div class="setup panel">
       <canvas id="setup-boss" class="setup-boss" width="64" height="64" aria-label="프로젝트 보스 도트 그림"></canvas>
-      <h2>작은 회사 창업</h2>
-      <p>동료를 모아 수정 요청과 마감을 공략하세요.<br>먼저 회사 이름을 정합니다.</p>
+      <h2>작은 팀, 큰 프로젝트</h2>
+      <p>동료를 모아 회사를 키우고<br>거대한 프로젝트를 공략하세요.</p>
+      <span class="genre-tag">인재 수집형 오피스 전투 RPG</span>
       <label class="sr-only" for="company-name">회사 이름</label>
       <div class="input-with-button"><input id="company-name" maxlength="18" value="${escapeHtml(state.companyName || "오피스 레이드 주식회사")}" autocomplete="organization"><button id="random-company" class="mustard">랜덤 생성</button></div>
       <button id="create-company">다음 · 대표 만들기</button>

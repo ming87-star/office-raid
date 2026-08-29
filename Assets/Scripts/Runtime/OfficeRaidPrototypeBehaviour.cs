@@ -135,13 +135,24 @@ namespace OfficeRaid.Runtime
                     new Vector2(0.07f, 0.84f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
                 CreateText(card, "Title", "첫 프로젝트가\n도착했다.", 27, FontStyle.Bold, Ink,
                     new Vector2(0.07f, 0.66f), new Vector2(0.93f, 0.84f), TextAnchor.MiddleLeft);
-                CreateSprite(card, "MailProject", PixelArtFactory.ProjectBoss(), new Vector2(0.27f, 0.31f), new Vector2(0.73f, 0.65f));
-                var mail = CreatePanel(card, "MailMessage", Color.white, new Vector2(0.08f, 0.09f), new Vector2(0.92f, 0.30f));
+                var mail = CreatePanel(card, "MailWindow", Color.white, new Vector2(0.07f, 0.07f), new Vector2(0.93f, 0.63f));
                 AddOutline(mail.gameObject, Ink, new Vector2(2f, -2f));
-                CreateText(mail, "From", "보낸 사람 · 대형 고객", 11, FontStyle.Bold, Teal,
-                    new Vector2(0.05f, 0.58f), new Vector2(0.95f, 0.92f), TextAnchor.MiddleLeft);
-                CreateText(mail, "Subject", "“오늘 안에 가능하시죠?”", 17, FontStyle.Bold, Ink,
-                    new Vector2(0.05f, 0.10f), new Vector2(0.95f, 0.62f), TextAnchor.MiddleLeft);
+                var mailBar = CreatePanel(mail, "MailBar", Ink, new Vector2(0f, 0.86f), Vector2.one);
+                CreateText(mailBar, "MailLabel", "MAIL · 받은편지함", 11, FontStyle.Bold, Color.white,
+                    new Vector2(0.04f, 0f), new Vector2(0.70f, 1f), TextAnchor.MiddleLeft);
+                CreateText(mailBar, "MailTime", "오전 8:57", 10, FontStyle.Bold, Mustard,
+                    new Vector2(0.70f, 0f), new Vector2(0.96f, 1f), TextAnchor.MiddleRight);
+                CreateText(mail, "From", "대형 고객사  <project@bigclient.co.kr>", 10, FontStyle.Bold, Teal,
+                    new Vector2(0.05f, 0.73f), new Vector2(0.95f, 0.86f), TextAnchor.MiddleLeft);
+                CreateText(mail, "Subject", "제목 · 긴급 프로젝트 의뢰드립니다", 13, FontStyle.Bold, Ink,
+                    new Vector2(0.05f, 0.58f), new Vector2(0.95f, 0.73f), TextAnchor.MiddleLeft);
+                CreateText(mail, "Body", "안녕하세요, 대표님.\n첨부 프로젝트를 검토 부탁드립니다.\n오늘 안에 가능하시죠?", 12, FontStyle.Normal, Ink,
+                    new Vector2(0.05f, 0.30f), new Vector2(0.95f, 0.58f), TextAnchor.MiddleLeft);
+                var attachment = CreatePanel(mail, "Attachment", PaperDark, new Vector2(0.05f, 0.06f), new Vector2(0.95f, 0.28f));
+                AddOutline(attachment.gameObject, Ink.WithAlpha(0.6f), new Vector2(1f, -1f));
+                CreateSprite(attachment, "AttachmentPreview", PixelArtFactory.ProjectBoss(), new Vector2(0.02f, 0.06f), new Vector2(0.21f, 0.94f));
+                CreateText(attachment, "FileName", "project_final_FINAL_v7.zip\n수정사항 47개 · 12.8MB", 10, FontStyle.Bold, Ink,
+                    new Vector2(0.23f, 0.06f), new Vector2(0.97f, 0.94f), TextAnchor.MiddleLeft);
             }
             else
             {
@@ -180,18 +191,18 @@ namespace OfficeRaid.Runtime
             CreateBackground();
             CreateText(screenRoot, "Logo", "OFFICE\nRAID", 44, FontStyle.Bold, Ink,
                 new Vector2(0.08f, 0.68f), new Vector2(0.92f, 0.92f), TextAnchor.MiddleCenter);
-            CreateText(screenRoot, "Tagline", "프로젝트는 거대하고, 퇴근은 멀었다.", 15, FontStyle.Bold, Teal,
+            CreateText(screenRoot, "Tagline", "인재 수집형 오피스 전투 RPG", 15, FontStyle.Bold, Teal,
                 new Vector2(0.06f, 0.62f), new Vector2(0.94f, 0.68f), TextAnchor.MiddleCenter);
 
             var card = CreatePanel(screenRoot, "CompanyCard", Panel, new Vector2(0.07f, 0.25f), new Vector2(0.93f, 0.57f));
             AddOutline(card.gameObject, Ink, new Vector2(2f, -2f));
-            CreateText(card, "Title", "작은 회사의 첫날", 22, FontStyle.Bold, Ink,
+            CreateText(card, "Title", "작은 팀, 큰 프로젝트", 22, FontStyle.Bold, Ink,
                 new Vector2(0.07f, 0.74f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
             CreateText(card, "Label", "회사 이름", 13, FontStyle.Bold, Ink,
                 new Vector2(0.07f, 0.59f), new Vector2(0.93f, 0.74f), TextAnchor.MiddleLeft);
             companyNameInput = CreateInputField(card, companyName, new Vector2(0.07f, 0.39f), new Vector2(0.66f, 0.59f));
             CreateButton(card, "랜덤 생성", Mustard, Ink, new Vector2(0.69f, 0.39f), new Vector2(0.93f, 0.59f), RandomizeCompanyName);
-            CreateText(card, "Description", "대표와 두 명의 동료로 시작합니다.", 13, FontStyle.Normal, Ink,
+            CreateText(card, "Description", "동료를 모아 회사를 키우고\n거대한 프로젝트를 공략하세요.", 13, FontStyle.Normal, Ink,
                 new Vector2(0.07f, 0.24f), new Vector2(0.93f, 0.38f), TextAnchor.MiddleLeft);
             CreateButton(card, "다음 · 대표 만들기", Teal, Color.white, new Vector2(0.07f, 0.05f), new Vector2(0.93f, 0.23f), OpenRepresentativeSetup);
         }

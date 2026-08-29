@@ -5,3 +5,35 @@ Thumbs.db
 *.swp
 *.swo
 
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# IDE files
+.idea/
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+
+# Unity crash reports and generated packages
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+
+# Full-resolution concept sources are kept outside Git history.
+assets/concepts/*.png

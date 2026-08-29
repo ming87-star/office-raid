@@ -22,9 +22,8 @@
 
 ### 시작 회사와 캐릭터 스타일
 
-![시작 회사와 캐릭터 스타일](assets/concepts/office-style.png)
+![시작 회사와 캐릭터 스타일](assets/concepts/office-style.webp)
 
 ### 프로젝트 전투의 시각적 은유
 
-![프로젝트 전투 콘셉트](assets/concepts/project-raid.png)
-
+![프로젝트 전투 콘셉트](assets/concepts/project-raid.webp)

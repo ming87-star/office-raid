@@ -10,7 +10,7 @@ namespace OfficeRaid.Runtime
 {
     public sealed class OfficeRaidPrototypeBehaviour : MonoBehaviour
     {
-        private enum View { Opening, CompanySetup, RepresentativeSetup, Office, Interview, TeamSelection, Battle }
+        private enum View { Opening, CompanySetup, RepresentativeSetup, Office, Interview, TeamSelection, Equipment, Battle }
 
         private static readonly Color Ink = Hex("17364A");
         private static readonly Color Paper = Hex("F3EBD7");
@@ -34,6 +34,7 @@ namespace OfficeRaid.Runtime
         private string notice = "회사 이름을 정하고 작은 회사를 시작하세요.";
         private List<Candidate> candidates = new List<Candidate>();
         private List<string> teamDraft = new List<string>();
+        private string equipmentEmployeeId;
         private Font font;
         private RectTransform screenRoot;
         private InputField companyNameInput;
@@ -388,11 +389,111 @@ namespace OfficeRaid.Runtime
             CreateText(status, "CompanyName", game.Company.Name, 18, FontStyle.Bold, Ink,
                 new Vector2(0.04f, 0.58f), new Vector2(0.96f, 0.94f), TextAnchor.MiddleLeft);
             var teamNames = string.Join(" · ", game.GetProjectTeam().Select(employee => employee.Name));
-            CreateText(status, "Stats", $"직원 {game.Company.Employees.Count}/{game.Company.RosterCapacity}   현금 {game.Company.Cash}   평판 {game.Company.Reputation}\n프로젝트 팀: {teamNames}",
+            CreateText(status, "Stats", $"직원 {game.Company.Employees.Count}/{game.Company.RosterCapacity}   현금 {game.Company.Cash}   평판 {game.Company.Reputation}   장비 {game.Company.Inventory.Count}\n프로젝트 팀: {teamNames}",
                 13, FontStyle.Normal, Ink, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.58f), TextAnchor.MiddleLeft);
-            CreateButton(screenRoot, "면접", Blue, Color.white, new Vector2(0.04f, 0.07f), new Vector2(0.31f, 0.16f), OpenInterview);
-            CreateButton(screenRoot, "팀 편성", Teal, Color.white, new Vector2(0.365f, 0.07f), new Vector2(0.635f, 0.16f), OpenTeamSelection);
-            CreateButton(screenRoot, "프로젝트", Red, Color.white, new Vector2(0.69f, 0.07f), new Vector2(0.96f, 0.16f), StartBattle);
+            CreateButton(screenRoot, "면접", Blue, Color.white, new Vector2(0.04f, 0.07f), new Vector2(0.25f, 0.16f), OpenInterview);
+            CreateButton(screenRoot, "팀 편성", Teal, Color.white, new Vector2(0.28f, 0.07f), new Vector2(0.49f, 0.16f), OpenTeamSelection);
+            CreateButton(screenRoot, "장비", Mustard, Ink, new Vector2(0.52f, 0.07f), new Vector2(0.73f, 0.16f), OpenEquipment);
+            CreateButton(screenRoot, "프로젝트", Red, Color.white, new Vector2(0.76f, 0.07f), new Vector2(0.96f, 0.16f), StartBattle);
+        }
+
+        private void OpenEquipment()
+        {
+            if (string.IsNullOrEmpty(equipmentEmployeeId) || game.Company.Employees.All(employee => employee.Id != equipmentEmployeeId))
+                equipmentEmployeeId = game.Company.Employees[0].Id;
+            notice = "직원을 선택하고 장비를 장착하세요.";
+            ShowEquipment();
+        }
+
+        private void ShowEquipment()
+        {
+            currentView = View.Equipment;
+            ClearScreen();
+            CreateBackground();
+            var employee = game.Company.Employees.FirstOrDefault(member => member.Id == equipmentEmployeeId) ?? game.Company.Employees[0];
+            equipmentEmployeeId = employee.Id;
+            CreateHeader("장비 관리", $"{employee.Name} · 실무 {employee.EffectiveWorkPower} · 협업 {employee.EffectiveCollaboration} · {notice}");
+
+            var count = game.Company.Employees.Count;
+            var gap = 0.012f;
+            var availableWidth = 0.92f - gap * (count - 1);
+            var buttonWidth = availableWidth / count;
+            for (var index = 0; index < count; index++)
+            {
+                var member = game.Company.Employees[index];
+                var minX = 0.04f + index * (buttonWidth + gap);
+                var selected = member.Id == employee.Id;
+                var capturedMember = member;
+                CreateButton(screenRoot, member.Name, selected ? Teal : PaperDark, selected ? Color.white : Ink,
+                    new Vector2(minX, 0.79f), new Vector2(minX + buttonWidth, 0.85f), () => SelectEquipmentEmployee(capturedMember));
+            }
+
+            var slots = new[] { EquipmentSlot.WorkTool, EquipmentSlot.SupportTool, EquipmentSlot.PersonalItem };
+            for (var index = 0; index < slots.Length; index++)
+            {
+                var slot = slots[index];
+                var item = employee.Equipment.FirstOrDefault(equipment => equipment.Slot == slot);
+                var top = 0.76f - index * 0.095f;
+                var card = CreatePanel(screenRoot, "Equipped" + slot, item == null ? PaperDark : Panel,
+                    new Vector2(0.04f, top - 0.082f), new Vector2(0.96f, top));
+                AddOutline(card.gameObject, item == null ? Ink.WithAlpha(0.3f) : RarityColor(item.Rarity), new Vector2(1f, -1f));
+                CreateText(card, "Slot", SlotName(slot), 10, FontStyle.Bold, Teal,
+                    new Vector2(0.03f, 0.53f), new Vector2(0.30f, 0.93f), TextAnchor.MiddleLeft);
+                CreateText(card, "Item", item == null ? "비어 있음" : item.Name, 13, FontStyle.Bold, Ink,
+                    new Vector2(0.03f, 0.08f), new Vector2(0.62f, 0.56f), TextAnchor.MiddleLeft);
+                if (item == null) continue;
+                CreateText(card, "Bonus", $"{RarityName(item.Rarity)} · 실무 +{item.WorkPowerBonus} · 협업 +{item.CollaborationBonus}", 10, FontStyle.Bold, RarityColor(item.Rarity),
+                    new Vector2(0.31f, 0.54f), new Vector2(0.74f, 0.93f), TextAnchor.MiddleRight);
+                var capturedItem = item;
+                CreateButton(card, "해제", Ink, Color.white, new Vector2(0.78f, 0.15f), new Vector2(0.96f, 0.78f), () => Unequip(capturedItem));
+            }
+
+            CreateText(screenRoot, "InventoryTitle", $"보관함 · {game.Company.Inventory.Count}", 12, FontStyle.Bold, Teal,
+                new Vector2(0.04f, 0.39f), new Vector2(0.96f, 0.46f), TextAnchor.MiddleLeft);
+            if (game.Company.Inventory.Count == 0)
+            {
+                var empty = CreatePanel(screenRoot, "EmptyInventory", PaperDark, new Vector2(0.04f, 0.17f), new Vector2(0.96f, 0.39f));
+                AddOutline(empty.gameObject, Ink.WithAlpha(0.3f), new Vector2(1f, -1f));
+                CreateText(empty, "Message", "프로젝트를 완료하면\n장비를 획득합니다.", 14, FontStyle.Bold, Ink.WithAlpha(0.65f),
+                    new Vector2(0.08f, 0.12f), new Vector2(0.92f, 0.88f), TextAnchor.MiddleCenter);
+            }
+            else
+            {
+                for (var index = 0; index < Math.Min(3, game.Company.Inventory.Count); index++)
+                {
+                    var item = game.Company.Inventory[index];
+                    var top = 0.39f - index * 0.075f;
+                    var card = CreatePanel(screenRoot, "Inventory" + index, Panel, new Vector2(0.04f, top - 0.065f), new Vector2(0.96f, top));
+                    AddOutline(card.gameObject, RarityColor(item.Rarity), new Vector2(1f, -1f));
+                    CreateText(card, "Name", item.Name, 12, FontStyle.Bold, Ink,
+                        new Vector2(0.03f, 0.40f), new Vector2(0.62f, 0.94f), TextAnchor.MiddleLeft);
+                    CreateText(card, "Info", $"{RarityName(item.Rarity)} {SlotName(item.Slot)} · 실무 +{item.WorkPowerBonus} · 협업 +{item.CollaborationBonus}", 9, FontStyle.Bold, RarityColor(item.Rarity),
+                        new Vector2(0.03f, 0.05f), new Vector2(0.74f, 0.48f), TextAnchor.MiddleLeft);
+                    var capturedItem = item;
+                    CreateButton(card, "장착", Teal, Color.white, new Vector2(0.78f, 0.14f), new Vector2(0.96f, 0.82f), () => Equip(capturedItem));
+                }
+            }
+
+            CreateButton(screenRoot, "← 사무실", Ink, Color.white, new Vector2(0.04f, 0.05f), new Vector2(0.40f, 0.12f), ShowOffice);
+        }
+
+        private void SelectEquipmentEmployee(Employee employee)
+        {
+            equipmentEmployeeId = employee.Id;
+            notice = "장착 대상을 변경했습니다.";
+            ShowEquipment();
+        }
+
+        private void Equip(Equipment equipment)
+        {
+            game.TryEquip(equipmentEmployeeId, equipment, out notice);
+            ShowEquipment();
+        }
+
+        private void Unequip(Equipment equipment)
+        {
+            game.TryUnequip(equipmentEmployeeId, equipment, out notice);
+            ShowEquipment();
         }
 
         private void OpenInterview()
@@ -902,6 +1003,42 @@ namespace OfficeRaid.Runtime
                 case EmployeeRank.Specialist: return Blue;
                 case EmployeeRank.Ace: return Hex("A35DB3");
                 case EmployeeRank.Legend: return Mustard;
+                default: return Hex("7E8790");
+            }
+        }
+
+        private static string SlotName(EquipmentSlot slot)
+        {
+            switch (slot)
+            {
+                case EquipmentSlot.WorkTool: return "업무 도구";
+                case EquipmentSlot.SupportTool: return "보조 도구";
+                case EquipmentSlot.PersonalItem: return "개인 소지품";
+                default: return slot.ToString();
+            }
+        }
+
+        private static string RarityName(EquipmentRarity rarity)
+        {
+            switch (rarity)
+            {
+                case EquipmentRarity.Common: return "일반";
+                case EquipmentRarity.Uncommon: return "고급";
+                case EquipmentRarity.Rare: return "희귀";
+                case EquipmentRarity.Epic: return "영웅";
+                case EquipmentRarity.Legendary: return "전설";
+                default: return rarity.ToString();
+            }
+        }
+
+        private static Color RarityColor(EquipmentRarity rarity)
+        {
+            switch (rarity)
+            {
+                case EquipmentRarity.Uncommon: return Hex("4E9F67");
+                case EquipmentRarity.Rare: return Blue;
+                case EquipmentRarity.Epic: return Hex("A35DB3");
+                case EquipmentRarity.Legendary: return Mustard;
                 default: return Hex("7E8790");
             }
         }

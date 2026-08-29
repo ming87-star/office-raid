@@ -75,6 +75,8 @@ docs/
 
 프로젝트 성공 시 현금, 평판과 무작위 장비를 획득합니다. 실패 시 직원이나 장비는 잃지 않고 현금 일부만 차감됩니다.
 
+`Equipment`는 `EquipmentSlot`과 등급, 실무·협업 보너스를 가집니다. 미장착 장비는 `CompanyState.Inventory`, 장착 장비는 `Employee.Equipment`에 저장합니다. `TryEquip`은 같은 슬롯의 기존 장비를 보관함으로 되돌린 뒤 새 장비를 장착하고, `BattleSimulator`는 `EffectiveWorkPower`와 `EffectiveCollaboration`을 사용합니다.
+
 ## 테스트
 
 Unity Test Runner의 EditMode에서 다음 항목을 검증합니다.

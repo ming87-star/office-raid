@@ -24,13 +24,15 @@ namespace OfficeRaid.Core
     {
         public string Name;
         public EquipmentRarity Rarity;
+        public EquipmentSlot Slot;
         public int WorkPowerBonus;
         public int CollaborationBonus;
 
-        public Equipment(string name, EquipmentRarity rarity, int workPowerBonus, int collaborationBonus)
+        public Equipment(string name, EquipmentRarity rarity, EquipmentSlot slot, int workPowerBonus, int collaborationBonus)
         {
             Name = name;
             Rarity = rarity;
+            Slot = slot;
             WorkPowerBonus = workPowerBonus;
             CollaborationBonus = collaborationBonus;
         }

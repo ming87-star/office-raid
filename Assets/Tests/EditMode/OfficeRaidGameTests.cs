@@ -102,6 +102,30 @@ namespace OfficeRaid.Tests
         }
 
         [Test]
+        public void Equipment_EquipsBySlotAndUpdatesEffectiveStats()
+        {
+            var game = new OfficeRaidGame(13);
+            game.CreateCompany("테스트 회사");
+            var employee = game.Company.Employees[0];
+            var first = new Equipment("테스트 노트북", EquipmentRarity.Rare, EquipmentSlot.WorkTool, 8, 2);
+            var replacement = new Equipment("교체 노트북", EquipmentRarity.Epic, EquipmentSlot.WorkTool, 12, 3);
+            game.Company.Inventory.Add(first);
+            game.Company.Inventory.Add(replacement);
+
+            Assert.That(game.TryEquip(employee.Id, first, out _), Is.True);
+            Assert.That(employee.EffectiveWorkPower, Is.EqualTo(employee.WorkPower + 8));
+            Assert.That(game.TryEquip(employee.Id, replacement, out var message), Is.True);
+            Assert.That(employee.Equipment.Single(), Is.SameAs(replacement));
+            Assert.That(game.Company.Inventory, Does.Contain(first));
+            Assert.That(employee.EffectiveWorkPower, Is.EqualTo(employee.WorkPower + 12));
+            Assert.That(message, Does.Contain("교체"));
+
+            Assert.That(game.TryUnequip(employee.Id, replacement, out _), Is.True);
+            Assert.That(employee.Equipment, Is.Empty);
+            Assert.That(game.Company.Inventory, Does.Contain(replacement));
+        }
+
+        [Test]
         public void ProjectTeam_RequiresExactlyThreeCurrentEmployees()
         {
             var game = new OfficeRaidGame(21);

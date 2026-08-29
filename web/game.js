@@ -21,6 +21,22 @@ const RANKS = [
   { name: "업계 전설", bonus: 18, color: "#d6a12c" }
 ];
 
+const EQUIPMENT_SLOTS = {
+  work: { name: "업무 도구", icon: "▣" },
+  support: { name: "보조 도구", icon: "◈" },
+  personal: { name: "개인 소지품", icon: "◆" }
+};
+const EQUIPMENT_RARITIES = [
+  { name: "일반", color: "#7e8790" }, { name: "고급", color: "#4e9f67" },
+  { name: "희귀", color: "#4a70a8" }, { name: "영웅", color: "#a35db3" },
+  { name: "전설", color: "#d6a12c" }
+];
+const EQUIPMENT_CATALOG = [
+  ["집중형 노트북", "work"], ["기획자의 태블릿", "work"], ["정밀 계산기", "work"],
+  ["협업 헤드셋", "support"], ["정리의 다이어리", "support"], ["황금 명함지갑", "support"],
+  ["마감 수호 텀블러", "personal"], ["새벽의 커피", "personal"], ["행운의 부적", "personal"]
+];
+
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
 const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서연", "현우", "유진", "수빈", "지훈", "예린", "시우", "채원"];
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
@@ -37,6 +53,7 @@ let nextId = 10;
 let representativeDraft = { name: "서대표", appearance: appearance(1103) };
 let representativeMode = "basic";
 let openingPage = 0;
+let equipmentTargetId = null;
 
 const state = {
   companyName: "",
@@ -73,8 +90,16 @@ function employee(name, department, trait, work, collaboration, speed, look, ran
     name, department, trait, work, collaboration, speed,
     focus: Math.round((work + collaboration) / 2),
     salary: 120 + rank * 72,
-    rank,
+    rank, equipment: { work: null, support: null, personal: null },
     appearance: appearance(look)
+  };
+}
+
+function effectiveStats(member) {
+  const equipped = Object.values(member.equipment || {}).filter(Boolean);
+  return {
+    work: member.work + equipped.reduce((sum, item) => sum + item.workBonus, 0),
+    collaboration: member.collaboration + equipped.reduce((sum, item) => sum + item.collaborationBonus, 0)
   };
 }
 
@@ -254,13 +279,76 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
       <div class="actions">
         <button class="blue" id="interview">면접</button>
         <button class="teal" id="team">팀 편성</button>
+        <button class="mustard" id="equipment">장비 ${state.equipment.length}</button>
         <button class="red" id="project">프로젝트</button>
       </div>
     </section>`;
   mountPortraits();
   document.querySelector("#interview").addEventListener("click", () => openInterview());
   document.querySelector("#team").addEventListener("click", openTeam);
+  document.querySelector("#equipment").addEventListener("click", openEquipment);
   document.querySelector("#project").addEventListener("click", startBattle);
+}
+
+function generateEquipmentReward() {
+  const roll = randomInt(100);
+  const rarity = roll < 60 ? 0 : roll < 85 ? 1 : roll < 96 ? 2 : roll < 99 ? 3 : 4;
+  const [name, slot] = EQUIPMENT_CATALOG[randomInt(EQUIPMENT_CATALOG.length)];
+  const bonus = 2 + rarity * 2;
+  return {
+    id: `equipment-${nextId++}`, name, slot, rarity,
+    workBonus: slot === "work" ? bonus + 1 : bonus,
+    collaborationBonus: slot === "support" ? bonus : Math.max(1, Math.floor(bonus / 2))
+  };
+}
+
+function openEquipment(notice = "직원을 선택하고 장비를 장착하세요.") {
+  currentView = "equipment";
+  equipmentTargetId = state.employees.some(member => member.id === equipmentTargetId) ? equipmentTargetId : state.employees[0]?.id;
+  renderEquipment(notice);
+}
+
+function renderEquipment(notice) {
+  const target = state.employees.find(member => member.id === equipmentTargetId) || state.employees[0];
+  if (!target) return renderOffice("장비를 사용할 직원이 없습니다.");
+  const stats = effectiveStats(target);
+  const people = state.employees.map(member => `<button class="${member.id === target.id ? "active" : ""}" data-equipment-target="${member.id}">${escapeHtml(member.name)}</button>`).join("");
+  const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
+    const item = target.equipment[slot];
+    return `<article class="equipment-slot ${item ? "filled" : ""}"><span>${info.icon}</span><div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}</article>`;
+  }).join("");
+  const inventory = state.equipment.length ? state.equipment.map(item => `<article class="equipment-item"><span style="background:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_SLOTS[item.slot].icon}</span><div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div><button class="teal" data-equip="${item.id}">장착</button></article>`).join("") : `<div class="empty-inventory">프로젝트를 완료하면 장비를 획득합니다.</div>`;
+  app.innerHTML = `${header("장비 관리", `${target.name} · 실무 ${stats.work} · 협업 ${stats.collaboration} · ${notice}`)}<section class="screen equipment-screen">
+    <div class="equipment-people">${people}</div>
+    <div class="equipment-slots panel">${slots}</div>
+    <p class="section-label">보관함 · ${state.equipment.length}</p>
+    <div class="equipment-inventory">${inventory}</div>
+    <button class="ink" id="back-from-equipment">← 사무실</button>
+  </section>`;
+  document.querySelectorAll("[data-equipment-target]").forEach(button => button.addEventListener("click", () => { equipmentTargetId = button.dataset.equipmentTarget; renderEquipment("장착 대상을 변경했습니다."); }));
+  document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
+  document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
+  document.querySelector("#back-from-equipment").addEventListener("click", () => renderOffice());
+}
+
+function equipItem(itemId) {
+  const target = state.employees.find(member => member.id === equipmentTargetId);
+  const index = state.equipment.findIndex(item => item.id === itemId);
+  if (!target || index < 0) return renderEquipment("장착할 장비를 찾을 수 없습니다.");
+  const item = state.equipment.splice(index, 1)[0];
+  const replaced = target.equipment[item.slot];
+  if (replaced) state.equipment.push(replaced);
+  target.equipment[item.slot] = item;
+  renderEquipment(replaced ? `${EQUIPMENT_SLOTS[item.slot].name} 장비를 교체했습니다.` : `${item.name}을(를) 장착했습니다.`);
+}
+
+function unequipItem(itemId) {
+  const target = state.employees.find(member => member.id === equipmentTargetId);
+  const slot = Object.keys(target?.equipment || {}).find(key => target.equipment[key]?.id === itemId);
+  if (!target || !slot) return renderEquipment("해제할 장비를 찾을 수 없습니다.");
+  state.equipment.push(target.equipment[slot]);
+  target.equipment[slot] = null;
+  renderEquipment("장비를 보관함으로 옮겼습니다.");
 }
 
 function rollRank() {
@@ -334,11 +422,12 @@ function openTeam() {
 function renderTeam(notice) {
   const cards = state.employees.map(member => {
     const selectedIndex = teamDraft.indexOf(member.id);
+    const stats = effectiveStats(member);
     return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
       <div><h3>${selectedIndex >= 0 ? `<span class="order">${selectedIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
       <p class="dept">${DEPARTMENTS[member.department].name} · ${escapeHtml(member.trait)}</p>
-      <p>실무 ${member.work}　협업 ${member.collaboration}　속도 ${member.speed}</p></div>
+      <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${member.speed}</p></div>
       <button class="${selectedIndex >= 0 ? "red" : "teal"}" data-toggle="${member.id}">${selectedIndex >= 0 ? "제외" : "선택"}</button>
     </article>`;
   }).join("");
@@ -395,7 +484,8 @@ function battleStep() {
       battle.nextEventRound += 2;
     }
   }
-  let damage = Math.round(member.work * .72 + member.collaboration * .25);
+  const stats = effectiveStats(member);
+  let damage = Math.round(stats.work * .72 + stats.collaboration * .25);
   let skill = "집중 업무";
   if (member.department === "sales") {
     battle.requirements = true;
@@ -431,7 +521,8 @@ function battleStep() {
       battle.rewardClaimed = true;
       state.cash += 700;
       state.reputation += 12;
-      state.equipment.push("희귀 노이즈 캔슬링 헤드셋");
+      battle.reward = generateEquipmentReward();
+      state.equipment.push(battle.reward);
     }
     battleTimer = window.setTimeout(renderBattle, 650);
     return;
@@ -475,7 +566,9 @@ function triggerBattleEvent() {
 
 function renderBattle() {
   const team = currentTeam();
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>PROJECT CLEAR</h2><p>현금 +700 · 평판 +12<br>희귀 노이즈 캔슬링 헤드셋 획득</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
+  const reward = battle.reward;
+  const rewardText = reward ? `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} 획득<br>실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}` : "장비 보상 확인 중";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>PROJECT CLEAR</h2><p>현금 +700 · 평판 +12<br>${rewardText}</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";

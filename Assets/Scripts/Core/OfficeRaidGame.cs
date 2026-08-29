@@ -206,6 +206,62 @@ namespace OfficeRaid.Core
             return equipment;
         }
 
+        public bool TryEquip(string employeeId, Equipment equipment, out string message)
+        {
+            if (Company == null || equipment == null)
+            {
+                message = "장착할 장비 정보가 없습니다.";
+                return false;
+            }
+
+            var employee = Company.Employees.FirstOrDefault(member => member.Id == employeeId);
+            if (employee == null)
+            {
+                message = "재직 중인 직원을 선택하세요.";
+                return false;
+            }
+
+            if (!Company.Inventory.Contains(equipment))
+            {
+                message = "보유 중인 장비만 장착할 수 있습니다.";
+                return false;
+            }
+
+            var replaced = employee.Equipment.FirstOrDefault(item => item.Slot == equipment.Slot);
+            if (replaced != null)
+            {
+                employee.Equipment.Remove(replaced);
+                Company.Inventory.Add(replaced);
+            }
+
+            Company.Inventory.Remove(equipment);
+            employee.Equipment.Add(equipment);
+            message = replaced == null
+                ? $"{employee.Name} 님이 {equipment.Name}을(를) 장착했습니다."
+                : $"{employee.Name} 님의 {SlotName(equipment.Slot)} 장비를 교체했습니다.";
+            return true;
+        }
+
+        public bool TryUnequip(string employeeId, Equipment equipment, out string message)
+        {
+            if (Company == null || equipment == null)
+            {
+                message = "해제할 장비 정보가 없습니다.";
+                return false;
+            }
+
+            var employee = Company.Employees.FirstOrDefault(member => member.Id == employeeId);
+            if (employee == null || !employee.Equipment.Remove(equipment))
+            {
+                message = "해당 직원이 장착한 장비가 아닙니다.";
+                return false;
+            }
+
+            Company.Inventory.Add(equipment);
+            message = $"{equipment.Name}을(를) 보관함으로 옮겼습니다.";
+            return true;
+        }
+
         private Employee CreateStarter(string name, Department department, string trait, int work, int collaboration, int speed)
         {
             return new Employee
@@ -229,7 +285,18 @@ namespace OfficeRaid.Core
 
         private Equipment GenerateEquipment()
         {
-            var names = new[] { "집중형 노트북", "정리의 다이어리", "협업 헤드셋", "마감 수호 텀블러" };
+            var names = new[]
+            {
+                "집중형 노트북", "기획자의 태블릿", "정밀 계산기",
+                "협업 헤드셋", "정리의 다이어리", "황금 명함지갑",
+                "마감 수호 텀블러", "새벽의 커피", "행운의 부적"
+            };
+            var slots = new[]
+            {
+                EquipmentSlot.WorkTool, EquipmentSlot.WorkTool, EquipmentSlot.WorkTool,
+                EquipmentSlot.SupportTool, EquipmentSlot.SupportTool, EquipmentSlot.SupportTool,
+                EquipmentSlot.PersonalItem, EquipmentSlot.PersonalItem, EquipmentSlot.PersonalItem
+            };
             var roll = rewardRandom.Next(100);
             var rarity = roll < 60 ? EquipmentRarity.Common
                 : roll < 85 ? EquipmentRarity.Uncommon
@@ -237,7 +304,21 @@ namespace OfficeRaid.Core
                 : roll < 99 ? EquipmentRarity.Epic
                 : EquipmentRarity.Legendary;
             var bonus = 2 + (int)rarity * 2;
-            return new Equipment(names[rewardRandom.Next(names.Length)], rarity, bonus, Math.Max(1, bonus / 2));
+            var itemIndex = rewardRandom.Next(names.Length);
+            var workBonus = slots[itemIndex] == EquipmentSlot.WorkTool ? bonus + 1 : bonus;
+            var collaborationBonus = slots[itemIndex] == EquipmentSlot.SupportTool ? bonus : Math.Max(1, bonus / 2);
+            return new Equipment(names[itemIndex], rarity, slots[itemIndex], workBonus, collaborationBonus);
+        }
+
+        private static string SlotName(EquipmentSlot slot)
+        {
+            switch (slot)
+            {
+                case EquipmentSlot.WorkTool: return "업무 도구";
+                case EquipmentSlot.SupportTool: return "보조 도구";
+                case EquipmentSlot.PersonalItem: return "개인 소지품";
+                default: return slot.ToString();
+            }
         }
     }
 }

@@ -32,6 +32,13 @@ namespace OfficeRaid.Core
         Legendary
     }
 
+    public enum EquipmentSlot
+    {
+        WorkTool,
+        SupportTool,
+        PersonalItem
+    }
+
     public enum ProjectEventType
     {
         None,

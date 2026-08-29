@@ -91,7 +91,12 @@ function renderOpening() {
   ];
   const scene = scenes[openingPage];
   const dots = scenes.map((_, index) => `<i class="${index === openingPage ? "active" : ""}"></i>`).join("");
-  let visual = `<div class="empty-office">${[0, 1, 2].map(() => `<span class="empty-desk"><b></b></span>`).join("")}</div>`;
+  let visual = `<div class="empty-office">
+    <span class="office-window" aria-hidden="true"><i></i><i></i></span>
+    <span class="office-clock" aria-hidden="true">◷</span>
+    <span class="office-shelf" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="office-workstations">${[0, 1, 2].map((_, index) => `<span class="empty-workstation"><i class="empty-monitor"></i><b class="empty-desk"></b><em class="empty-chair chair-${index + 1}"></em></span>`).join("")}</div>
+  </div>`;
   if (openingPage === 1) {
     visual = `<div class="opening-mail-window">
       <div class="mail-toolbar"><strong>MAIL · 받은편지함</strong><time>오전 8:57</time></div>
@@ -126,11 +131,14 @@ function renderSetup() {
   currentView = "setup";
   app.innerHTML = `${header("OFFICE RAID", "프로젝트는 거대하고, 퇴근은 멀었다.")}
     <section class="screen"><div class="setup panel">
-      <div class="setup-battle-preview" aria-label="프로젝트 전투 미리보기">
+      <div class="setup-story-preview" aria-label="거대한 프로젝트에 도전하는 팀의 연출 장면">
+        <span class="setup-project-glow" aria-hidden="true"></span>
+        <span class="setup-deadline-stamp">DEADLINE<br><strong>D-8</strong></span>
         <canvas id="setup-boss" width="64" height="64" aria-label="프로젝트 보스"></canvas>
-        <i class="preview-packet preview-packet-one" aria-hidden="true"></i>
-        <i class="preview-packet preview-packet-two" aria-hidden="true"></i>
-        <div class="setup-preview-team">
+        <i class="story-paper story-paper-one" aria-hidden="true"></i>
+        <i class="story-paper story-paper-two" aria-hidden="true"></i>
+        <i class="story-paper story-paper-three" aria-hidden="true"></i>
+        <div class="setup-story-team">
           <canvas width="24" height="24" data-setup-member="pm" aria-label="기획 담당자의 뒷모습"></canvas>
           <canvas width="24" height="24" data-setup-member="dev" aria-label="개발 담당자의 뒷모습"></canvas>
           <canvas width="24" height="24" data-setup-member="sales" aria-label="영업 담당자의 뒷모습"></canvas>

@@ -126,8 +126,7 @@ namespace OfficeRaid.Runtime
                     new Vector2(0.07f, 0.66f), new Vector2(0.93f, 0.84f), TextAnchor.MiddleLeft);
                 var room = CreatePanel(card, "EmptyOffice", PaperDark, new Vector2(0.07f, 0.10f), new Vector2(0.93f, 0.61f));
                 AddOutline(room.gameObject, Ink, new Vector2(2f, -2f));
-                CreateOfficeTiles(room);
-                foreach (var position in new[] { 0.20f, 0.50f, 0.80f }) CreateDesk(room, position, 0.14f);
+                CreateOpeningOffice(room);
             }
             else if (openingPage == 1)
             {
@@ -194,21 +193,27 @@ namespace OfficeRaid.Runtime
             CreateText(screenRoot, "Tagline", "인재 수집형 오피스 전투 RPG", 15, FontStyle.Bold, Teal,
                 new Vector2(0.06f, 0.74f), new Vector2(0.94f, 0.80f), TextAnchor.MiddleCenter);
 
-            var preview = CreatePanel(screenRoot, "SetupBattlePreview", PaperDark, new Vector2(0.10f, 0.53f), new Vector2(0.90f, 0.73f));
+            var preview = CreatePanel(screenRoot, "SetupStoryPreview", Hex("D9CCB1"), new Vector2(0.10f, 0.53f), new Vector2(0.90f, 0.73f));
             AddOutline(preview.gameObject, Ink, new Vector2(1f, -1f));
-            CreateText(preview, "PreviewLabel", "PROJECT RAID", 8, FontStyle.Bold, Ink,
-                new Vector2(0.03f, 0.86f), new Vector2(0.34f, 0.98f), TextAnchor.MiddleLeft);
-            CreateSprite(preview, "SetupBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.38f, 0.43f), new Vector2(0.62f, 0.98f));
+            CreateImage(preview, "StageFloor", Ink.WithAlpha(0.13f), new Vector2(0f, 0f), new Vector2(1f, 0.22f));
+            var glow = CreateImage(preview, "ProjectGlow", Mustard.WithAlpha(0.30f), new Vector2(0.31f, 0.25f), new Vector2(0.69f, 1f));
+            glow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            CreateText(preview, "PreviewLabel", "THE FIRST BIG PROJECT", 8, FontStyle.Bold, Ink.WithAlpha(0.55f),
+                new Vector2(0.03f, 0.86f), new Vector2(0.42f, 0.98f), TextAnchor.MiddleLeft);
+            var stamp = CreatePanel(preview, "DeadlineStamp", Panel, new Vector2(0.77f, 0.69f), new Vector2(0.96f, 0.94f));
+            AddOutline(stamp.gameObject, Red, new Vector2(1f, -1f));
+            stamp.localRotation = Quaternion.Euler(0f, 0f, 5f);
+            CreateText(stamp, "Deadline", "DEADLINE\nD-8", 11, FontStyle.Bold, Red, Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
+            CreateSprite(preview, "SetupBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.36f, 0.37f), new Vector2(0.64f, 0.98f));
             CreateSprite(preview, "SetupProjectManagement", PixelArtFactory.EmployeeBack(Department.ProjectManagement),
-                new Vector2(0.08f, 0.03f), new Vector2(0.32f, 0.43f));
+                new Vector2(0.07f, 0.03f), new Vector2(0.33f, 0.43f));
             CreateSprite(preview, "SetupDeveloper", PixelArtFactory.EmployeeBack(Department.Development),
-                new Vector2(0.38f, 0.01f), new Vector2(0.62f, 0.41f));
+                new Vector2(0.36f, 0.01f), new Vector2(0.64f, 0.45f));
             CreateSprite(preview, "SetupSales", PixelArtFactory.EmployeeBack(Department.Sales),
-                new Vector2(0.68f, 0.03f), new Vector2(0.92f, 0.43f));
-            CreateSprite(preview, "SetupSalesEffect", PixelArtFactory.AttackBlock(Mustard),
-                new Vector2(0.34f, 0.43f), new Vector2(0.39f, 0.53f));
-            CreateSprite(preview, "SetupDeveloperEffect", PixelArtFactory.AttackBlock(Teal),
-                new Vector2(0.61f, 0.52f), new Vector2(0.66f, 0.62f));
+                new Vector2(0.67f, 0.03f), new Vector2(0.93f, 0.43f));
+            CreateStoryPaper(preview, "PaperOne", new Vector2(0.21f, 0.48f), -16f);
+            CreateStoryPaper(preview, "PaperTwo", new Vector2(0.73f, 0.55f), 19f);
+            CreateStoryPaper(preview, "PaperThree", new Vector2(0.28f, 0.72f), 9f);
 
             var card = CreatePanel(screenRoot, "CompanyCard", Panel, new Vector2(0.07f, 0.17f), new Vector2(0.93f, 0.51f));
             AddOutline(card.gameObject, Ink, new Vector2(2f, -2f));
@@ -647,6 +652,49 @@ namespace OfficeRaid.Runtime
         {
             for (var index = 1; index < 6; index++)
                 CreateImage(parent, "FloorLine" + index, Ink.WithAlpha(0.08f), new Vector2(0f, index / 6f), new Vector2(1f, index / 6f + 0.004f));
+        }
+
+        private void CreateOpeningOffice(RectTransform room)
+        {
+            CreateImage(room, "OfficeFloor", Hex("C8B99D"), new Vector2(0f, 0f), new Vector2(1f, 0.40f));
+            for (var index = 1; index < 4; index++)
+                CreateImage(room, "FloorLine" + index, Ink.WithAlpha(0.08f), new Vector2(0f, index * 0.10f), new Vector2(1f, index * 0.10f + 0.006f));
+
+            var window = CreatePanel(room, "OfficeWindow", Hex("7BB7C5"), new Vector2(0.06f, 0.55f), new Vector2(0.36f, 0.92f));
+            AddOutline(window.gameObject, Ink, new Vector2(2f, -2f));
+            CreateImage(window, "WindowVertical", Ink, new Vector2(0.49f, 0f), new Vector2(0.52f, 1f));
+            CreateImage(window, "WindowHorizontal", Ink, new Vector2(0f, 0.49f), new Vector2(1f, 0.52f));
+
+            var clock = CreatePanel(room, "OfficeClock", Panel, new Vector2(0.45f, 0.73f), new Vector2(0.54f, 0.89f));
+            AddOutline(clock.gameObject, Ink, new Vector2(1f, -1f));
+            CreateText(clock, "Hands", "◷", 17, FontStyle.Bold, Ink, Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
+
+            var shelf = CreatePanel(room, "OfficeShelf", Hex("B47B4F"), new Vector2(0.68f, 0.58f), new Vector2(0.94f, 0.88f));
+            AddOutline(shelf.gameObject, Ink, new Vector2(2f, -2f));
+            CreateImage(shelf, "BookOne", Mustard, new Vector2(0.10f, 0.10f), new Vector2(0.27f, 0.68f));
+            CreateImage(shelf, "BookTwo", Teal, new Vector2(0.34f, 0.10f), new Vector2(0.51f, 0.88f));
+            CreateImage(shelf, "Box", Red, new Vector2(0.60f, 0.10f), new Vector2(0.90f, 0.48f));
+
+            foreach (var position in new[] { 0.20f, 0.50f, 0.80f }) CreateOpeningWorkstation(room, position);
+        }
+
+        private void CreateOpeningWorkstation(RectTransform parent, float centerX)
+        {
+            var chair = CreatePanel(parent, "EmptyChair", Blue, new Vector2(centerX - 0.055f, 0.03f), new Vector2(centerX + 0.055f, 0.24f));
+            AddOutline(chair.gameObject, Ink, new Vector2(1f, -1f));
+            CreateImage(parent, "DeskTop", Hex("A36E45"), new Vector2(centerX - 0.13f, 0.19f), new Vector2(centerX + 0.13f, 0.31f));
+            CreateImage(parent, "DeskLeftLeg", Ink, new Vector2(centerX - 0.115f, 0.04f), new Vector2(centerX - 0.095f, 0.20f));
+            CreateImage(parent, "DeskRightLeg", Ink, new Vector2(centerX + 0.095f, 0.04f), new Vector2(centerX + 0.115f, 0.20f));
+            CreateImage(parent, "Monitor", Ink, new Vector2(centerX - 0.07f, 0.29f), new Vector2(centerX + 0.07f, 0.49f));
+            CreateImage(parent, "Screen", Teal, new Vector2(centerX - 0.055f, 0.32f), new Vector2(centerX + 0.055f, 0.46f));
+            CreateImage(parent, "MonitorStand", Ink, new Vector2(centerX - 0.012f, 0.24f), new Vector2(centerX + 0.012f, 0.31f));
+        }
+
+        private void CreateStoryPaper(RectTransform parent, string name, Vector2 center, float rotation)
+        {
+            var paper = CreatePanel(parent, name, Panel, center - new Vector2(0.03f, 0.035f), center + new Vector2(0.03f, 0.035f));
+            AddOutline(paper.gameObject, Ink, new Vector2(1f, -1f));
+            paper.localRotation = Quaternion.Euler(0f, 0f, rotation);
         }
 
         private void CreateDesk(RectTransform parent, float centerX, float centerY)

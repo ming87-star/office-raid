@@ -2,13 +2,6 @@ name: Build and deploy WebGL preview
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "Assets/**"
-      - "Packages/**"
-      - "ProjectSettings/**"
-      - ".github/workflows/webgl-pages.yml"
 
 permissions:
   contents: read

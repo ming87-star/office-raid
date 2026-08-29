@@ -14,7 +14,9 @@
 
 ## 현재 단계
 
-Unity 6.3 LTS 기반의 첫 실행 가능한 프로토타입을 개발하고 있습니다.
+Unity 6.3 LTS Android 프로젝트와 설치 없이 실행 가능한 브라우저 프로토타입을 함께 개발하고 있습니다.
+
+**[모바일 웹 미리보기 실행](https://ming87-star.github.io/office-raid/)**
 
 현재 구현된 흐름:
 
@@ -38,7 +40,7 @@ Unity 6.3 LTS 기반의 첫 실행 가능한 프로토타입을 개발하고 있
 
 자세한 내용은 [게임 기획서](docs/GAME_DESIGN.md)와 [기술 설계서](docs/TECHNICAL_DESIGN.md)를 참고하세요.
 
-WebGL 자동 배포 설정은 [WebGL 미리보기 안내](docs/WEBGL_PREVIEW.md)를 참고하세요.
+웹 미리보기와 선택적 Unity WebGL 자동 배포 설정은 [웹 미리보기 안내](docs/WEBGL_PREVIEW.md)를 참고하세요.
 
 ## 콘셉트 이미지
 

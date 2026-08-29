@@ -26,9 +26,16 @@ namespace OfficeRaid.Tests
 
             Assert.That(candidate.Employee.Name, Is.Not.Empty);
             Assert.That(candidate.SigningCost, Is.GreaterThan(0));
+            Assert.That(candidate.Employee.Appearance.Face, Is.InRange(0, 7));
+            Assert.That(candidate.Employee.Appearance.Skin, Is.InRange(0, 5));
             Assert.That(candidate.Employee.Appearance.Hair, Is.InRange(0, 15));
             Assert.That(candidate.Employee.Appearance.Eyes, Is.InRange(0, 9));
+            Assert.That(candidate.Employee.Appearance.Eyebrows, Is.InRange(0, 7));
+            Assert.That(candidate.Employee.Appearance.Nose, Is.InRange(0, 7));
+            Assert.That(candidate.Employee.Appearance.Mouth, Is.InRange(0, 9));
+            Assert.That(candidate.Employee.Appearance.Accessory, Is.InRange(0, 8));
             Assert.That(candidate.Employee.Appearance.Outfit, Is.InRange(0, 11));
+            Assert.That(candidate.Employee.Appearance.Summary, Does.Contain("얼굴"));
         }
 
         [Test]

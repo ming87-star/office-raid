@@ -16,7 +16,7 @@ namespace OfficeRaid.Core
         public int Accessory;
         public int Outfit;
 
-        public string Summary => $"Face {Face + 1} · Hair {Hair + 1} · Eyes {Eyes + 1} · Outfit {Outfit + 1}";
+        public string Summary => $"얼굴 {Face + 1} · 머리 {Hair + 1} · 눈 {Eyes + 1} · 의상 {Outfit + 1}";
     }
 
     [Serializable]

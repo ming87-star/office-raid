@@ -286,7 +286,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   mountPortraits();
   document.querySelector("#interview").addEventListener("click", () => openInterview());
   document.querySelector("#team").addEventListener("click", openTeam);
-  document.querySelector("#equipment").addEventListener("click", openEquipment);
+  document.querySelector("#equipment").addEventListener("click", () => openEquipment());
   document.querySelector("#project").addEventListener("click", startBattle);
 }
 

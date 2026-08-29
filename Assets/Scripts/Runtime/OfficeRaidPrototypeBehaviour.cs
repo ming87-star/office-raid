@@ -10,7 +10,7 @@ namespace OfficeRaid.Runtime
 {
     public sealed class OfficeRaidPrototypeBehaviour : MonoBehaviour
     {
-        private enum View { CompanySetup, Office, Interview, Battle }
+        private enum View { CompanySetup, Office, Interview, TeamSelection, Battle }
 
         private static readonly Color Ink = Hex("17364A");
         private static readonly Color Paper = Hex("F3EBD7");
@@ -26,6 +26,7 @@ namespace OfficeRaid.Runtime
         private string companyName = "오피스 레이드 주식회사";
         private string notice = "회사 이름을 정하고 작은 회사를 시작하세요.";
         private List<Candidate> candidates = new List<Candidate>();
+        private List<string> teamDraft = new List<string>();
         private Font font;
         private RectTransform screenRoot;
         private InputField companyNameInput;
@@ -135,7 +136,7 @@ namespace OfficeRaid.Runtime
             var room = CreatePanel(screenRoot, "OfficeRoom", PaperDark, new Vector2(0.04f, 0.38f), new Vector2(0.96f, 0.82f));
             AddOutline(room.gameObject, Ink, new Vector2(2f, -2f));
             CreateOfficeTiles(room);
-            var employees = game.Company.Employees.Take(3).ToArray();
+            var employees = game.GetProjectTeam().Take(3).ToArray();
             var positions = new[] { 0.18f, 0.5f, 0.82f };
             for (var index = 0; index < employees.Length; index++)
             {
@@ -151,10 +152,12 @@ namespace OfficeRaid.Runtime
             AddOutline(status.gameObject, Ink, new Vector2(1f, -1f));
             CreateText(status, "CompanyName", game.Company.Name, 18, FontStyle.Bold, Ink,
                 new Vector2(0.04f, 0.58f), new Vector2(0.96f, 0.94f), TextAnchor.MiddleLeft);
-            CreateText(status, "Stats", $"직원 {game.Company.Employees.Count}/{game.Company.RosterCapacity}   현금 {game.Company.Cash}   평판 {game.Company.Reputation}\n프로젝트 참가 인원 {game.Company.ProjectTeamSize}명",
+            var teamNames = string.Join(" · ", game.GetProjectTeam().Select(employee => employee.Name));
+            CreateText(status, "Stats", $"직원 {game.Company.Employees.Count}/{game.Company.RosterCapacity}   현금 {game.Company.Cash}   평판 {game.Company.Reputation}\n프로젝트 팀: {teamNames}",
                 13, FontStyle.Normal, Ink, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.58f), TextAnchor.MiddleLeft);
-            CreateButton(screenRoot, "면접 진행", Blue, Color.white, new Vector2(0.04f, 0.07f), new Vector2(0.47f, 0.16f), OpenInterview);
-            CreateButton(screenRoot, "프로젝트 돌입", Red, Color.white, new Vector2(0.53f, 0.07f), new Vector2(0.96f, 0.16f), StartBattle);
+            CreateButton(screenRoot, "면접", Blue, Color.white, new Vector2(0.04f, 0.07f), new Vector2(0.31f, 0.16f), OpenInterview);
+            CreateButton(screenRoot, "팀 편성", Teal, Color.white, new Vector2(0.365f, 0.07f), new Vector2(0.635f, 0.16f), OpenTeamSelection);
+            CreateButton(screenRoot, "프로젝트", Red, Color.white, new Vector2(0.69f, 0.07f), new Vector2(0.96f, 0.16f), StartBattle);
         }
 
         private void OpenInterview()
@@ -198,6 +201,75 @@ namespace OfficeRaid.Runtime
             ShowInterview();
         }
 
+        private void OpenTeamSelection()
+        {
+            teamDraft = game.GetProjectTeam().Select(employee => employee.Id).ToList();
+            notice = "참가할 직원 3명을 선택하세요. 선택한 순서대로 배치됩니다.";
+            ShowTeamSelection();
+        }
+
+        private void ShowTeamSelection()
+        {
+            currentView = View.TeamSelection;
+            ClearScreen();
+            CreateBackground();
+            CreateHeader("프로젝트 팀 편성", $"선택 {teamDraft.Count}/{game.Company.ProjectTeamSize} · {notice}");
+
+            for (var index = 0; index < game.Company.Employees.Count; index++)
+            {
+                var employee = game.Company.Employees[index];
+                var selected = teamDraft.Contains(employee.Id);
+                var top = 0.82f - index * 0.135f;
+                var card = CreatePanel(screenRoot, "TeamMember" + index,
+                    selected ? DepartmentColor(employee.Department).WithAlpha(0.16f) : Panel,
+                    new Vector2(0.04f, top - 0.115f), new Vector2(0.96f, top));
+                AddOutline(card.gameObject, selected ? DepartmentColor(employee.Department) : Ink.WithAlpha(0.35f), new Vector2(2f, -2f));
+                CreateSprite(card, "Portrait", PixelArtFactory.Portrait(employee.Department, employee.Appearance),
+                    new Vector2(0.025f, 0.10f), new Vector2(0.18f, 0.90f));
+                var order = selected ? teamDraft.IndexOf(employee.Id) + 1 : 0;
+                CreateText(card, "Name", (selected ? order + ". " : string.Empty) + employee.Name + " · " + ShortDepartment(employee.Department),
+                    15, FontStyle.Bold, Ink, new Vector2(0.21f, 0.52f), new Vector2(0.73f, 0.91f), TextAnchor.MiddleLeft);
+                CreateText(card, "Stats", $"실무 {employee.EffectiveWorkPower}  협업 {employee.EffectiveCollaboration}  속도 {employee.Speed}",
+                    11, FontStyle.Normal, Ink, new Vector2(0.21f, 0.10f), new Vector2(0.74f, 0.53f), TextAnchor.MiddleLeft);
+                var capturedEmployee = employee;
+                CreateButton(card, selected ? "제외" : "선택", selected ? Red : Teal, Color.white,
+                    new Vector2(0.77f, 0.18f), new Vector2(0.96f, 0.82f), () => ToggleTeamMember(capturedEmployee));
+            }
+
+            CreateButton(screenRoot, "취소", Ink, Color.white, new Vector2(0.04f, 0.05f), new Vector2(0.36f, 0.12f), ShowOffice);
+            CreateButton(screenRoot, "편성 저장", Mustard, Ink, new Vector2(0.42f, 0.05f), new Vector2(0.96f, 0.12f), SaveTeamSelection);
+        }
+
+        private void ToggleTeamMember(Employee employee)
+        {
+            if (teamDraft.Remove(employee.Id))
+            {
+                notice = employee.Name + " 님을 팀에서 제외했습니다.";
+            }
+            else if (teamDraft.Count < game.Company.ProjectTeamSize)
+            {
+                teamDraft.Add(employee.Id);
+                notice = employee.Name + " 님을 팀에 추가했습니다.";
+            }
+            else
+            {
+                notice = $"프로젝트에는 {game.Company.ProjectTeamSize}명만 참가할 수 있습니다.";
+            }
+
+            ShowTeamSelection();
+        }
+
+        private void SaveTeamSelection()
+        {
+            if (game.TrySetProjectTeam(teamDraft, out notice))
+            {
+                ShowOffice();
+                return;
+            }
+
+            ShowTeamSelection();
+        }
+
         private void StartBattle()
         {
             game.StartPrototypeBattle();
@@ -235,9 +307,18 @@ namespace OfficeRaid.Runtime
             CreateSprite(arena, "ProjectBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.34f, 0.66f), new Vector2(0.66f, 0.99f));
             CreateText(arena, "BossName", "수정요청 더미", 11, FontStyle.Bold, Red,
                 new Vector2(0.30f, 0.59f), new Vector2(0.70f, 0.68f), TextAnchor.MiddleCenter);
-            CreateBattleEmployee(arena, Department.ProjectManagement, "서대표", 0.08f, 0.12f, 0.34f, 0.48f);
-            CreateBattleEmployee(arena, Department.Development, "이코드", 0.38f, 0.05f, 0.62f, 0.41f);
-            CreateBattleEmployee(arena, Department.Sales, "김세일", 0.68f, 0.12f, 0.94f, 0.48f);
+            var team = game.GetProjectTeam().Take(3).ToArray();
+            var battlePositions = new[]
+            {
+                new Vector4(0.08f, 0.12f, 0.34f, 0.48f),
+                new Vector4(0.38f, 0.05f, 0.62f, 0.41f),
+                new Vector4(0.68f, 0.12f, 0.94f, 0.48f)
+            };
+            for (var index = 0; index < team.Length; index++)
+            {
+                var position = battlePositions[index];
+                CreateBattleEmployee(arena, team[index].Department, team[index].Name, position.x, position.y, position.z, position.w);
+            }
 
             var shield = CreateImage(arena, "ScheduleShield", Teal.WithAlpha(0.58f), new Vector2(0.14f, 0.43f), new Vector2(0.43f, 0.60f));
             AddOutline(shield.gameObject, Color.white, new Vector2(1f, -1f));
@@ -255,7 +336,6 @@ namespace OfficeRaid.Runtime
 
             battleLog = CreateText(screenRoot, "BattleLog", string.Empty, 12, FontStyle.Bold, Ink,
                 new Vector2(0.04f, 0.255f), new Vector2(0.96f, 0.30f), TextAnchor.MiddleCenter);
-            var team = game.Company.Employees.Take(3).ToArray();
             for (var index = 0; index < team.Length; index++)
             {
                 var minX = 0.025f + index * 0.325f;

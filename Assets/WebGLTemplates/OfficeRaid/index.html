@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#17364a">
+  <title>OFFICE RAID · Web Preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #17364a; }
+    body { display: grid; place-items: center; font-family: Arial, sans-serif; }
+    #game-shell {
+      position: relative;
+      width: min(100vw, calc(100vh * 0.5625));
+      height: 100vh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      background: #f3ebd7;
+      box-shadow: 0 0 40px rgba(0,0,0,.35);
+    }
+    #unity-canvas { display: block; width: 100%; height: 100%; background: #f3ebd7; }
+    #loading { position: absolute; inset: 0; display: grid; place-content: center; gap: 14px; text-align: center; color: #f3ebd7; background: #17364a; }
+    #loading strong { font-size: 28px; letter-spacing: 2px; }
+    #progress-track { width: 220px; height: 12px; border: 2px solid #f3ebd7; }
+    #progress { width: 0; height: 100%; background: #d6a12c; transition: width .1s linear; }
+    #status { font-size: 13px; }
+    #error { display: none; max-width: 280px; color: #fff; font-size: 13px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <section id="loading">
+      <strong>OFFICE RAID</strong>
+      <div id="progress-track"><div id="progress"></div></div>
+      <div id="status">프로젝트 불러오는 중…</div>
+      <div id="error"></div>
+    </section>
+  </main>
+  <script>
+    const canvas = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const progress = document.querySelector("#progress");
+    const status = document.querySelector("#status");
+    const error = document.querySelector("#error");
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+    const config = {
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}"
+    };
+
+    const script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(canvas, config, value => {
+        progress.style.width = `${Math.round(value * 100)}%`;
+        status.textContent = `프로젝트 불러오는 중… ${Math.round(value * 100)}%`;
+      }).then(() => {
+        loading.style.display = "none";
+        canvas.focus();
+      }).catch(message => {
+        error.style.display = "block";
+        error.textContent = message;
+        status.textContent = "미리보기를 실행하지 못했습니다.";
+      });
+    };
+    script.onerror = () => {
+      error.style.display = "block";
+      error.textContent = "Unity 로더 파일을 불러오지 못했습니다.";
+      status.textContent = "미리보기를 실행하지 못했습니다.";
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>

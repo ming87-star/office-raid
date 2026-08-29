@@ -36,6 +36,9 @@ namespace OfficeRaid.Core
             Company.Employees.Add(CreateStarter("서대표", Department.ProjectManagement, "침착한 조율자", 17, 18, 14));
             Company.Employees.Add(CreateStarter("김세일", Department.Sales, "발표 체질", 15, 14, 17));
             Company.Employees.Add(CreateStarter("이코드", Department.Development, "위기 전문가", 19, 12, 16));
+            Company.SelectedProjectTeamIds.Add(Company.Employees[0].Id);
+            Company.SelectedProjectTeamIds.Add(Company.Employees[2].Id);
+            Company.SelectedProjectTeamIds.Add(Company.Employees[1].Id);
         }
 
         public List<Candidate> GenerateInterviewCandidates(int count = 3)
@@ -98,6 +101,56 @@ namespace OfficeRaid.Core
                 });
         }
 
+        public IReadOnlyList<Employee> GetProjectTeam()
+        {
+            if (Company == null)
+            {
+                return Array.Empty<Employee>();
+            }
+
+            var employeesById = Company.Employees.ToDictionary(employee => employee.Id);
+            var selected = new List<Employee>();
+            foreach (var id in Company.SelectedProjectTeamIds)
+            {
+                if (employeesById.TryGetValue(id, out var employee))
+                {
+                    selected.Add(employee);
+                }
+            }
+
+            return selected;
+        }
+
+        public bool TrySetProjectTeam(IEnumerable<string> employeeIds, out string message)
+        {
+            if (Company == null)
+            {
+                message = "회사를 먼저 만들어야 합니다.";
+                return false;
+            }
+
+            var selectedIds = employeeIds == null
+                ? new List<string>()
+                : employeeIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+            if (selectedIds.Count != Company.ProjectTeamSize)
+            {
+                message = $"프로젝트 참가자는 정확히 {Company.ProjectTeamSize}명이어야 합니다.";
+                return false;
+            }
+
+            var employeeIdsInCompany = new HashSet<string>(Company.Employees.Select(employee => employee.Id));
+            if (selectedIds.Any(id => !employeeIdsInCompany.Contains(id)))
+            {
+                message = "재직 중인 직원만 프로젝트에 참가할 수 있습니다.";
+                return false;
+            }
+
+            Company.SelectedProjectTeamIds.Clear();
+            Company.SelectedProjectTeamIds.AddRange(selectedIds);
+            message = "프로젝트 팀 편성을 저장했습니다.";
+            return true;
+        }
+
         public BattleSimulator StartPrototypeBattle()
         {
             if (Company == null)
@@ -105,7 +158,13 @@ namespace OfficeRaid.Core
                 throw new InvalidOperationException("Create a company before starting a project.");
             }
 
-            var team = Company.Employees.Take(Company.ProjectTeamSize).ToList();
+            var team = GetProjectTeam().ToList();
+            if (team.Count != Company.ProjectTeamSize)
+            {
+                team = Company.Employees.Take(Company.ProjectTeamSize).ToList();
+                Company.SelectedProjectTeamIds.Clear();
+                Company.SelectedProjectTeamIds.AddRange(team.Select(employee => employee.Id));
+            }
             CurrentBattle = new BattleSimulator(CreatePrototypeProject(), team, seed + Company.Reputation + 1);
             battleRewardClaimed = false;
             return CurrentBattle;

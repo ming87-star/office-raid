@@ -137,6 +137,7 @@ namespace OfficeRaid.Core
         public int RosterCapacity;
         public int ProjectTeamSize;
         public readonly List<Employee> Employees = new List<Employee>();
+        public readonly List<string> SelectedProjectTeamIds = new List<string>();
         public readonly List<Equipment> Inventory = new List<Equipment>();
     }
 }

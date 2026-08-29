@@ -15,6 +15,7 @@ namespace OfficeRaid.Tests
             Assert.That(game.Company.Name, Is.EqualTo("테스트 회사"));
             Assert.That(game.Company.Employees.Count, Is.EqualTo(3));
             Assert.That(game.Company.ProjectTeamSize, Is.EqualTo(3));
+            Assert.That(game.GetProjectTeam().Count, Is.EqualTo(3));
         }
 
         [Test]
@@ -62,6 +63,54 @@ namespace OfficeRaid.Tests
             Assert.That(game.Company.Reputation, Is.EqualTo(battle.Project.RewardReputation));
             Assert.That(game.Company.Inventory.Single(), Is.SameAs(equipment));
             Assert.That(message, Does.Contain("획득"));
+        }
+
+        [Test]
+        public void ProjectTeam_RequiresExactlyThreeCurrentEmployees()
+        {
+            var game = new OfficeRaidGame(21);
+            game.CreateCompany("테스트 회사");
+
+            var tooSmall = game.Company.Employees.Take(2).Select(employee => employee.Id);
+            Assert.That(game.TrySetProjectTeam(tooSmall, out var countMessage), Is.False);
+            Assert.That(countMessage, Does.Contain("정확히 3명"));
+
+            var invalid = game.Company.Employees.Take(2).Select(employee => employee.Id).Concat(new[] { "퇴사자" });
+            Assert.That(game.TrySetProjectTeam(invalid, out var employeeMessage), Is.False);
+            Assert.That(employeeMessage, Does.Contain("재직 중"));
+        }
+
+        [Test]
+        public void ProjectBattle_UsesSelectedEmployees()
+        {
+            var game = new OfficeRaidGame(31);
+            game.CreateCompany("테스트 회사");
+            var newEmployee = new Employee
+            {
+                Id = "new-finance",
+                Name = "박재무",
+                Department = Department.Finance,
+                Rank = EmployeeRank.Rookie,
+                Level = 1,
+                WorkPower = 14,
+                Collaboration = 14,
+                Focus = 14,
+                Adaptability = 14,
+                Mental = 14,
+                Speed = 14,
+                MonthlySalary = 120,
+                Trait = "꼼꼼한 기록가",
+                Appearance = new AppearanceProfile()
+            };
+            Assert.That(game.TryHire(new Candidate(newEmployee, 100), out _), Is.True);
+
+            var selectedIds = game.Company.Employees.Skip(1).Take(3).Select(employee => employee.Id);
+            Assert.That(game.TrySetProjectTeam(selectedIds, out _), Is.True);
+            var battle = game.StartPrototypeBattle();
+            battle.Step();
+
+            Assert.That(battle.Logs.Any(log => log.Contains("박재무")), Is.True);
+            Assert.That(battle.Logs.Any(log => log.Contains("서대표의")), Is.False);
         }
     }
 }

@@ -126,7 +126,16 @@ function renderSetup() {
   currentView = "setup";
   app.innerHTML = `${header("OFFICE RAID", "프로젝트는 거대하고, 퇴근은 멀었다.")}
     <section class="screen"><div class="setup panel">
-      <canvas id="setup-boss" class="setup-boss" width="64" height="64" aria-label="프로젝트 보스 도트 그림"></canvas>
+      <div class="setup-battle-preview" aria-label="프로젝트 전투 미리보기">
+        <canvas id="setup-boss" width="64" height="64" aria-label="프로젝트 보스"></canvas>
+        <i class="preview-packet preview-packet-one" aria-hidden="true"></i>
+        <i class="preview-packet preview-packet-two" aria-hidden="true"></i>
+        <div class="setup-preview-team">
+          <canvas width="24" height="24" data-setup-member="pm" aria-label="기획 담당자의 뒷모습"></canvas>
+          <canvas width="24" height="24" data-setup-member="dev" aria-label="개발 담당자의 뒷모습"></canvas>
+          <canvas width="24" height="24" data-setup-member="sales" aria-label="영업 담당자의 뒷모습"></canvas>
+        </div>
+      </div>
       <h2>작은 팀, 큰 프로젝트</h2>
       <p>동료를 모아 회사를 키우고<br>거대한 프로젝트를 공략하세요.</p>
       <span class="genre-tag">인재 수집형 오피스 전투 RPG</span>
@@ -135,6 +144,10 @@ function renderSetup() {
       <button id="create-company">다음 · 대표 만들기</button>
     </div></section>`;
   drawBoss(document.querySelector("#setup-boss"));
+  const setupLooks = { pm: appearance(1103), dev: appearance(3817), sales: appearance(2471) };
+  document.querySelectorAll("[data-setup-member]").forEach(canvas => {
+    drawBackPortrait(canvas, { department: canvas.dataset.setupMember, appearance: setupLooks[canvas.dataset.setupMember] });
+  });
   document.querySelector("#random-company").addEventListener("click", randomizeCompanyName);
   document.querySelector("#create-company").addEventListener("click", openRepresentativeSetup);
   document.querySelector("#company-name").addEventListener("keydown", event => { if (event.key === "Enter") openRepresentativeSetup(); });

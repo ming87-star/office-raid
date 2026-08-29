@@ -132,7 +132,68 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   text-align: center;
 }
 
-.setup-boss { width: 128px; height: 128px; margin: 0 auto 10px; image-rendering: pixelated; }
+.setup-battle-preview {
+  position: relative;
+  height: 188px;
+  margin: 0 0 14px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  background: var(--paper-dark);
+  box-shadow: inset 0 -28px 0 rgba(23,54,74,.08);
+}
+.setup-battle-preview::before {
+  content: "PROJECT RAID";
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  color: rgba(23,54,74,.55);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+#setup-boss {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  left: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translateX(-50%);
+  image-rendering: pixelated;
+}
+.setup-preview-team {
+  position: absolute;
+  z-index: 3;
+  right: 7%;
+  bottom: 4px;
+  left: 7%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+}
+.setup-preview-team canvas {
+  width: 64px;
+  max-width: 100%;
+  margin: 0 auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 rgba(23,54,74,.28));
+}
+.setup-preview-team canvas:nth-child(2) { transform: translateY(5px); }
+.preview-packet {
+  position: absolute;
+  z-index: 2;
+  bottom: 61px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  animation: preview-deliver 1.25s steps(5) infinite;
+}
+.preview-packet-one { left: 35%; background: var(--mustard); animation-delay: -.35s; }
+.preview-packet-two { right: 34%; background: var(--teal); animation-delay: -.9s; }
+@keyframes preview-deliver {
+  from { bottom: 58px; opacity: 1; }
+  to { bottom: 112px; opacity: .15; transform: scale(.65); }
+}
 .setup h2 { margin: 0 0 8px; font-size: 25px; }
 .setup p { margin: 0 0 20px; font-size: 13px; line-height: 1.55; }
 .genre-tag { display: inline-block; margin: -8px 0 15px; padding: 4px 8px; border: 1px solid var(--teal); color: var(--teal); font-size: 10px; font-weight: 900; }
@@ -274,4 +335,15 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .mail-body { font-size: 9px; }
   .mail-attachment canvas { width: 34px; height: 34px; }
   .opening-team canvas { width: 58px; }
+  .setup { padding: 12px 14px; }
+  .setup-battle-preview { height: 128px; margin-bottom: 8px; }
+  #setup-boss { width: 65px; height: 65px; }
+  .setup-preview-team canvas { width: 43px; }
+  .preview-packet { bottom: 39px; width: 8px; height: 8px; }
+  @keyframes preview-deliver {
+    from { bottom: 38px; opacity: 1; }
+    to { bottom: 75px; opacity: .15; transform: scale(.65); }
+  }
+  .setup h2 { font-size: 21px; }
+  .setup p { margin-bottom: 14px; }
 }

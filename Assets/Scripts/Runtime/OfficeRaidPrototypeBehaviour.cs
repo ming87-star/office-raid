@@ -190,11 +190,27 @@ namespace OfficeRaid.Runtime
             ClearScreen();
             CreateBackground();
             CreateText(screenRoot, "Logo", "OFFICE\nRAID", 44, FontStyle.Bold, Ink,
-                new Vector2(0.08f, 0.68f), new Vector2(0.92f, 0.92f), TextAnchor.MiddleCenter);
+                new Vector2(0.08f, 0.79f), new Vector2(0.92f, 0.94f), TextAnchor.MiddleCenter);
             CreateText(screenRoot, "Tagline", "인재 수집형 오피스 전투 RPG", 15, FontStyle.Bold, Teal,
-                new Vector2(0.06f, 0.62f), new Vector2(0.94f, 0.68f), TextAnchor.MiddleCenter);
+                new Vector2(0.06f, 0.74f), new Vector2(0.94f, 0.80f), TextAnchor.MiddleCenter);
 
-            var card = CreatePanel(screenRoot, "CompanyCard", Panel, new Vector2(0.07f, 0.25f), new Vector2(0.93f, 0.57f));
+            var preview = CreatePanel(screenRoot, "SetupBattlePreview", PaperDark, new Vector2(0.10f, 0.53f), new Vector2(0.90f, 0.73f));
+            AddOutline(preview.gameObject, Ink, new Vector2(1f, -1f));
+            CreateText(preview, "PreviewLabel", "PROJECT RAID", 8, FontStyle.Bold, Ink,
+                new Vector2(0.03f, 0.86f), new Vector2(0.34f, 0.98f), TextAnchor.MiddleLeft);
+            CreateSprite(preview, "SetupBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.38f, 0.43f), new Vector2(0.62f, 0.98f));
+            CreateSprite(preview, "SetupProjectManagement", PixelArtFactory.EmployeeBack(Department.ProjectManagement),
+                new Vector2(0.08f, 0.03f), new Vector2(0.32f, 0.43f));
+            CreateSprite(preview, "SetupDeveloper", PixelArtFactory.EmployeeBack(Department.Development),
+                new Vector2(0.38f, 0.01f), new Vector2(0.62f, 0.41f));
+            CreateSprite(preview, "SetupSales", PixelArtFactory.EmployeeBack(Department.Sales),
+                new Vector2(0.68f, 0.03f), new Vector2(0.92f, 0.43f));
+            CreateSprite(preview, "SetupSalesEffect", PixelArtFactory.AttackBlock(Mustard),
+                new Vector2(0.34f, 0.43f), new Vector2(0.39f, 0.53f));
+            CreateSprite(preview, "SetupDeveloperEffect", PixelArtFactory.AttackBlock(Teal),
+                new Vector2(0.61f, 0.52f), new Vector2(0.66f, 0.62f));
+
+            var card = CreatePanel(screenRoot, "CompanyCard", Panel, new Vector2(0.07f, 0.17f), new Vector2(0.93f, 0.51f));
             AddOutline(card.gameObject, Ink, new Vector2(2f, -2f));
             CreateText(card, "Title", "작은 팀, 큰 프로젝트", 22, FontStyle.Bold, Ink,
                 new Vector2(0.07f, 0.74f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);

@@ -1,45 +1,51 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using OfficeRaid.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace OfficeRaid.Runtime
 {
     public sealed class OfficeRaidPrototypeBehaviour : MonoBehaviour
     {
-        private enum View
-        {
-            CompanySetup,
-            Office,
-            Interview,
-            Battle
-        }
+        private enum View { CompanySetup, Office, Interview, Battle }
 
-        private const float ReferenceWidth = 1280f;
-        private const float ReferenceHeight = 720f;
+        private static readonly Color Ink = Hex("17364A");
+        private static readonly Color Paper = Hex("F3EBD7");
+        private static readonly Color PaperDark = Hex("D8CEB8");
+        private static readonly Color Teal = Hex("168C8B");
+        private static readonly Color Mustard = Hex("D6A12C");
+        private static readonly Color Red = Hex("C84B3C");
+        private static readonly Color Blue = Hex("4A70A8");
+        private static readonly Color Panel = Hex("FFF9E9");
 
         private OfficeRaidGame game;
-        private View currentScreen = View.CompanySetup;
+        private View currentView;
         private string companyName = "오피스 레이드 주식회사";
         private string notice = "회사 이름을 정하고 작은 회사를 시작하세요.";
         private List<Candidate> candidates = new List<Candidate>();
-        private Vector2 logScroll;
+        private Font font;
+        private RectTransform screenRoot;
+        private InputField companyNameInput;
+        private Text battleTitle;
+        private Text battleDeadline;
+        private Text battleWorkload;
+        private Text battleLog;
+        private Image battleWorkFill;
+        private GameObject battleResult;
+        private Text battleResultText;
+        private RectTransform salesEffect;
+        private RectTransform developerEffect;
         private float battleTimer;
+        private float attackAnimation;
         private bool resultClaimed;
-        private Font koreanFont;
-        private GUIStyle titleStyle;
-        private GUIStyle headingStyle;
-        private GUIStyle bodyStyle;
-        private GUIStyle cardStyle;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            if (FindFirstObjectByType<OfficeRaidPrototypeBehaviour>() != null)
-            {
-                return;
-            }
-
+            if (FindFirstObjectByType<OfficeRaidPrototypeBehaviour>() != null) return;
             var root = new GameObject("OfficeRaidPrototype");
             DontDestroyOnLoad(root);
             root.AddComponent<OfficeRaidPrototypeBehaviour>();
@@ -48,335 +54,451 @@ namespace OfficeRaid.Runtime
         private void Awake()
         {
             game = new OfficeRaidGame();
-            koreanFont = Font.CreateDynamicFontFromOSFont(
-                new[] { "Malgun Gothic", "Noto Sans CJK KR", "Apple SD Gothic Neo", "sans-serif", "Arial" },
-                24);
+            font = Font.CreateDynamicFontFromOSFont(
+                new[] { "Malgun Gothic", "Noto Sans CJK KR", "Apple SD Gothic Neo", "Arial" }, 24);
+            if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            EnsureEventSystem();
+            BuildCanvas();
+            ShowCompanySetup();
         }
 
         private void Update()
         {
-            if (currentScreen != View.Battle || game.CurrentBattle == null || game.CurrentBattle.IsComplete)
-            {
-                return;
-            }
+            AnimateAttackEffects();
+            if (currentView != View.Battle || game.CurrentBattle == null || game.CurrentBattle.IsComplete) return;
 
             battleTimer += Time.deltaTime;
-            if (battleTimer < 0.85f)
-            {
-                return;
-            }
-
+            if (battleTimer < 0.85f) return;
             battleTimer = 0f;
+            attackAnimation = 0f;
             game.CurrentBattle.Step();
-            logScroll.y = 100000f;
+            RefreshBattle();
         }
 
-        private void OnGUI()
+        private void BuildCanvas()
         {
-            var scale = Mathf.Min(Screen.width / ReferenceWidth, Screen.height / ReferenceHeight);
-            var offsetX = (Screen.width - ReferenceWidth * scale) * 0.5f;
-            var offsetY = (Screen.height - ReferenceHeight * scale) * 0.5f;
-            GUI.matrix = Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity, Vector3.one * scale);
+            var canvasObject = new GameObject("PortraitCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasObject.transform.SetParent(transform, false);
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.pixelPerfect = true;
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(360f, 780f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
 
-            EnsureStyles();
-            DrawBackground();
-
-            GUILayout.BeginArea(new Rect(40f, 28f, 1200f, 664f));
-            DrawHeader();
-
-            switch (currentScreen)
-            {
-                case View.CompanySetup:
-                    DrawCompanySetup();
-                    break;
-                case View.Office:
-                    DrawOffice();
-                    break;
-                case View.Interview:
-                    DrawInterview();
-                    break;
-                case View.Battle:
-                    DrawBattle();
-                    break;
-            }
-
-            GUILayout.EndArea();
+            var safeRoot = CreateRect(canvasObject.transform, "SafeArea");
+            Stretch(safeRoot);
+            safeRoot.gameObject.AddComponent<SafeAreaFitter>();
+            screenRoot = CreateRect(safeRoot, "Screen");
+            Stretch(screenRoot);
         }
 
-        private void EnsureStyles()
+        private void ShowCompanySetup()
         {
-            if (titleStyle != null)
-            {
-                return;
-            }
+            currentView = View.CompanySetup;
+            ClearScreen();
+            CreateBackground();
+            CreateText(screenRoot, "Logo", "OFFICE\nRAID", 44, FontStyle.Bold, Ink,
+                new Vector2(0.08f, 0.68f), new Vector2(0.92f, 0.92f), TextAnchor.MiddleCenter);
+            CreateText(screenRoot, "Tagline", "프로젝트는 거대하고, 퇴근은 멀었다.", 15, FontStyle.Bold, Teal,
+                new Vector2(0.06f, 0.62f), new Vector2(0.94f, 0.68f), TextAnchor.MiddleCenter);
 
-            GUI.skin.font = koreanFont;
-            GUI.skin.button.fontSize = 20;
-            GUI.skin.button.padding = new RectOffset(18, 18, 12, 12);
-            GUI.skin.textField.fontSize = 22;
-            GUI.skin.textField.padding = new RectOffset(12, 12, 10, 10);
-
-            titleStyle = new GUIStyle(GUI.skin.label)
-            {
-                font = koreanFont,
-                fontSize = 38,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.05f, 0.12f, 0.2f) }
-            };
-            headingStyle = new GUIStyle(GUI.skin.label)
-            {
-                font = koreanFont,
-                fontSize = 26,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.05f, 0.22f, 0.28f) }
-            };
-            bodyStyle = new GUIStyle(GUI.skin.label)
-            {
-                font = koreanFont,
-                fontSize = 19,
-                wordWrap = true,
-                normal = { textColor = new Color(0.12f, 0.16f, 0.2f) }
-            };
-            cardStyle = new GUIStyle(GUI.skin.box)
-            {
-                font = koreanFont,
-                fontSize = 18,
-                alignment = TextAnchor.UpperLeft,
-                padding = new RectOffset(18, 18, 14, 14),
-                normal = { textColor = new Color(0.12f, 0.16f, 0.2f) }
-            };
+            var card = CreatePanel(screenRoot, "CompanyCard", Panel, new Vector2(0.07f, 0.25f), new Vector2(0.93f, 0.57f));
+            AddOutline(card.gameObject, Ink, new Vector2(2f, -2f));
+            CreateText(card, "Title", "작은 회사의 첫날", 22, FontStyle.Bold, Ink,
+                new Vector2(0.07f, 0.74f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
+            CreateText(card, "Label", "회사 이름", 13, FontStyle.Bold, Ink,
+                new Vector2(0.07f, 0.59f), new Vector2(0.93f, 0.74f), TextAnchor.MiddleLeft);
+            companyNameInput = CreateInputField(card, companyName, new Vector2(0.07f, 0.39f), new Vector2(0.93f, 0.59f));
+            CreateText(card, "Description", "대표와 두 명의 동료로 시작합니다.", 13, FontStyle.Normal, Ink,
+                new Vector2(0.07f, 0.24f), new Vector2(0.93f, 0.38f), TextAnchor.MiddleLeft);
+            CreateButton(card, "회사 설립", Teal, Color.white, new Vector2(0.07f, 0.05f), new Vector2(0.93f, 0.23f), CreateCompany);
         }
 
-        private static void DrawBackground()
+        private void CreateCompany()
         {
-            var previous = GUI.color;
-            GUI.color = new Color(0.94f, 0.92f, 0.84f);
-            GUI.DrawTexture(new Rect(0f, 0f, ReferenceWidth, ReferenceHeight), Texture2D.whiteTexture);
-            GUI.color = previous;
+            companyName = companyNameInput == null ? companyName : companyNameInput.text;
+            game.CreateCompany(companyName);
+            notice = "첫 프로젝트를 수주할 준비가 됐습니다.";
+            ShowOffice();
         }
 
-        private void DrawHeader()
+        private void ShowOffice()
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("OFFICE RAID", titleStyle, GUILayout.Width(310f));
-            GUILayout.FlexibleSpace();
-            if (game.Company != null)
+            currentView = View.Office;
+            ClearScreen();
+            CreateBackground();
+            CreateHeader("작은 사무실", notice);
+
+            var room = CreatePanel(screenRoot, "OfficeRoom", PaperDark, new Vector2(0.04f, 0.38f), new Vector2(0.96f, 0.82f));
+            AddOutline(room.gameObject, Ink, new Vector2(2f, -2f));
+            CreateOfficeTiles(room);
+            var employees = game.Company.Employees.Take(3).ToArray();
+            var positions = new[] { 0.18f, 0.5f, 0.82f };
+            for (var index = 0; index < employees.Length; index++)
             {
-                GUILayout.Label($"{game.Company.Name}  |  현금 {game.Company.Cash}  |  평판 {game.Company.Reputation}", bodyStyle);
+                var employee = employees[index];
+                CreateDesk(room, positions[index], 0.48f);
+                CreateSprite(room, employee.Name, PixelArtFactory.Employee(employee.Department),
+                    new Vector2(positions[index] - 0.09f, 0.18f), new Vector2(positions[index] + 0.09f, 0.48f));
+                CreateText(room, employee.Name + "Label", employee.Name + "\n" + ShortDepartment(employee.Department), 11, FontStyle.Bold, Ink,
+                    new Vector2(positions[index] - 0.15f, 0.01f), new Vector2(positions[index] + 0.15f, 0.18f), TextAnchor.MiddleCenter);
             }
-            GUILayout.EndHorizontal();
-            DrawRule();
+
+            var status = CreatePanel(screenRoot, "CompanyStatus", Panel, new Vector2(0.04f, 0.19f), new Vector2(0.96f, 0.35f));
+            AddOutline(status.gameObject, Ink, new Vector2(1f, -1f));
+            CreateText(status, "CompanyName", game.Company.Name, 18, FontStyle.Bold, Ink,
+                new Vector2(0.04f, 0.58f), new Vector2(0.96f, 0.94f), TextAnchor.MiddleLeft);
+            CreateText(status, "Stats", $"직원 {game.Company.Employees.Count}/{game.Company.RosterCapacity}   현금 {game.Company.Cash}   평판 {game.Company.Reputation}\n프로젝트 참가 인원 {game.Company.ProjectTeamSize}명",
+                13, FontStyle.Normal, Ink, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.58f), TextAnchor.MiddleLeft);
+            CreateButton(screenRoot, "면접 진행", Blue, Color.white, new Vector2(0.04f, 0.07f), new Vector2(0.47f, 0.16f), OpenInterview);
+            CreateButton(screenRoot, "프로젝트 돌입", Red, Color.white, new Vector2(0.53f, 0.07f), new Vector2(0.96f, 0.16f), StartBattle);
         }
 
-        private void DrawCompanySetup()
+        private void OpenInterview()
         {
-            GUILayout.Space(80f);
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical(cardStyle, GUILayout.Width(620f), GUILayout.Height(310f));
-            GUILayout.Label("작은 회사의 첫날", headingStyle);
-            GUILayout.Space(18f);
-            GUILayout.Label("회사 이름", bodyStyle);
-            companyName = GUILayout.TextField(companyName, 24);
-            GUILayout.Space(24f);
-            GUILayout.Label("대표와 두 명의 동료로 시작합니다. 프로젝트를 완료해 더 큰 회사를 만드세요.", bodyStyle);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("회사 설립"))
-            {
-                game.CreateCompany(companyName);
-                notice = "첫 프로젝트를 수주할 준비가 됐습니다.";
-                currentScreen = View.Office;
-            }
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            candidates = game.GenerateInterviewCandidates();
+            notice = "능력과 연봉 조건을 비교해 동료를 채용하세요.";
+            ShowInterview();
         }
 
-        private void DrawOffice()
+        private void ShowInterview()
         {
-            GUILayout.Space(18f);
-            GUILayout.Label("작은 사무실", headingStyle);
-            GUILayout.Label(notice, bodyStyle);
-            GUILayout.Space(12f);
+            currentView = View.Interview;
+            ClearScreen();
+            CreateBackground();
+            CreateHeader("면접실", notice);
+            CreateButton(screenRoot, "← 사무실", Ink, Color.white, new Vector2(0.04f, 0.05f), new Vector2(0.36f, 0.12f), ShowOffice);
 
-            GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(cardStyle, GUILayout.Width(720f), GUILayout.Height(430f));
-            GUILayout.Label($"직원 {game.Company.Employees.Count}/{game.Company.RosterCapacity} · 프로젝트 참가 {game.Company.ProjectTeamSize}명", headingStyle);
-            GUILayout.Space(8f);
-            foreach (var employee in game.Company.Employees)
-            {
-                GUILayout.Label(
-                    $"{employee.Name}  |  {DepartmentName(employee.Department)}  |  실무 {employee.EffectiveWorkPower}  협업 {employee.EffectiveCollaboration}  속도 {employee.Speed}  |  {employee.Trait}",
-                    bodyStyle);
-            }
-
-            GUILayout.FlexibleSpace();
-            if (game.Company.Inventory.Count > 0)
-            {
-                GUILayout.Label("보유 장비", headingStyle);
-                foreach (var item in game.Company.Inventory)
-                {
-                    GUILayout.Label($"[{item.Rarity}] {item.Name} · 실무 +{item.WorkPowerBonus}", bodyStyle);
-                }
-            }
-            GUILayout.EndVertical();
-
-            GUILayout.Space(18f);
-            GUILayout.BeginVertical(cardStyle, GUILayout.ExpandWidth(true), GUILayout.Height(430f));
-            GUILayout.Label("오늘의 업무", headingStyle);
-            GUILayout.Space(16f);
-            if (GUILayout.Button("면접 진행"))
-            {
-                candidates = game.GenerateInterviewCandidates();
-                notice = "지원자의 능력, 숙련도, 연봉 조건을 비교하세요.";
-                currentScreen = View.Interview;
-            }
-
-            GUILayout.Space(10f);
-            if (GUILayout.Button("프로젝트 돌입"))
-            {
-                game.StartPrototypeBattle();
-                resultClaimed = false;
-                battleTimer = 0f;
-                notice = "업무 능력을 연계해 마감시계의 핵심을 공략합니다.";
-                currentScreen = View.Battle;
-            }
-
-            GUILayout.Space(18f);
-            GUILayout.Label("프로젝트: 폭주하는 앱 출시", bodyStyle);
-            GUILayout.Label("추천 부서: PM · 개발 · 영업", bodyStyle);
-            GUILayout.Label("보상: 현금 650 · 평판 12 · 장비 1개", bodyStyle);
-            GUILayout.EndVertical();
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawInterview()
-        {
-            GUILayout.Space(16f);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("면접실", headingStyle);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("사무실로", GUILayout.Width(150f)))
-            {
-                currentScreen = View.Office;
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label(notice, bodyStyle);
-            GUILayout.Space(10f);
-
-            GUILayout.BeginHorizontal();
             for (var index = 0; index < candidates.Count; index++)
             {
                 var candidate = candidates[index];
-                GUILayout.BeginVertical(cardStyle, GUILayout.Width(380f), GUILayout.Height(430f));
-                GUILayout.Label(candidate.Employee.Name, headingStyle);
-                GUILayout.Label($"{DepartmentName(candidate.Employee.Department)} · {RankName(candidate.Employee.Rank)}", bodyStyle);
-                GUILayout.Space(10f);
-                GUILayout.Label($"실무 {candidate.Employee.WorkPower}   협업 {candidate.Employee.Collaboration}", bodyStyle);
-                GUILayout.Label($"집중 {candidate.Employee.Focus}   대응 {candidate.Employee.Adaptability}", bodyStyle);
-                GUILayout.Label($"멘탈 {candidate.Employee.Mental}   속도 {candidate.Employee.Speed}", bodyStyle);
-                GUILayout.Space(10f);
-                GUILayout.Label($"성격: {candidate.Employee.Trait}", bodyStyle);
-                GUILayout.Label($"외형 조합: {candidate.Employee.Appearance.Summary}", bodyStyle);
-                GUILayout.Label($"월급 {candidate.Employee.MonthlySalary} · 계약금 {candidate.SigningCost}", bodyStyle);
-                GUILayout.FlexibleSpace();
-                GUI.enabled = !game.Company.Employees.Any(item => item.Id == candidate.Employee.Id);
-                if (GUILayout.Button("채용"))
-                {
-                    game.TryHire(candidate, out notice);
-                }
-                GUI.enabled = true;
-                GUILayout.EndVertical();
-                if (index < candidates.Count - 1) GUILayout.Space(18f);
+                var top = 0.82f - index * 0.225f;
+                var card = CreatePanel(screenRoot, "Candidate" + index, Panel, new Vector2(0.04f, top - 0.20f), new Vector2(0.96f, top));
+                AddOutline(card.gameObject, RankColor(candidate.Employee.Rank), new Vector2(2f, -2f));
+                CreateSprite(card, "Portrait", PixelArtFactory.Portrait(candidate.Employee.Department, candidate.Employee.Appearance),
+                    new Vector2(0.03f, 0.14f), new Vector2(0.23f, 0.86f));
+                CreateText(card, "Name", candidate.Employee.Name + "  " + RankName(candidate.Employee.Rank), 16, FontStyle.Bold, Ink,
+                    new Vector2(0.26f, 0.66f), new Vector2(0.74f, 0.94f), TextAnchor.MiddleLeft);
+                CreateText(card, "Department", ShortDepartment(candidate.Employee.Department) + " · " + candidate.Employee.Trait, 12, FontStyle.Normal, Teal,
+                    new Vector2(0.26f, 0.48f), new Vector2(0.96f, 0.68f), TextAnchor.MiddleLeft);
+                CreateText(card, "Stats", $"실무 {candidate.Employee.WorkPower}  협업 {candidate.Employee.Collaboration}  속도 {candidate.Employee.Speed}\n계약금 {candidate.SigningCost} · 월급 {candidate.Employee.MonthlySalary}",
+                    12, FontStyle.Normal, Ink, new Vector2(0.26f, 0.08f), new Vector2(0.74f, 0.47f), TextAnchor.MiddleLeft);
+                var capturedCandidate = candidate;
+                CreateButton(card, "채용", RankColor(candidate.Employee.Rank), Color.white,
+                    new Vector2(0.76f, 0.10f), new Vector2(0.96f, 0.43f), () => Hire(capturedCandidate));
             }
-            GUILayout.EndHorizontal();
         }
 
-        private void DrawBattle()
+        private void Hire(Candidate candidate)
+        {
+            game.TryHire(candidate, out notice);
+            ShowInterview();
+        }
+
+        private void StartBattle()
+        {
+            game.StartPrototypeBattle();
+            resultClaimed = false;
+            battleTimer = 0f;
+            attackAnimation = 0f;
+            notice = "업무 연계로 마감시계의 핵심을 공략합니다.";
+            ShowBattle();
+        }
+
+        private void ShowBattle()
+        {
+            currentView = View.Battle;
+            ClearScreen();
+            CreateBackground();
+
+            var header = CreatePanel(screenRoot, "BattleHeader", Ink, new Vector2(0f, 0.91f), new Vector2(1f, 1f));
+            CreateText(header, "Company", game.Company.Name, 14, FontStyle.Bold, Color.white,
+                new Vector2(0.04f, 0.10f), new Vector2(0.72f, 0.90f), TextAnchor.MiddleLeft);
+            CreateText(header, "Auto", "● 자동", 12, FontStyle.Bold, Mustard,
+                new Vector2(0.72f, 0.10f), new Vector2(0.96f, 0.90f), TextAnchor.MiddleRight);
+            battleTitle = CreateText(screenRoot, "ProjectTitle", string.Empty, 18, FontStyle.Bold, Ink,
+                new Vector2(0.04f, 0.855f), new Vector2(0.74f, 0.91f), TextAnchor.MiddleLeft);
+            battleDeadline = CreateText(screenRoot, "Deadline", string.Empty, 12, FontStyle.Bold, Red,
+                new Vector2(0.72f, 0.855f), new Vector2(0.96f, 0.91f), TextAnchor.MiddleRight);
+
+            var bar = CreatePanel(screenRoot, "WorkBar", PaperDark, new Vector2(0.04f, 0.815f), new Vector2(0.96f, 0.85f));
+            battleWorkFill = CreateImage(bar, "Fill", Red, Vector2.zero, Vector2.one);
+            battleWorkload = CreateText(bar, "WorkText", string.Empty, 11, FontStyle.Bold, Color.white,
+                Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
+
+            var arena = CreatePanel(screenRoot, "Arena", Hex("D9D3C3"), new Vector2(0.025f, 0.30f), new Vector2(0.975f, 0.805f));
+            AddOutline(arena.gameObject, Ink, new Vector2(2f, -2f));
+            CreateOfficeTiles(arena);
+            CreateSprite(arena, "ProjectBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.34f, 0.66f), new Vector2(0.66f, 0.99f));
+            CreateText(arena, "BossName", "수정요청 더미", 11, FontStyle.Bold, Red,
+                new Vector2(0.30f, 0.59f), new Vector2(0.70f, 0.68f), TextAnchor.MiddleCenter);
+            CreateBattleEmployee(arena, Department.ProjectManagement, "서대표", 0.08f, 0.12f, 0.34f, 0.48f);
+            CreateBattleEmployee(arena, Department.Development, "이코드", 0.38f, 0.05f, 0.62f, 0.41f);
+            CreateBattleEmployee(arena, Department.Sales, "김세일", 0.68f, 0.12f, 0.94f, 0.48f);
+
+            var shield = CreateImage(arena, "ScheduleShield", Teal.WithAlpha(0.58f), new Vector2(0.14f, 0.43f), new Vector2(0.43f, 0.60f));
+            AddOutline(shield.gameObject, Color.white, new Vector2(1f, -1f));
+            CreateText(shield.rectTransform, "ShieldText", "일정\n방어", 11, FontStyle.Bold, Color.white, Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
+            CreateAttackLane(arena, "SalesLane", Mustard, new Vector2(0.69f, 0.42f), new Vector2(0.58f, 0.72f), 15f);
+            salesEffect = CreateSprite(arena, "SalesEffect", PixelArtFactory.AttackBlock(Mustard),
+                new Vector2(0.66f, 0.41f), new Vector2(0.73f, 0.48f)).rectTransform;
+            CreateText(arena, "SalesArrow", "▲", 18, FontStyle.Bold, Mustard,
+                new Vector2(0.54f, 0.68f), new Vector2(0.64f, 0.78f), TextAnchor.MiddleCenter);
+            CreateAttackLane(arena, "DeveloperLane", Teal, new Vector2(0.485f, 0.38f), new Vector2(0.485f, 0.68f), 0f);
+            developerEffect = CreateSprite(arena, "DeveloperEffect", PixelArtFactory.AttackBlock(Teal),
+                new Vector2(0.455f, 0.39f), new Vector2(0.515f, 0.46f)).rectTransform;
+            CreateText(arena, "DeveloperArrow", "▲", 18, FontStyle.Bold, Teal,
+                new Vector2(0.44f, 0.65f), new Vector2(0.54f, 0.75f), TextAnchor.MiddleCenter);
+
+            battleLog = CreateText(screenRoot, "BattleLog", string.Empty, 12, FontStyle.Bold, Ink,
+                new Vector2(0.04f, 0.255f), new Vector2(0.96f, 0.30f), TextAnchor.MiddleCenter);
+            var team = game.Company.Employees.Take(3).ToArray();
+            for (var index = 0; index < team.Length; index++)
+            {
+                var minX = 0.025f + index * 0.325f;
+                CreateBattleCard(screenRoot, team[index], minX, minX + 0.30f);
+            }
+
+            battleResult = CreatePanel(screenRoot, "BattleResult", Ink.WithAlpha(0.97f), new Vector2(0.05f, 0.30f), new Vector2(0.95f, 0.60f)).gameObject;
+            battleResultText = CreateText(battleResult.transform, "ResultText", string.Empty, 17, FontStyle.Bold, Color.white,
+                new Vector2(0.07f, 0.38f), new Vector2(0.93f, 0.90f), TextAnchor.MiddleCenter);
+            CreateButton(battleResult.transform, "사무실로 복귀", Mustard, Ink,
+                new Vector2(0.12f, 0.10f), new Vector2(0.88f, 0.34f), ShowOffice);
+            battleResult.SetActive(false);
+            RefreshBattle();
+        }
+
+        private void RefreshBattle()
         {
             var battle = game.CurrentBattle;
-            GUILayout.Space(12f);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(battle.Project.Name, headingStyle);
-            GUILayout.FlexibleSpace();
-            GUILayout.Label($"마감 {battle.Turn}/{battle.Project.DeadlineTurns}일", bodyStyle);
-            GUILayout.EndHorizontal();
-
-            var ratio = battle.RemainingWorkload / (float)battle.Project.MaxWorkload;
-            var barRect = GUILayoutUtility.GetRect(1180f, 38f);
-            GUI.Box(barRect, string.Empty);
-            var previous = GUI.color;
-            GUI.color = new Color(0.85f, 0.18f, 0.12f);
-            GUI.DrawTexture(new Rect(barRect.x + 3f, barRect.y + 3f, (barRect.width - 6f) * ratio, barRect.height - 6f), Texture2D.whiteTexture);
-            GUI.color = previous;
-            GUI.Label(barRect, $"남은 업무량 {battle.RemainingWorkload}/{battle.Project.MaxWorkload}", new GUIStyle(bodyStyle) { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } });
-
-            GUILayout.Space(12f);
-            GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(cardStyle, GUILayout.Width(450f), GUILayout.Height(440f));
-            GUILayout.Label("프로젝트 팀", headingStyle);
-            foreach (var employee in game.Company.Employees.Take(game.Company.ProjectTeamSize))
+            if (battle == null || battleTitle == null) return;
+            battleTitle.text = "PROJECT 01 · 앱 출시";
+            battleDeadline.text = $"DAY {battle.Turn}/{battle.Project.DeadlineTurns}";
+            battleWorkload.text = $"남은 업무 {battle.RemainingWorkload}/{battle.Project.MaxWorkload}";
+            var ratio = Mathf.Clamp01(battle.RemainingWorkload / (float)battle.Project.MaxWorkload);
+            battleWorkFill.rectTransform.anchorMax = new Vector2(ratio, 1f);
+            battleLog.text = battle.Logs.Count == 0 ? notice : battle.Logs[battle.Logs.Count - 1];
+            if (!battle.IsComplete) return;
+            if (!resultClaimed)
             {
-                GUILayout.Label($"{employee.Name} · {DepartmentName(employee.Department)}", bodyStyle);
-                GUILayout.Label($"  {BattleSkill(employee.Department)}", bodyStyle);
+                game.ClaimBattleResult(out notice);
+                resultClaimed = true;
             }
-            GUILayout.Space(18f);
-            GUILayout.Label("업무 연계", headingStyle);
-            GUILayout.Label("요구사항 정리 → 일정 통합 → 집중 개발", bodyStyle);
-            GUILayout.FlexibleSpace();
-            if (battle.IsComplete)
-            {
-                if (!resultClaimed)
-                {
-                    game.ClaimBattleResult(out notice);
-                    resultClaimed = true;
-                }
-
-                GUILayout.Label(notice, bodyStyle);
-                if (GUILayout.Button("사무실로 복귀"))
-                {
-                    currentScreen = View.Office;
-                }
-            }
-            GUILayout.EndVertical();
-
-            GUILayout.Space(18f);
-            GUILayout.BeginVertical(cardStyle, GUILayout.ExpandWidth(true), GUILayout.Height(440f));
-            GUILayout.Label("프로젝트 진행 기록", headingStyle);
-            logScroll = GUILayout.BeginScrollView(logScroll);
-            foreach (var entry in battle.Logs)
-            {
-                GUILayout.Label(entry, bodyStyle);
-            }
-            GUILayout.EndScrollView();
-            GUILayout.EndVertical();
-            GUILayout.EndHorizontal();
+            battleResultText.text = (battle.IsSuccess ? "PROJECT COMPLETE\n" : "DEADLINE OVER\n") + notice;
+            battleResult.SetActive(true);
         }
 
-        private static void DrawRule()
+        private void AnimateAttackEffects()
         {
-            var rect = GUILayoutUtility.GetRect(1f, 2f, GUILayout.ExpandWidth(true));
-            var previous = GUI.color;
-            GUI.color = new Color(0.08f, 0.2f, 0.25f, 0.35f);
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = previous;
+            if (currentView != View.Battle || salesEffect == null || developerEffect == null) return;
+            attackAnimation = Mathf.Repeat(attackAnimation + Time.deltaTime * 1.5f, 1f);
+            var eased = attackAnimation * attackAnimation * (3f - 2f * attackAnimation);
+            SetAnchoredCenter(salesEffect, Vector2.Lerp(new Vector2(0.70f, 0.43f), new Vector2(0.58f, 0.70f), eased));
+            SetAnchoredCenter(developerEffect, Vector2.Lerp(new Vector2(0.485f, 0.40f), new Vector2(0.485f, 0.69f), eased));
         }
 
-        private static string DepartmentName(Department department)
+        private void CreateBattleEmployee(RectTransform parent, Department department, string name, float minX, float minY, float maxX, float maxY)
+        {
+            CreateSprite(parent, name, PixelArtFactory.Employee(department), new Vector2(minX, minY), new Vector2(maxX, maxY));
+        }
+
+        private void CreateBattleCard(RectTransform parent, Employee employee, float minX, float maxX)
+        {
+            var card = CreatePanel(parent, employee.Name + "Card", Panel, new Vector2(minX, 0.055f), new Vector2(maxX, 0.235f));
+            AddOutline(card.gameObject, DepartmentColor(employee.Department), new Vector2(2f, -2f));
+            CreateText(card, "Role", ShortDepartment(employee.Department), 13, FontStyle.Bold, DepartmentColor(employee.Department),
+                new Vector2(0.05f, 0.68f), new Vector2(0.95f, 0.95f), TextAnchor.MiddleCenter);
+            CreateText(card, "Name", employee.Name, 12, FontStyle.Bold, Ink,
+                new Vector2(0.05f, 0.45f), new Vector2(0.95f, 0.69f), TextAnchor.MiddleCenter);
+            CreateText(card, "Skill", SkillName(employee.Department), 11, FontStyle.Normal, Ink,
+                new Vector2(0.05f, 0.06f), new Vector2(0.95f, 0.44f), TextAnchor.MiddleCenter);
+        }
+
+        private void CreateAttackLane(RectTransform parent, string name, Color color, Vector2 start, Vector2 end, float rotation)
+        {
+            var center = (start + end) * 0.5f;
+            var length = Vector2.Distance(start, end);
+            var lane = CreateImage(parent, name, color.WithAlpha(0.42f), center - new Vector2(0.008f, length * 0.5f), center + new Vector2(0.008f, length * 0.5f));
+            lane.rectTransform.localRotation = Quaternion.Euler(0f, 0f, rotation);
+        }
+
+        private void CreateOfficeTiles(RectTransform parent)
+        {
+            for (var index = 1; index < 6; index++)
+                CreateImage(parent, "FloorLine" + index, Ink.WithAlpha(0.08f), new Vector2(0f, index / 6f), new Vector2(1f, index / 6f + 0.004f));
+        }
+
+        private void CreateDesk(RectTransform parent, float centerX, float centerY)
+        {
+            CreateImage(parent, "Desk", Hex("A36E45"), new Vector2(centerX - 0.13f, centerY), new Vector2(centerX + 0.13f, centerY + 0.18f));
+            CreateImage(parent, "Monitor", Ink, new Vector2(centerX - 0.07f, centerY + 0.08f), new Vector2(centerX + 0.07f, centerY + 0.22f));
+            CreateImage(parent, "Screen", Teal, new Vector2(centerX - 0.055f, centerY + 0.10f), new Vector2(centerX + 0.055f, centerY + 0.20f));
+        }
+
+        private void CreateHeader(string title, string subtitle)
+        {
+            var header = CreatePanel(screenRoot, "Header", Ink, new Vector2(0f, 0.86f), new Vector2(1f, 1f));
+            CreateText(header, "Title", title, 24, FontStyle.Bold, Color.white,
+                new Vector2(0.04f, 0.44f), new Vector2(0.96f, 0.94f), TextAnchor.MiddleLeft);
+            CreateText(header, "Subtitle", subtitle, 12, FontStyle.Normal, Paper,
+                new Vector2(0.04f, 0.05f), new Vector2(0.96f, 0.46f), TextAnchor.MiddleLeft);
+        }
+
+        private void CreateBackground()
+        {
+            CreateImage(screenRoot, "PaperBackground", Paper, Vector2.zero, Vector2.one);
+            for (var index = 0; index < 12; index++)
+                CreateImage(screenRoot, "PaperLine" + index, Ink.WithAlpha(0.025f), new Vector2(0f, index / 12f), new Vector2(1f, index / 12f + 0.002f));
+        }
+
+        private void ClearScreen()
+        {
+            for (var index = screenRoot.childCount - 1; index >= 0; index--) Destroy(screenRoot.GetChild(index).gameObject);
+            battleTitle = null;
+            battleDeadline = null;
+            battleWorkload = null;
+            battleLog = null;
+            battleWorkFill = null;
+            battleResult = null;
+            battleResultText = null;
+            salesEffect = null;
+            developerEffect = null;
+        }
+
+        private InputField CreateInputField(Transform parent, string value, Vector2 min, Vector2 max)
+        {
+            var root = CreatePanel(parent, "CompanyNameInput", Color.white, min, max);
+            AddOutline(root.gameObject, Ink, new Vector2(1f, -1f));
+            var text = CreateText(root, "Text", value, 17, FontStyle.Bold, Ink,
+                new Vector2(0.04f, 0f), new Vector2(0.96f, 1f), TextAnchor.MiddleLeft);
+            var input = root.gameObject.AddComponent<InputField>();
+            input.textComponent = text;
+            input.text = value;
+            input.characterLimit = 24;
+            input.lineType = InputField.LineType.SingleLine;
+            return input;
+        }
+
+        private Button CreateButton(Transform parent, string label, Color background, Color foreground, Vector2 min, Vector2 max, Action onClick)
+        {
+            var image = CreateImage(parent, label + "Button", background, min, max);
+            AddOutline(image.gameObject, Ink.WithAlpha(0.75f), new Vector2(2f, -2f));
+            var button = image.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() => onClick());
+            CreateText(image.rectTransform, "Label", label, 14, FontStyle.Bold, foreground, Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
+            return button;
+        }
+
+        private Text CreateText(Transform parent, string name, string value, int size, FontStyle style, Color color, Vector2 min, Vector2 max, TextAnchor alignment)
+        {
+            var rect = CreateRect(parent, name);
+            SetAnchors(rect, min, max);
+            var text = rect.gameObject.AddComponent<Text>();
+            text.font = font;
+            text.text = value;
+            text.fontSize = size;
+            text.fontStyle = style;
+            text.color = color;
+            text.alignment = alignment;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = Mathf.Max(9, size - 4);
+            text.resizeTextMaxSize = size;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            return text;
+        }
+
+        private static Image CreateImage(Transform parent, string name, Color color, Vector2 min, Vector2 max)
+        {
+            var rect = CreateRect(parent, name);
+            SetAnchors(rect, min, max);
+            var image = rect.gameObject.AddComponent<Image>();
+            image.color = color;
+            return image;
+        }
+
+        private static RectTransform CreatePanel(Transform parent, string name, Color color, Vector2 min, Vector2 max)
+        {
+            return CreateImage(parent, name, color, min, max).rectTransform;
+        }
+
+        private static Image CreateSprite(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max)
+        {
+            var image = CreateImage(parent, name, Color.white, min, max);
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            return image;
+        }
+
+        private static RectTransform CreateRect(Transform parent, string name)
+        {
+            var gameObject = new GameObject(name, typeof(RectTransform));
+            var rect = gameObject.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            return rect;
+        }
+
+        private static void SetAnchors(RectTransform rect, Vector2 min, Vector2 max)
+        {
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static void Stretch(RectTransform rect) { SetAnchors(rect, Vector2.zero, Vector2.one); }
+
+        private static void SetAnchoredCenter(RectTransform rect, Vector2 center)
+        {
+            var size = rect.anchorMax - rect.anchorMin;
+            SetAnchors(rect, center - size * 0.5f, center + size * 0.5f);
+        }
+
+        private static void AddOutline(GameObject target, Color color, Vector2 distance)
+        {
+            var outline = target.AddComponent<Outline>();
+            outline.effectColor = color;
+            outline.effectDistance = distance;
+            outline.useGraphicAlpha = true;
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (FindFirstObjectByType<EventSystem>() != null) return;
+            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            DontDestroyOnLoad(eventSystem);
+        }
+
+        private static string ShortDepartment(Department department)
         {
             switch (department)
             {
                 case Department.Sales: return "영업";
-                case Department.ProjectManagement: return "기획/PM";
-                case Department.Development: return "개발/R&D";
-                case Department.Finance: return "회계/재무";
+                case Department.ProjectManagement: return "일정";
+                case Department.Development: return "개발";
+                case Department.Finance: return "재무";
                 case Department.Design: return "디자인";
                 case Department.Marketing: return "마케팅";
                 case Department.HumanResources: return "인사";
                 case Department.Legal: return "법무";
-                case Department.QualityAssurance: return "품질관리";
-                case Department.InformationTechnology: return "운영/IT";
+                case Department.QualityAssurance: return "품질";
+                case Department.InformationTechnology: return "운영";
                 default: return department.ToString();
+            }
+        }
+
+        private static string SkillName(Department department)
+        {
+            switch (department)
+            {
+                case Department.ProjectManagement: return "일정 방어";
+                case Department.Sales: return "요구 정리";
+                case Department.Development: return "집중 개발";
+                default: return "업무 처리";
             }
         }
 
@@ -393,16 +515,43 @@ namespace OfficeRaid.Runtime
             }
         }
 
-        private static string BattleSkill(Department department)
+        private static Color DepartmentColor(Department department)
         {
             switch (department)
             {
-                case Department.Sales: return "프레젠테이션으로 요구사항 방어막 파괴";
-                case Department.ProjectManagement: return "간트차트 방어막과 협업 경로 생성";
-                case Department.Development: return "코드와 완료 표시로 핵심 업무 공격";
-                case Department.Finance: return "예산 손실 차단과 비용 최적화";
-                default: return "부서 전문 업무 수행";
+                case Department.ProjectManagement: return Blue;
+                case Department.Sales: return Mustard;
+                case Department.Development: return Teal;
+                case Department.Finance: return Hex("6D7C8C");
+                default: return Hex("9B6D9D");
             }
+        }
+
+        private static Color RankColor(EmployeeRank rank)
+        {
+            switch (rank)
+            {
+                case EmployeeRank.Experienced: return Hex("4E9F67");
+                case EmployeeRank.Specialist: return Blue;
+                case EmployeeRank.Ace: return Hex("A35DB3");
+                case EmployeeRank.Legend: return Mustard;
+                default: return Hex("7E8790");
+            }
+        }
+
+        private static Color Hex(string hex)
+        {
+            ColorUtility.TryParseHtmlString("#" + hex, out var color);
+            return color;
+        }
+    }
+
+    internal static class ColorExtensions
+    {
+        public static Color WithAlpha(this Color color, float alpha)
+        {
+            color.a = alpha;
+            return color;
         }
     }
 }

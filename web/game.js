@@ -24,6 +24,8 @@ const RANKS = [
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
 const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서연", "현우", "유진", "수빈", "지훈", "예린", "시우", "채원"];
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
+const COMPANY_PREFIXES = ["반짝", "단단", "빠른", "작은", "푸른", "새벽", "모아", "한걸음"];
+const COMPANY_SUFFIXES = ["랩", "스튜디오", "웍스", "컴퍼니", "프로젝트", "오피스", "팩토리", "파트너스"];
 
 const app = document.querySelector("#app");
 let currentView = "setup";
@@ -32,6 +34,7 @@ let teamDraft = [];
 let battleTimer = null;
 let battle = null;
 let nextId = 10;
+let representativeDraft = { name: "서대표", appearance: appearance(1103) };
 
 const state = {
   companyName: "",
@@ -85,19 +88,74 @@ function renderSetup() {
       <h2>작은 회사 창업</h2>
       <p>동료를 모아 수정 요청과 마감을 공략하세요.<br>먼저 회사 이름을 정합니다.</p>
       <label class="sr-only" for="company-name">회사 이름</label>
-      <input id="company-name" maxlength="18" value="오피스 레이드 주식회사" autocomplete="organization">
-      <button id="create-company">회사 시작</button>
+      <div class="input-with-button"><input id="company-name" maxlength="18" value="${escapeHtml(state.companyName || "오피스 레이드 주식회사")}" autocomplete="organization"><button id="random-company" class="mustard">랜덤 생성</button></div>
+      <button id="create-company">다음 · 대표 만들기</button>
     </div></section>`;
   drawBoss(document.querySelector("#setup-boss"));
-  document.querySelector("#create-company").addEventListener("click", createCompany);
-  document.querySelector("#company-name").addEventListener("keydown", event => { if (event.key === "Enter") createCompany(); });
+  document.querySelector("#random-company").addEventListener("click", randomizeCompanyName);
+  document.querySelector("#create-company").addEventListener("click", openRepresentativeSetup);
+  document.querySelector("#company-name").addEventListener("keydown", event => { if (event.key === "Enter") openRepresentativeSetup(); });
+}
+
+function randomizeCompanyName() {
+  document.querySelector("#company-name").value = `${COMPANY_PREFIXES[randomInt(COMPANY_PREFIXES.length)]} ${COMPANY_SUFFIXES[randomInt(COMPANY_SUFFIXES.length)]}`;
+}
+
+function openRepresentativeSetup() {
+  const input = document.querySelector("#company-name");
+  state.companyName = input.value.trim() || "이름 없는 회사";
+  renderRepresentativeSetup();
+}
+
+function renderRepresentativeSetup() {
+  currentView = "representative";
+  const look = representativeDraft.appearance;
+  const rows = [
+    ["skin", "피부", 6], ["hair", "머리", 16], ["eyes", "눈", 10],
+    ["outfit", "의상", 12], ["accessory", "액세서리", 9]
+  ].map(([part, label, count]) => `<div class="custom-row"><strong>${label} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1">◀</button><button data-part="${part}" data-delta="1">▶</button></div>`).join("");
+  app.innerHTML = `${header("대표 만들기", "이름과 외형은 능력치에 영향을 주지 않습니다.")}
+    <section class="screen"><div class="representative panel">
+      <canvas id="representative-preview" width="24" height="24" aria-label="대표 정면 미리보기"></canvas>
+      <div class="input-with-button"><input id="representative-name" maxlength="10" value="${escapeHtml(representativeDraft.name)}"><button id="random-representative-name" class="mustard">이름 랜덤</button></div>
+      <button id="random-appearance" class="blue full-button">외형 전체 랜덤</button>
+      <div class="custom-list">${rows}</div>
+    </div>
+    <div class="footer-actions"><button class="ink" id="back-company">← 회사 이름</button><button class="teal" id="finish-company">회사 시작</button></div></section>`;
+  drawPortrait(document.querySelector("#representative-preview"), { department: "pm", appearance: look });
+  document.querySelector("#random-representative-name").addEventListener("click", () => {
+    representativeDraft.name = FAMILY[randomInt(FAMILY.length)] + GIVEN[randomInt(GIVEN.length)];
+    renderRepresentativeSetup();
+  });
+  document.querySelector("#random-appearance").addEventListener("click", () => {
+    saveRepresentativeName();
+    representativeDraft.appearance = appearance(randomInt(100000));
+    renderRepresentativeSetup();
+  });
+  document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => changeRepresentativePart(button.dataset.part, Number(button.dataset.delta))));
+  document.querySelector("#back-company").addEventListener("click", () => { saveRepresentativeName(); renderSetup(); });
+  document.querySelector("#finish-company").addEventListener("click", createCompany);
+  document.querySelector("#representative-name").addEventListener("keydown", event => { if (event.key === "Enter") createCompany(); });
+}
+
+function saveRepresentativeName() {
+  const input = document.querySelector("#representative-name");
+  if (input && input.value.trim()) representativeDraft.name = input.value.trim();
+}
+
+function changeRepresentativePart(part, delta) {
+  saveRepresentativeName();
+  const counts = { skin: 6, hair: 16, eyes: 10, outfit: 12, accessory: 9 };
+  representativeDraft.appearance[part] = (representativeDraft.appearance[part] + delta + counts[part]) % counts[part];
+  renderRepresentativeSetup();
 }
 
 function createCompany() {
-  const input = document.querySelector("#company-name");
-  state.companyName = input.value.trim() || "이름 없는 회사";
+  saveRepresentativeName();
+  const representative = employee(representativeDraft.name, "pm", "침착한 조율자", 17, 18, 14, 1103);
+  representative.appearance = { ...representativeDraft.appearance };
   state.employees = [
-    employee("서대표", "pm", "침착한 조율자", 17, 18, 14, 1103),
+    representative,
     employee("김세일", "sales", "발표 체질", 15, 14, 17, 2471),
     employee("이코드", "dev", "위기 전문가", 19, 12, 16, 3817)
   ];
@@ -344,7 +402,7 @@ function triggerBattleEvent() {
 function renderBattle() {
   const team = currentTeam();
   const result = battle.result === "success" ? `<div class="battle-result"><h2>PROJECT CLEAR</h2><p>현금 +700 · 평판 +12<br>희귀 노이즈 캔슬링 헤드셋 획득</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
-  const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
+  const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
   const statusTone = battle.status ? battle.status.tone : "good";
@@ -393,7 +451,10 @@ function animatePacket(department, lane) {
 function mountPortraits() {
   document.querySelectorAll("[data-portrait]").forEach(canvas => {
     const member = state.employees.find(item => item.id === canvas.dataset.portrait);
-    if (member) drawPortrait(canvas, member);
+    if (member) {
+      if (canvas.dataset.facing === "back") drawBackPortrait(canvas, member);
+      else drawPortrait(canvas, member);
+    }
   });
 }
 
@@ -406,7 +467,27 @@ function pixelContext(canvas) {
 
 function rect(context, color, x, y, width, height) {
   context.fillStyle = color;
-  context.fillRect(x, y, width, height);
+  context.fillRect(x, context.canvas.height - y - height, width, height);
+}
+
+function drawBackPortrait(canvas, member) {
+  if (!canvas || !member) return;
+  const context = pixelContext(canvas);
+  const look = member.appearance;
+  const skin = COLORS.skin[look.skin];
+  const hair = COLORS.hair[Math.floor(look.hair / 3) % COLORS.hair.length];
+  const shirt = COLORS.outfit[look.outfit];
+  const department = DEPARTMENTS[member.department].color;
+  rect(context, COLORS.ink, 3, 0, 18, 6);
+  rect(context, shirt, 4, 1, 16, 5);
+  rect(context, department, 10, 1, 4, 5);
+  rect(context, skin, 10, 5, 4, 2);
+  rect(context, COLORS.ink, 4, 7, 16, 13);
+  rect(context, hair, 5, 8, 14, 12);
+  rect(context, COLORS.ink, 5, 18, 14, 4);
+  rect(context, hair, 6, 19, 12, 4);
+  if (look.hair % 4 === 2) { rect(context, hair, 3, 8, 3, 10); rect(context, hair, 18, 8, 3, 10); }
+  if (look.hair % 4 === 3) { rect(context, hair, 2, 6, 4, 12); rect(context, hair, 18, 6, 4, 12); }
 }
 
 function drawPortrait(canvas, member) {

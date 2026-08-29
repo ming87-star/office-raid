@@ -7,7 +7,9 @@ namespace OfficeRaid.Runtime
     internal static class PixelArtFactory
     {
         private static readonly Dictionary<Department, Sprite> Employees = new Dictionary<Department, Sprite>();
+        private static readonly Dictionary<Department, Sprite> EmployeeBacks = new Dictionary<Department, Sprite>();
         private static readonly Dictionary<string, Sprite> Portraits = new Dictionary<string, Sprite>();
+        private static readonly Dictionary<string, Sprite> PortraitBacks = new Dictionary<string, Sprite>();
         private static readonly Dictionary<string, Sprite> AttackBlocks = new Dictionary<string, Sprite>();
         private static Sprite projectBoss;
 
@@ -19,17 +21,43 @@ namespace OfficeRaid.Runtime
             var skin = ToColor("D99D78");
             var hair = ToColor("443A38");
             var shirt = DepartmentColor(department);
-            Fill(pixels, 24, 5, 2, 13, 5, hair);
-            Fill(pixels, 24, 4, 6, 15, 7, outline);
-            Fill(pixels, 24, 6, 7, 11, 6, skin);
-            Fill(pixels, 24, 7, 12, 9, 2, hair);
-            Fill(pixels, 24, 5, 14, 13, 10, outline);
-            Fill(pixels, 24, 6, 15, 11, 8, shirt);
-            Fill(pixels, 24, 2, 16, 4, 7, skin);
-            Fill(pixels, 24, 18, 16, 4, 7, skin);
-            Fill(pixels, 24, 6, 24, 5, 7, outline);
-            Fill(pixels, 24, 13, 24, 5, 7, outline);
+            Fill(pixels, 24, 6, 1, 5, 7, outline);
+            Fill(pixels, 24, 13, 1, 5, 7, outline);
+            Fill(pixels, 24, 5, 8, 14, 11, outline);
+            Fill(pixels, 24, 6, 9, 12, 9, shirt);
+            Fill(pixels, 24, 2, 10, 4, 8, skin);
+            Fill(pixels, 24, 18, 10, 4, 8, skin);
+            Fill(pixels, 24, 9, 18, 6, 2, skin);
+            Fill(pixels, 24, 4, 19, 16, 11, outline);
+            Fill(pixels, 24, 5, 20, 14, 9, skin);
+            Fill(pixels, 24, 5, 27, 14, 4, hair);
+            Fill(pixels, 24, 6, 26, 8, 2, hair);
+            Fill(pixels, 24, 7, 23, 2, 1, outline);
+            Fill(pixels, 24, 15, 23, 2, 1, outline);
+            Fill(pixels, 24, 10, 21, 4, 1, outline);
             return Employees[department] = Build("Employee_" + department, 24, 32, pixels);
+        }
+
+        public static Sprite EmployeeBack(Department department)
+        {
+            if (EmployeeBacks.TryGetValue(department, out var cached)) return cached;
+            var pixels = Canvas(24, 32);
+            var outline = ToColor("17364A");
+            var skin = ToColor("D99D78");
+            var hair = ToColor("443A38");
+            var shirt = DepartmentColor(department);
+            Fill(pixels, 24, 6, 1, 5, 7, outline);
+            Fill(pixels, 24, 13, 1, 5, 7, outline);
+            Fill(pixels, 24, 5, 8, 14, 11, outline);
+            Fill(pixels, 24, 6, 9, 12, 9, shirt);
+            Fill(pixels, 24, 10, 10, 4, 8, DepartmentColor(department));
+            Fill(pixels, 24, 2, 10, 4, 8, skin);
+            Fill(pixels, 24, 18, 10, 4, 8, skin);
+            Fill(pixels, 24, 9, 18, 6, 2, skin);
+            Fill(pixels, 24, 4, 19, 16, 11, outline);
+            Fill(pixels, 24, 5, 20, 14, 9, hair);
+            Fill(pixels, 24, 5, 27, 14, 4, hair);
+            return EmployeeBacks[department] = Build("EmployeeBack_" + department, 24, 32, pixels);
         }
 
         public static Sprite Portrait(Department department, AppearanceProfile appearance)
@@ -61,6 +89,70 @@ namespace OfficeRaid.Runtime
             DrawMouth(pixels, appearance.Mouth, outline);
             DrawAccessory(pixels, appearance.Accessory, hair, outline, skin);
             return Portraits[key] = Build("Portrait_" + key, 24, 24, pixels);
+        }
+
+        public static Sprite PortraitBack(Department department, AppearanceProfile appearance)
+        {
+            var key = department + "_" + appearance.Face + "_" + appearance.Skin + "_" + appearance.Hair + "_" +
+                      appearance.Eyes + "_" + appearance.Eyebrows + "_" + appearance.Nose + "_" +
+                      appearance.Mouth + "_" + appearance.Accessory + "_" + appearance.Outfit;
+            if (PortraitBacks.TryGetValue(key, out var cached)) return cached;
+
+            var pixels = Canvas(24, 24);
+            var outline = ToColor("17364A");
+            var skin = SkinColor(appearance.Skin);
+            var hair = HairColor(appearance.Hair);
+            DrawOutfit(pixels, department, appearance.Outfit, outline, skin);
+            Fill(pixels, 24, 4, 7, 16, 13, outline);
+            Fill(pixels, 24, 5, 8, 14, 12, hair);
+            Fill(pixels, 24, 4, 17, 16, 4, outline);
+            Fill(pixels, 24, 5, 18, 14, 4, hair);
+
+            var hairStyle = appearance.Hair % 8;
+            if (hairStyle == 2)
+            {
+                Fill(pixels, 24, 3, 8, 3, 10, hair);
+                Fill(pixels, 24, 18, 8, 3, 10, hair);
+            }
+            else if (hairStyle == 3)
+            {
+                Fill(pixels, 24, 2, 6, 4, 12, hair);
+                Fill(pixels, 24, 18, 6, 4, 12, hair);
+            }
+
+            if (appearance.Accessory == 4) Fill(pixels, 24, 16, 20, 3, 1, ToColor("C84B3C"));
+            if (appearance.Accessory == 5)
+            {
+                Fill(pixels, 24, 2, 11, 2, 7, outline);
+                Fill(pixels, 24, 20, 11, 2, 7, outline);
+            }
+            if (appearance.Accessory == 8)
+            {
+                Fill(pixels, 24, 4, 20, 16, 2, outline);
+                Fill(pixels, 24, 5, 21, 14, 2, ToColor("D6A12C"));
+            }
+
+            return PortraitBacks[key] = Build("PortraitBack_" + key, 24, 24, pixels);
+        }
+
+        private static Color32 SkinColor(int variant)
+        {
+            var colors = new[]
+            {
+                ToColor("F7D7BD"), ToColor("EDBE98"), ToColor("D99D78"),
+                ToColor("BD7F5C"), ToColor("956044"), ToColor("704536")
+            };
+            return colors[variant % colors.Length];
+        }
+
+        private static Color32 HairColor(int variant)
+        {
+            var colors = new[]
+            {
+                ToColor("29272C"), ToColor("573B32"), ToColor("8B593A"),
+                ToColor("C2853D"), ToColor("6E3047"), ToColor("243E52")
+            };
+            return colors[(variant / 3) % colors.Length];
         }
 
         private static void DrawFace(Color32[] pixels, int variant, Color32 outline, Color32 skin)

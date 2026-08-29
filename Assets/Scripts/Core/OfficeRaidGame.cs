@@ -21,7 +21,7 @@ namespace OfficeRaid.Core
             rewardRandom = new Random(seed + 77);
         }
 
-        public void CreateCompany(string companyName)
+        public void CreateCompany(string companyName, string representativeName = null, AppearanceProfile representativeAppearance = null)
         {
             Company = new CompanyState
             {
@@ -33,7 +33,13 @@ namespace OfficeRaid.Core
                 ProjectTeamSize = 3
             };
 
-            Company.Employees.Add(CreateStarter("서대표", Department.ProjectManagement, "침착한 조율자", 17, 18, 14));
+            var leaderName = string.IsNullOrWhiteSpace(representativeName) ? "서대표" : representativeName.Trim();
+            var representative = CreateStarter(leaderName, Department.ProjectManagement, "침착한 조율자", 17, 18, 14);
+            if (representativeAppearance != null)
+            {
+                representative.Appearance = representativeAppearance;
+            }
+            Company.Employees.Add(representative);
             Company.Employees.Add(CreateStarter("김세일", Department.Sales, "발표 체질", 15, 14, 17));
             Company.Employees.Add(CreateStarter("이코드", Department.Development, "위기 전문가", 19, 12, 16));
             Company.SelectedProjectTeamIds.Add(Company.Employees[0].Id);

@@ -19,6 +19,19 @@ namespace OfficeRaid.Tests
         }
 
         [Test]
+        public void CreateCompany_UsesCustomizedRepresentative()
+        {
+            var appearance = new AppearanceProfile { Skin = 4, Hair = 11, Eyes = 7, Outfit = 9, Accessory = 5 };
+            var game = new OfficeRaidGame(2);
+
+            game.CreateCompany("테스트 회사", "김대표", appearance);
+
+            Assert.That(game.Company.Employees[0].Name, Is.EqualTo("김대표"));
+            Assert.That(game.Company.Employees[0].Appearance, Is.SameAs(appearance));
+            Assert.That(game.Company.Employees[0].Department, Is.EqualTo(Department.ProjectManagement));
+        }
+
+        [Test]
         public void CandidateGenerator_CreatesValidCombinationalAppearance()
         {
             var generator = new CandidateGenerator(42);

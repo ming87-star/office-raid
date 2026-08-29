@@ -10,7 +10,7 @@ namespace OfficeRaid.Runtime
 {
     public sealed class OfficeRaidPrototypeBehaviour : MonoBehaviour
     {
-        private enum View { CompanySetup, Office, Interview, TeamSelection, Battle }
+        private enum View { CompanySetup, RepresentativeSetup, Office, Interview, TeamSelection, Battle }
 
         private static readonly Color Ink = Hex("17364A");
         private static readonly Color Paper = Hex("F3EBD7");
@@ -20,16 +20,24 @@ namespace OfficeRaid.Runtime
         private static readonly Color Red = Hex("C84B3C");
         private static readonly Color Blue = Hex("4A70A8");
         private static readonly Color Panel = Hex("FFF9E9");
+        private static readonly string[] CompanyPrefixes = { "반짝", "단단", "빠른", "작은", "푸른", "새벽", "모아", "한걸음" };
+        private static readonly string[] CompanySuffixes = { "랩", "스튜디오", "웍스", "컴퍼니", "프로젝트", "오피스", "팩토리", "파트너스" };
+        private static readonly string[] RepresentativeFamilyNames = { "김", "이", "박", "최", "정", "강", "조", "윤" };
+        private static readonly string[] RepresentativeGivenNames = { "민준", "서연", "지우", "도윤", "하린", "현우", "유진", "수빈" };
 
         private OfficeRaidGame game;
         private View currentView;
         private string companyName = "오피스 레이드 주식회사";
+        private string representativeName = "서대표";
+        private AppearanceProfile representativeAppearance = new AppearanceProfile { Face = 1, Skin = 2, Hair = 3, Eyes = 2, Eyebrows = 1, Nose = 2, Mouth = 1, Accessory = 0, Outfit = 0 };
         private string notice = "회사 이름을 정하고 작은 회사를 시작하세요.";
         private List<Candidate> candidates = new List<Candidate>();
         private List<string> teamDraft = new List<string>();
         private Font font;
         private RectTransform screenRoot;
         private InputField companyNameInput;
+        private InputField representativeNameInput;
+        private readonly System.Random setupRandom = new System.Random();
         private Text battleTitle;
         private Text battleDeadline;
         private Text battleWorkload;
@@ -113,16 +121,110 @@ namespace OfficeRaid.Runtime
                 new Vector2(0.07f, 0.74f), new Vector2(0.93f, 0.94f), TextAnchor.MiddleLeft);
             CreateText(card, "Label", "회사 이름", 13, FontStyle.Bold, Ink,
                 new Vector2(0.07f, 0.59f), new Vector2(0.93f, 0.74f), TextAnchor.MiddleLeft);
-            companyNameInput = CreateInputField(card, companyName, new Vector2(0.07f, 0.39f), new Vector2(0.93f, 0.59f));
+            companyNameInput = CreateInputField(card, companyName, new Vector2(0.07f, 0.39f), new Vector2(0.66f, 0.59f));
+            CreateButton(card, "랜덤 생성", Mustard, Ink, new Vector2(0.69f, 0.39f), new Vector2(0.93f, 0.59f), RandomizeCompanyName);
             CreateText(card, "Description", "대표와 두 명의 동료로 시작합니다.", 13, FontStyle.Normal, Ink,
                 new Vector2(0.07f, 0.24f), new Vector2(0.93f, 0.38f), TextAnchor.MiddleLeft);
-            CreateButton(card, "회사 설립", Teal, Color.white, new Vector2(0.07f, 0.05f), new Vector2(0.93f, 0.23f), CreateCompany);
+            CreateButton(card, "다음 · 대표 만들기", Teal, Color.white, new Vector2(0.07f, 0.05f), new Vector2(0.93f, 0.23f), OpenRepresentativeSetup);
+        }
+
+        private void RandomizeCompanyName()
+        {
+            companyName = CompanyPrefixes[setupRandom.Next(CompanyPrefixes.Length)] + " " + CompanySuffixes[setupRandom.Next(CompanySuffixes.Length)];
+            if (companyNameInput != null) companyNameInput.text = companyName;
+        }
+
+        private void OpenRepresentativeSetup()
+        {
+            companyName = companyNameInput == null ? companyName : companyNameInput.text;
+            ShowRepresentativeSetup();
+        }
+
+        private void ShowRepresentativeSetup()
+        {
+            currentView = View.RepresentativeSetup;
+            ClearScreen();
+            CreateBackground();
+            CreateHeader("대표 만들기", "대표 이름과 모습을 정하세요. 능력치는 외형과 무관합니다.");
+            var card = CreatePanel(screenRoot, "RepresentativeCard", Panel, new Vector2(0.06f, 0.16f), new Vector2(0.94f, 0.82f));
+            AddOutline(card.gameObject, Ink, new Vector2(2f, -2f));
+            CreateSprite(card, "RepresentativePortrait", PixelArtFactory.Portrait(Department.ProjectManagement, representativeAppearance),
+                new Vector2(0.31f, 0.66f), new Vector2(0.69f, 0.96f));
+            CreateText(card, "NameLabel", "대표 이름", 12, FontStyle.Bold, Ink,
+                new Vector2(0.06f, 0.57f), new Vector2(0.54f, 0.65f), TextAnchor.MiddleLeft);
+            representativeNameInput = CreateInputField(card, representativeName, new Vector2(0.06f, 0.47f), new Vector2(0.62f, 0.57f));
+            CreateButton(card, "이름 랜덤", Mustard, Ink, new Vector2(0.66f, 0.47f), new Vector2(0.94f, 0.57f), RandomizeRepresentativeName);
+            CreateButton(card, "전체 랜덤", Blue, Color.white, new Vector2(0.66f, 0.59f), new Vector2(0.94f, 0.66f), RandomizeRepresentativeAppearance);
+            CreateAppearanceRow(card, "피부", "Skin", representativeAppearance.Skin + 1, 0.38f, 6);
+            CreateAppearanceRow(card, "머리", "Hair", representativeAppearance.Hair + 1, 0.30f, 16);
+            CreateAppearanceRow(card, "눈", "Eyes", representativeAppearance.Eyes + 1, 0.22f, 10);
+            CreateAppearanceRow(card, "의상", "Outfit", representativeAppearance.Outfit + 1, 0.14f, 12);
+            CreateAppearanceRow(card, "액세서리", "Accessory", representativeAppearance.Accessory + 1, 0.06f, 9);
+            CreateButton(screenRoot, "← 회사 이름", Ink, Color.white, new Vector2(0.04f, 0.05f), new Vector2(0.40f, 0.13f), BackToCompanySetup);
+            CreateButton(screenRoot, "회사 시작", Teal, Color.white, new Vector2(0.45f, 0.05f), new Vector2(0.96f, 0.13f), CreateCompany);
+        }
+
+        private void CreateAppearanceRow(RectTransform parent, string label, string part, int value, float minY, int count)
+        {
+            CreateText(parent, part + "Label", $"{label}  {value}/{count}", 13, FontStyle.Bold, Ink,
+                new Vector2(0.07f, minY), new Vector2(0.55f, minY + 0.07f), TextAnchor.MiddleLeft);
+            CreateButton(parent, "◀", PaperDark, Ink, new Vector2(0.59f, minY), new Vector2(0.74f, minY + 0.07f),
+                () => ChangeRepresentativePart(part, -1, count));
+            CreateButton(parent, "▶", PaperDark, Ink, new Vector2(0.79f, minY), new Vector2(0.94f, minY + 0.07f),
+                () => ChangeRepresentativePart(part, 1, count));
+        }
+
+        private void SaveRepresentativeName()
+        {
+            if (representativeNameInput != null && !string.IsNullOrWhiteSpace(representativeNameInput.text))
+                representativeName = representativeNameInput.text.Trim();
+        }
+
+        private void RandomizeRepresentativeName()
+        {
+            representativeName = RepresentativeFamilyNames[setupRandom.Next(RepresentativeFamilyNames.Length)] +
+                                 RepresentativeGivenNames[setupRandom.Next(RepresentativeGivenNames.Length)];
+            ShowRepresentativeSetup();
+        }
+
+        private void RandomizeRepresentativeAppearance()
+        {
+            SaveRepresentativeName();
+            representativeAppearance = new AppearanceProfile
+            {
+                Face = setupRandom.Next(8), Skin = setupRandom.Next(6), Hair = setupRandom.Next(16),
+                Eyes = setupRandom.Next(10), Eyebrows = setupRandom.Next(8), Nose = setupRandom.Next(8),
+                Mouth = setupRandom.Next(10), Accessory = setupRandom.Next(9), Outfit = setupRandom.Next(12)
+            };
+            ShowRepresentativeSetup();
+        }
+
+        private void ChangeRepresentativePart(string part, int delta, int count)
+        {
+            SaveRepresentativeName();
+            switch (part)
+            {
+                case "Skin": representativeAppearance.Skin = Wrap(representativeAppearance.Skin + delta, count); break;
+                case "Hair": representativeAppearance.Hair = Wrap(representativeAppearance.Hair + delta, count); break;
+                case "Eyes": representativeAppearance.Eyes = Wrap(representativeAppearance.Eyes + delta, count); break;
+                case "Outfit": representativeAppearance.Outfit = Wrap(representativeAppearance.Outfit + delta, count); break;
+                case "Accessory": representativeAppearance.Accessory = Wrap(representativeAppearance.Accessory + delta, count); break;
+            }
+            ShowRepresentativeSetup();
+        }
+
+        private static int Wrap(int value, int count) { return (value % count + count) % count; }
+
+        private void BackToCompanySetup()
+        {
+            SaveRepresentativeName();
+            ShowCompanySetup();
         }
 
         private void CreateCompany()
         {
-            companyName = companyNameInput == null ? companyName : companyNameInput.text;
-            game.CreateCompany(companyName);
+            SaveRepresentativeName();
+            game.CreateCompany(companyName, representativeName, representativeAppearance);
             notice = "첫 프로젝트를 수주할 준비가 됐습니다.";
             ShowOffice();
         }
@@ -143,7 +245,7 @@ namespace OfficeRaid.Runtime
             {
                 var employee = employees[index];
                 CreateDesk(room, positions[index], 0.48f);
-                CreateSprite(room, employee.Name, PixelArtFactory.Employee(employee.Department),
+                CreateSprite(room, employee.Name, PixelArtFactory.Portrait(employee.Department, employee.Appearance),
                     new Vector2(positions[index] - 0.09f, 0.18f), new Vector2(positions[index] + 0.09f, 0.48f));
                 CreateText(room, employee.Name + "Label", employee.Name + "\n" + ShortDepartment(employee.Department), 11, FontStyle.Bold, Ink,
                     new Vector2(positions[index] - 0.15f, 0.01f), new Vector2(positions[index] + 0.15f, 0.18f), TextAnchor.MiddleCenter);
@@ -320,7 +422,7 @@ namespace OfficeRaid.Runtime
             for (var index = 0; index < team.Length; index++)
             {
                 var position = battlePositions[index];
-                CreateBattleEmployee(arena, team[index].Department, team[index].Name, position.x, position.y, position.z, position.w);
+                CreateBattleEmployee(arena, team[index], position.x, position.y, position.z, position.w);
             }
 
             var shield = CreateImage(arena, "ScheduleShield", Teal.WithAlpha(0.58f), new Vector2(0.14f, 0.43f), new Vector2(0.43f, 0.60f));
@@ -388,9 +490,10 @@ namespace OfficeRaid.Runtime
             SetAnchoredCenter(developerEffect, Vector2.Lerp(new Vector2(0.485f, 0.40f), new Vector2(0.485f, 0.69f), eased));
         }
 
-        private void CreateBattleEmployee(RectTransform parent, Department department, string name, float minX, float minY, float maxX, float maxY)
+        private void CreateBattleEmployee(RectTransform parent, Employee employee, float minX, float minY, float maxX, float maxY)
         {
-            CreateSprite(parent, name, PixelArtFactory.Employee(department), new Vector2(minX, minY), new Vector2(maxX, maxY));
+            CreateSprite(parent, employee.Name, PixelArtFactory.PortraitBack(employee.Department, employee.Appearance),
+                new Vector2(minX, minY), new Vector2(maxX, maxY));
         }
 
         private void CreateBattleCard(RectTransform parent, Employee employee, float minX, float maxX)
@@ -449,6 +552,7 @@ namespace OfficeRaid.Runtime
             battleDeadline = null;
             battleWorkload = null;
             battleLog = null;
+            battleStatus = null;
             battleWorkFill = null;
             battleResult = null;
             battleResultText = null;

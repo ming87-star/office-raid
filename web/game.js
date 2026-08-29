@@ -236,7 +236,11 @@ function saveTeam() {
 
 function startBattle() {
   currentView = "battle";
-  battle = { max: 190, workload: 190, action: 0, deadline: 8, momentum: 0, requirements: false, result: null, rewardClaimed: false, log: "업무 분담을 시작합니다." };
+  battle = {
+    max: 190, workload: 190, action: 0, deadline: 8, momentum: 0, requirements: false,
+    result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
+    eventText: "", nextEventRound: 2, eventCursor: randomInt(4)
+  };
   renderBattle();
   battleTimer = window.setTimeout(battleStep, 900);
 }
@@ -251,6 +255,14 @@ function battleStep() {
   const team = currentTeam();
   const member = team[battle.action % team.length];
   const round = Math.floor(battle.action / team.length) + 1;
+  if (battle.action % team.length === 0) {
+    advanceBattleStatus();
+    battle.eventText = "";
+    if (round >= battle.nextEventRound) {
+      triggerBattleEvent();
+      battle.nextEventRound += 2;
+    }
+  }
   let damage = Math.round(member.work * .72 + member.collaboration * .25);
   let skill = "집중 업무";
   if (member.department === "sales") {
@@ -269,8 +281,14 @@ function battleStep() {
     damage += 4;
     skill = "예산 재배치";
   }
+  if (battle.status) {
+    damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
+  }
+  damage = Math.max(1, damage);
   battle.workload = Math.max(0, battle.workload - damage);
-  battle.log = `${member.name}의 ${skill}! 업무량 ${damage} 처리`;
+  const eventLine = battle.eventText ? `${battle.eventText}\n` : "";
+  battle.log = `${eventLine}${member.name}의 ${skill}! 업무량 ${damage} 처리`;
+  battle.eventText = "";
   battle.action += 1;
   animatePacket(member.department, battle.action % 3);
   updateBattleNumbers(round);
@@ -295,15 +313,45 @@ function battleStep() {
   battleTimer = window.setTimeout(battleStep, 950);
 }
 
+function advanceBattleStatus() {
+  if (!battle.status) return;
+  battle.status.turns -= 1;
+  if (battle.status.turns <= 0) battle.status = null;
+}
+
+function triggerBattleEvent() {
+  const event = battle.eventCursor % 4;
+  battle.eventCursor += 1;
+  if (event === 0) {
+    const added = 12;
+    battle.workload = Math.min(battle.max + 30, battle.workload + added);
+    battle.requirements = false;
+    battle.status = { name: "재작업", turns: 1, efficiency: .9, flat: 0, tone: "bad" };
+    battle.eventText = `⚠ 요구사항 변경! 업무량 +${added}`;
+  } else if (event === 1) {
+    battle.status = { name: "긴급회의", turns: 1, efficiency: .75, flat: 0, tone: "bad" };
+    battle.eventText = "⚠ 긴급회의! 오늘 업무 효율 -25%";
+  } else if (event === 2) {
+    battle.status = { name: "예산 압박", turns: 2, efficiency: 1, flat: -3, tone: "bad" };
+    battle.eventText = "⚠ 예산 삭감! 2턴 동안 처리량 -3";
+  } else {
+    battle.momentum += 4;
+    battle.status = { name: "합의 완료", turns: 2, efficiency: 1, flat: 4, tone: "good" };
+    battle.eventText = "✓ 고객의 빠른 승인! 2턴 동안 처리량 +4";
+  }
+}
+
 function renderBattle() {
   const team = currentTeam();
   const result = battle.result === "success" ? `<div class="battle-result"><h2>PROJECT CLEAR</h2><p>현금 +700 · 평판 +12<br>희귀 노이즈 캔슬링 헤드셋 획득</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
+  const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
+  const statusTone = battle.status ? battle.status.tone : "good";
   app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : "업무 효과는 직원에서 프로젝트를 향해 올라갑니다.")}
     <section class="screen battle-screen">
-      <div class="boss-card panel"><div class="boss-row"><strong>끝없는 수정 요청</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${battle.workload / battle.max * 100}%"></i></div></div>
-      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64"></canvas><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div></div>
+      <div class="boss-card panel"><div class="boss-row"><strong>끝없는 수정 요청</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div></div>
+      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div></div>
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <button class="ink" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>
     </section>`;
@@ -318,11 +366,14 @@ function updateBattleNumbers(round) {
   const deadline = document.querySelector("#deadline");
   const log = document.querySelector("#battle-log");
   const boss = document.querySelector("#boss-canvas");
+  const status = document.querySelector("#status-chip");
   if (!bar) return;
-  bar.style.width = `${battle.workload / battle.max * 100}%`;
+  bar.style.width = `${Math.min(100, battle.workload / battle.max * 100)}%`;
   text.textContent = `업무량 ${battle.workload}/${battle.max}`;
   deadline.textContent = `마감 ${round}/${battle.deadline}`;
   log.textContent = battle.log;
+  status.textContent = battle.status ? `STATUS · ${battle.status.name} ${battle.status.turns}턴` : "STATUS · 안정";
+  status.className = `status-chip ${battle.status ? battle.status.tone : "good"}`;
   boss.classList.remove("hit");
   void boss.offsetWidth;
   boss.classList.add("hit");

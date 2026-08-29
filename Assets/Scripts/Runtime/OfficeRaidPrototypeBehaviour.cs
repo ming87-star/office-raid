@@ -34,6 +34,7 @@ namespace OfficeRaid.Runtime
         private Text battleDeadline;
         private Text battleWorkload;
         private Text battleLog;
+        private Text battleStatus;
         private Image battleWorkFill;
         private GameObject battleResult;
         private Text battleResultText;
@@ -307,6 +308,8 @@ namespace OfficeRaid.Runtime
             CreateSprite(arena, "ProjectBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.34f, 0.66f), new Vector2(0.66f, 0.99f));
             CreateText(arena, "BossName", "수정요청 더미", 11, FontStyle.Bold, Red,
                 new Vector2(0.30f, 0.59f), new Vector2(0.70f, 0.68f), TextAnchor.MiddleCenter);
+            battleStatus = CreateText(arena, "BattleStatus", "STATUS · 안정", 11, FontStyle.Bold, Teal,
+                new Vector2(0.025f, 0.88f), new Vector2(0.33f, 0.97f), TextAnchor.MiddleLeft);
             var team = game.GetProjectTeam().Take(3).ToArray();
             var battlePositions = new[]
             {
@@ -361,6 +364,11 @@ namespace OfficeRaid.Runtime
             var ratio = Mathf.Clamp01(battle.RemainingWorkload / (float)battle.Project.MaxWorkload);
             battleWorkFill.rectTransform.anchorMax = new Vector2(ratio, 1f);
             battleLog.text = battle.Logs.Count == 0 ? notice : battle.Logs[battle.Logs.Count - 1];
+            battleStatus.text = string.IsNullOrEmpty(battle.ActiveStatusName)
+                ? "STATUS · 안정"
+                : $"STATUS · {battle.ActiveStatusName} {battle.ActiveStatusTurns}일";
+            battleStatus.color = battle.ActiveStatusName == "합의 완료" ? Teal :
+                string.IsNullOrEmpty(battle.ActiveStatusName) ? Teal : Red;
             if (!battle.IsComplete) return;
             if (!resultClaimed)
             {

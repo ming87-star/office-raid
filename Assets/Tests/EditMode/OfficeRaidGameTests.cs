@@ -55,6 +55,22 @@ namespace OfficeRaid.Tests
         }
 
         [Test]
+        public void ProjectEvent_AppliesVisibleTemporaryStatus()
+        {
+            var game = new OfficeRaidGame(17);
+            game.CreateCompany("테스트 회사");
+            var battle = new BattleSimulator(game.CreatePrototypeProject(), game.GetProjectTeam(), 99, 100);
+
+            battle.Step();
+            battle.Step();
+
+            Assert.That(battle.LastEvent, Is.Not.EqualTo(ProjectEventType.None));
+            Assert.That(battle.ActiveStatusName, Is.Not.Empty);
+            Assert.That(battle.ActiveStatusTurns, Is.GreaterThan(0));
+            Assert.That(battle.Logs.Any(log => log.Contains("[돌발]") || log.Contains("[호재]")), Is.True);
+        }
+
+        [Test]
         public void SuccessfulProject_GrantsCurrencyReputationAndEquipment()
         {
             var game = new OfficeRaidGame(11);

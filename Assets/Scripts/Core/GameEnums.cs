@@ -31,4 +31,13 @@ namespace OfficeRaid.Core
         Epic,
         Legendary
     }
+
+    public enum ProjectEventType
+    {
+        None,
+        RequirementChange,
+        EmergencyMeeting,
+        BudgetCut,
+        ClientApproval
+    }
 }

@@ -38,6 +38,7 @@ namespace OfficeRaid.Runtime
         private InputField companyNameInput;
         private InputField representativeNameInput;
         private readonly System.Random setupRandom = new System.Random();
+        private bool representativeDetailMode;
         private Text battleTitle;
         private Text battleDeadline;
         private Text battleWorkload;
@@ -155,11 +156,25 @@ namespace OfficeRaid.Runtime
             representativeNameInput = CreateInputField(card, representativeName, new Vector2(0.06f, 0.47f), new Vector2(0.62f, 0.57f));
             CreateButton(card, "이름 랜덤", Mustard, Ink, new Vector2(0.66f, 0.47f), new Vector2(0.94f, 0.57f), RandomizeRepresentativeName);
             CreateButton(card, "전체 랜덤", Blue, Color.white, new Vector2(0.66f, 0.59f), new Vector2(0.94f, 0.66f), RandomizeRepresentativeAppearance);
-            CreateAppearanceRow(card, "피부", "Skin", representativeAppearance.Skin + 1, 0.38f, 6);
-            CreateAppearanceRow(card, "머리", "Hair", representativeAppearance.Hair + 1, 0.30f, 16);
-            CreateAppearanceRow(card, "눈", "Eyes", representativeAppearance.Eyes + 1, 0.22f, 10);
-            CreateAppearanceRow(card, "의상", "Outfit", representativeAppearance.Outfit + 1, 0.14f, 12);
-            CreateAppearanceRow(card, "액세서리", "Accessory", representativeAppearance.Accessory + 1, 0.06f, 9);
+            CreateButton(card, "기본 외형", representativeDetailMode ? PaperDark : Teal,
+                representativeDetailMode ? Ink : Color.white, new Vector2(0.06f, 0.38f), new Vector2(0.48f, 0.45f), ShowRepresentativeBasicParts);
+            CreateButton(card, "얼굴 세부", representativeDetailMode ? Teal : PaperDark,
+                representativeDetailMode ? Color.white : Ink, new Vector2(0.52f, 0.38f), new Vector2(0.94f, 0.45f), ShowRepresentativeDetailParts);
+            if (representativeDetailMode)
+            {
+                CreateAppearanceRow(card, "얼굴형", "Face", representativeAppearance.Face + 1, 0.305f, 8);
+                CreateAppearanceRow(card, "눈", "Eyes", representativeAppearance.Eyes + 1, 0.245f, 10);
+                CreateAppearanceRow(card, "눈썹", "Eyebrows", representativeAppearance.Eyebrows + 1, 0.185f, 8);
+                CreateAppearanceRow(card, "코", "Nose", representativeAppearance.Nose + 1, 0.125f, 8);
+                CreateAppearanceRow(card, "입", "Mouth", representativeAppearance.Mouth + 1, 0.065f, 10);
+            }
+            else
+            {
+                CreateAppearanceRow(card, "피부", "Skin", representativeAppearance.Skin + 1, 0.29f, 6);
+                CreateAppearanceRow(card, "머리", "Hair", representativeAppearance.Hair + 1, 0.22f, 16);
+                CreateAppearanceRow(card, "의상", "Outfit", representativeAppearance.Outfit + 1, 0.15f, 12);
+                CreateAppearanceRow(card, "액세서리", "Accessory", representativeAppearance.Accessory + 1, 0.08f, 9);
+            }
             CreateButton(screenRoot, "← 회사 이름", Ink, Color.white, new Vector2(0.04f, 0.05f), new Vector2(0.40f, 0.13f), BackToCompanySetup);
             CreateButton(screenRoot, "회사 시작", Teal, Color.white, new Vector2(0.45f, 0.05f), new Vector2(0.96f, 0.13f), CreateCompany);
         }
@@ -167,11 +182,25 @@ namespace OfficeRaid.Runtime
         private void CreateAppearanceRow(RectTransform parent, string label, string part, int value, float minY, int count)
         {
             CreateText(parent, part + "Label", $"{label}  {value}/{count}", 13, FontStyle.Bold, Ink,
-                new Vector2(0.07f, minY), new Vector2(0.55f, minY + 0.07f), TextAnchor.MiddleLeft);
-            CreateButton(parent, "◀", PaperDark, Ink, new Vector2(0.59f, minY), new Vector2(0.74f, minY + 0.07f),
+                new Vector2(0.07f, minY), new Vector2(0.55f, minY + 0.055f), TextAnchor.MiddleLeft);
+            CreateButton(parent, "◀", PaperDark, Ink, new Vector2(0.59f, minY), new Vector2(0.74f, minY + 0.055f),
                 () => ChangeRepresentativePart(part, -1, count));
-            CreateButton(parent, "▶", PaperDark, Ink, new Vector2(0.79f, minY), new Vector2(0.94f, minY + 0.07f),
+            CreateButton(parent, "▶", PaperDark, Ink, new Vector2(0.79f, minY), new Vector2(0.94f, minY + 0.055f),
                 () => ChangeRepresentativePart(part, 1, count));
+        }
+
+        private void ShowRepresentativeBasicParts()
+        {
+            SaveRepresentativeName();
+            representativeDetailMode = false;
+            ShowRepresentativeSetup();
+        }
+
+        private void ShowRepresentativeDetailParts()
+        {
+            SaveRepresentativeName();
+            representativeDetailMode = true;
+            ShowRepresentativeSetup();
         }
 
         private void SaveRepresentativeName()
@@ -204,9 +233,13 @@ namespace OfficeRaid.Runtime
             SaveRepresentativeName();
             switch (part)
             {
+                case "Face": representativeAppearance.Face = Wrap(representativeAppearance.Face + delta, count); break;
                 case "Skin": representativeAppearance.Skin = Wrap(representativeAppearance.Skin + delta, count); break;
                 case "Hair": representativeAppearance.Hair = Wrap(representativeAppearance.Hair + delta, count); break;
                 case "Eyes": representativeAppearance.Eyes = Wrap(representativeAppearance.Eyes + delta, count); break;
+                case "Eyebrows": representativeAppearance.Eyebrows = Wrap(representativeAppearance.Eyebrows + delta, count); break;
+                case "Nose": representativeAppearance.Nose = Wrap(representativeAppearance.Nose + delta, count); break;
+                case "Mouth": representativeAppearance.Mouth = Wrap(representativeAppearance.Mouth + delta, count); break;
                 case "Outfit": representativeAppearance.Outfit = Wrap(representativeAppearance.Outfit + delta, count); break;
                 case "Accessory": representativeAppearance.Accessory = Wrap(representativeAppearance.Accessory + delta, count); break;
             }

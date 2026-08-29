@@ -107,7 +107,10 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .representative { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
 .representative > canvas { width: 116px; height: 116px; margin: 0 auto; image-rendering: pixelated; }
 .representative .full-button { width: 100%; min-height: 38px; }
-.custom-list { min-height: 0; display: flex; flex: 1 1 auto; flex-direction: column; justify-content: space-between; gap: 5px; }
+.custom-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.custom-tabs button { min-height: 36px; background: var(--paper-dark); color: var(--ink); font-size: 12px; }
+.custom-tabs button.active { background: var(--teal); color: white; }
+.custom-list { min-height: 0; display: flex; flex: 1 1 auto; flex-direction: column; justify-content: space-evenly; gap: 5px; }
 .custom-row { display: grid; grid-template-columns: 1fr 50px 50px; gap: 7px; align-items: center; }
 .custom-row strong { font-size: 12px; }
 .custom-row strong span { color: var(--teal); }

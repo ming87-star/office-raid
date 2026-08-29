@@ -35,6 +35,7 @@ let battleTimer = null;
 let battle = null;
 let nextId = 10;
 let representativeDraft = { name: "서대표", appearance: appearance(1103) };
+let representativeMode = "basic";
 
 const state = {
   companyName: "",
@@ -110,15 +111,17 @@ function openRepresentativeSetup() {
 function renderRepresentativeSetup() {
   currentView = "representative";
   const look = representativeDraft.appearance;
-  const rows = [
-    ["skin", "피부", 6], ["hair", "머리", 16], ["eyes", "눈", 10],
-    ["outfit", "의상", 12], ["accessory", "액세서리", 9]
-  ].map(([part, label, count]) => `<div class="custom-row"><strong>${label} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1">◀</button><button data-part="${part}" data-delta="1">▶</button></div>`).join("");
+  const parts = representativeMode === "detail"
+    ? [["face", "얼굴형", 8], ["eyes", "눈", 10], ["eyebrows", "눈썹", 8], ["nose", "코", 8], ["mouth", "입", 10]]
+    : [["skin", "피부", 6], ["hair", "머리", 16], ["outfit", "의상", 12], ["accessory", "액세서리", 9]];
+  const rows = parts.map(([part, label, count]) => `<div class="custom-row"><strong>${label} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1" aria-label="${label} 이전">◀</button><button data-part="${part}" data-delta="1" aria-label="${label} 다음">▶</button></div>`).join("");
   app.innerHTML = `${header("대표 만들기", "이름과 외형은 능력치에 영향을 주지 않습니다.")}
     <section class="screen"><div class="representative panel">
       <canvas id="representative-preview" width="24" height="24" aria-label="대표 정면 미리보기"></canvas>
+      <label class="sr-only" for="representative-name">대표 이름</label>
       <div class="input-with-button"><input id="representative-name" maxlength="10" value="${escapeHtml(representativeDraft.name)}"><button id="random-representative-name" class="mustard">이름 랜덤</button></div>
       <button id="random-appearance" class="blue full-button">외형 전체 랜덤</button>
+      <div class="custom-tabs"><button id="basic-parts" class="${representativeMode === "basic" ? "active" : ""}">기본 외형</button><button id="detail-parts" class="${representativeMode === "detail" ? "active" : ""}">얼굴 세부</button></div>
       <div class="custom-list">${rows}</div>
     </div>
     <div class="footer-actions"><button class="ink" id="back-company">← 회사 이름</button><button class="teal" id="finish-company">회사 시작</button></div></section>`;
@@ -132,10 +135,18 @@ function renderRepresentativeSetup() {
     representativeDraft.appearance = appearance(randomInt(100000));
     renderRepresentativeSetup();
   });
+  document.querySelector("#basic-parts").addEventListener("click", () => switchRepresentativeMode("basic"));
+  document.querySelector("#detail-parts").addEventListener("click", () => switchRepresentativeMode("detail"));
   document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => changeRepresentativePart(button.dataset.part, Number(button.dataset.delta))));
   document.querySelector("#back-company").addEventListener("click", () => { saveRepresentativeName(); renderSetup(); });
   document.querySelector("#finish-company").addEventListener("click", createCompany);
   document.querySelector("#representative-name").addEventListener("keydown", event => { if (event.key === "Enter") createCompany(); });
+}
+
+function switchRepresentativeMode(mode) {
+  saveRepresentativeName();
+  representativeMode = mode;
+  renderRepresentativeSetup();
 }
 
 function saveRepresentativeName() {
@@ -145,7 +156,7 @@ function saveRepresentativeName() {
 
 function changeRepresentativePart(part, delta) {
   saveRepresentativeName();
-  const counts = { skin: 6, hair: 16, eyes: 10, outfit: 12, accessory: 9 };
+  const counts = { face: 8, skin: 6, hair: 16, eyes: 10, eyebrows: 8, nose: 8, mouth: 10, outfit: 12, accessory: 9 };
   representativeDraft.appearance[part] = (representativeDraft.appearance[part] + delta + counts[part]) % counts[part];
   renderRepresentativeSetup();
 }

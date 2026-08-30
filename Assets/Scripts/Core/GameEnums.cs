@@ -47,4 +47,20 @@ namespace OfficeRaid.Core
         BudgetCut,
         ClientApproval
     }
+
+    public enum DirectiveSkillId
+    {
+        RequirementBrief,
+        ClientPersuasion,
+        ContractClose,
+        ScheduleShift,
+        WorkAllocation,
+        EmergencyCommand,
+        FocusDevelopment,
+        AutomationDeploy,
+        NightShift,
+        BudgetApproval,
+        CostDefense,
+        EmergencyApproval
+    }
 }

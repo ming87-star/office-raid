@@ -46,14 +46,23 @@ namespace OfficeRaid.Runtime
         private Text battleWorkload;
         private Text battleLog;
         private Text battleStatus;
+        private Text battleAuto;
+        private Text directiveGaugeText;
         private Image battleWorkFill;
+        private Image directiveGaugeFill;
+        private RectTransform battleArena;
         private GameObject battleResult;
         private Text battleResultText;
+        private GameObject directiveOverlay;
+        private GameObject directiveEffect;
         private RectTransform salesEffect;
         private RectTransform developerEffect;
         private float battleTimer;
         private float attackAnimation;
+        private float directiveEffectTimer;
         private bool resultClaimed;
+        private readonly Dictionary<string, DirectiveSkillId> directiveSelections = new Dictionary<string, DirectiveSkillId>();
+        private string directiveFocusEmployeeId;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -78,7 +87,19 @@ namespace OfficeRaid.Runtime
         private void Update()
         {
             AnimateAttackEffects();
+            if (directiveEffectTimer > 0f)
+            {
+                directiveEffectTimer -= Time.deltaTime;
+                if (directiveEffectTimer <= 0f && directiveEffect != null)
+                {
+                    Destroy(directiveEffect);
+                    directiveEffect = null;
+                    RefreshBattle();
+                }
+                return;
+            }
             if (currentView != View.Battle || game.CurrentBattle == null || game.CurrentBattle.IsComplete) return;
+            if (game.CurrentBattle.AwaitingDirective) return;
 
             battleTimer += Time.deltaTime;
             if (battleTimer < 0.85f) return;
@@ -609,6 +630,8 @@ namespace OfficeRaid.Runtime
         private void StartBattle()
         {
             game.StartPrototypeBattle();
+            directiveSelections.Clear();
+            directiveFocusEmployeeId = null;
             resultClaimed = false;
             battleTimer = 0f;
             attackAnimation = 0f;
@@ -625,7 +648,7 @@ namespace OfficeRaid.Runtime
             var header = CreatePanel(screenRoot, "BattleHeader", Ink, new Vector2(0f, 0.91f), new Vector2(1f, 1f));
             CreateText(header, "Company", game.Company.Name, 14, FontStyle.Bold, Color.white,
                 new Vector2(0.04f, 0.10f), new Vector2(0.72f, 0.90f), TextAnchor.MiddleLeft);
-            CreateText(header, "Auto", "● 자동", 12, FontStyle.Bold, Mustard,
+            battleAuto = CreateText(header, "Auto", "● 자동", 12, FontStyle.Bold, Mustard,
                 new Vector2(0.72f, 0.10f), new Vector2(0.96f, 0.90f), TextAnchor.MiddleRight);
             battleTitle = CreateText(screenRoot, "ProjectTitle", string.Empty, 18, FontStyle.Bold, Ink,
                 new Vector2(0.04f, 0.855f), new Vector2(0.74f, 0.91f), TextAnchor.MiddleLeft);
@@ -638,6 +661,7 @@ namespace OfficeRaid.Runtime
                 Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
 
             var arena = CreatePanel(screenRoot, "Arena", Hex("D9D3C3"), new Vector2(0.025f, 0.30f), new Vector2(0.975f, 0.805f));
+            battleArena = arena;
             AddOutline(arena.gameObject, Ink, new Vector2(2f, -2f));
             CreateOfficeTiles(arena);
             CreateSprite(arena, "ProjectBoss", PixelArtFactory.ProjectBoss(), new Vector2(0.34f, 0.66f), new Vector2(0.66f, 0.99f));
@@ -645,6 +669,11 @@ namespace OfficeRaid.Runtime
                 new Vector2(0.30f, 0.59f), new Vector2(0.70f, 0.68f), TextAnchor.MiddleCenter);
             battleStatus = CreateText(arena, "BattleStatus", "STATUS · 안정", 11, FontStyle.Bold, Teal,
                 new Vector2(0.025f, 0.88f), new Vector2(0.33f, 0.97f), TextAnchor.MiddleLeft);
+            var directiveBar = CreatePanel(arena, "DirectiveGauge", PaperDark, new Vector2(0.025f, 0.80f), new Vector2(0.33f, 0.865f));
+            AddOutline(directiveBar.gameObject, Ink, new Vector2(1f, -1f));
+            directiveGaugeFill = CreateImage(directiveBar, "Fill", Mustard, Vector2.zero, Vector2.one);
+            directiveGaugeText = CreateText(directiveBar, "Text", string.Empty, 9, FontStyle.Bold, Ink,
+                Vector2.zero, Vector2.one, TextAnchor.MiddleCenter);
             var team = game.GetProjectTeam().Take(3).ToArray();
             var battlePositions = new[]
             {
@@ -694,7 +723,7 @@ namespace OfficeRaid.Runtime
             var battle = game.CurrentBattle;
             if (battle == null || battleTitle == null) return;
             battleTitle.text = "PROJECT 01 · 앱 출시";
-            battleDeadline.text = $"DAY {battle.Turn}/{battle.Project.DeadlineTurns}";
+            battleDeadline.text = $"DAY {battle.Turn}/{battle.EffectiveDeadlineTurns}";
             battleWorkload.text = $"남은 업무 {battle.RemainingWorkload}/{battle.Project.MaxWorkload}";
             var ratio = Mathf.Clamp01(battle.RemainingWorkload / (float)battle.Project.MaxWorkload);
             battleWorkFill.rectTransform.anchorMax = new Vector2(ratio, 1f);
@@ -704,7 +733,23 @@ namespace OfficeRaid.Runtime
                 : $"STATUS · {battle.ActiveStatusName} {battle.ActiveStatusTurns}일";
             battleStatus.color = battle.ActiveStatusName == "합의 완료" ? Teal :
                 string.IsNullOrEmpty(battle.ActiveStatusName) ? Teal : Red;
+            if (directiveGaugeFill != null)
+                directiveGaugeFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(battle.DirectiveGauge / 100f), 1f);
+            if (directiveGaugeText != null)
+                directiveGaugeText.text = battle.AwaitingDirective ? "긴급 지시 · READY" : $"긴급 지시 · {battle.DirectiveGauge}%";
+            if (battleAuto != null)
+            {
+                battleAuto.text = battle.AwaitingDirective ? "● 지시 대기" : "● 자동";
+                battleAuto.color = battle.AwaitingDirective ? Red : Mustard;
+            }
+            if (battle.AwaitingDirective && directiveOverlay == null) ShowDirectiveOverlay();
+            if (!battle.AwaitingDirective && directiveOverlay != null)
+            {
+                Destroy(directiveOverlay);
+                directiveOverlay = null;
+            }
             if (!battle.IsComplete) return;
+            if (directiveEffectTimer > 0f) return;
             if (!resultClaimed)
             {
                 game.ClaimBattleResult(out notice);
@@ -712,6 +757,113 @@ namespace OfficeRaid.Runtime
             }
             battleResultText.text = (battle.IsSuccess ? "PROJECT COMPLETE\n" : "DEADLINE OVER\n") + notice;
             battleResult.SetActive(true);
+        }
+
+        private void ShowDirectiveOverlay()
+        {
+            var battle = game.CurrentBattle;
+            var team = game.GetProjectTeam().Take(3).ToArray();
+            if (battle == null || !battle.AwaitingDirective || battleArena == null || team.Length == 0) return;
+            if (string.IsNullOrEmpty(directiveFocusEmployeeId) || team.All(member => member.Id != directiveFocusEmployeeId))
+                directiveFocusEmployeeId = team[0].Id;
+            if (directiveOverlay != null) Destroy(directiveOverlay);
+
+            var panel = CreatePanel(battleArena, "DirectiveOverlay", Panel.WithAlpha(0.99f), new Vector2(0.015f, 0.015f), new Vector2(0.985f, 0.985f));
+            directiveOverlay = panel.gameObject;
+            AddOutline(panel.gameObject, Ink, new Vector2(3f, -3f));
+            CreateText(panel, "Title", "긴급 지시", 19, FontStyle.Bold, Red,
+                new Vector2(0.04f, 0.86f), new Vector2(0.52f, 0.98f), TextAnchor.MiddleLeft);
+            CreateText(panel, "Count", $"선택 {directiveSelections.Count}/{team.Length}", 11, FontStyle.Bold, Mustard,
+                new Vector2(0.62f, 0.88f), new Vector2(0.96f, 0.98f), TextAnchor.MiddleRight);
+            CreateText(panel, "Reason", battle.DirectiveReason, 9, FontStyle.Bold, Ink,
+                new Vector2(0.04f, 0.79f), new Vector2(0.96f, 0.88f), TextAnchor.MiddleLeft);
+
+            for (var index = 0; index < team.Length; index++)
+            {
+                var employee = team[index];
+                var capturedEmployee = employee;
+                var minX = 0.04f + index * 0.315f;
+                var selected = directiveSelections.ContainsKey(employee.Id);
+                var focused = employee.Id == directiveFocusEmployeeId;
+                CreateButton(panel, (selected ? "✓ " : string.Empty) + employee.Name,
+                    focused ? Teal : selected ? Blue : PaperDark, focused || selected ? Color.white : Ink,
+                    new Vector2(minX, 0.68f), new Vector2(minX + 0.285f, 0.78f),
+                    () => { directiveFocusEmployeeId = capturedEmployee.Id; ShowDirectiveOverlay(); });
+            }
+
+            var focus = team.First(member => member.Id == directiveFocusEmployeeId);
+            var skills = DirectiveSkillCatalog.For(focus.Department);
+            for (var index = 0; index < skills.Count; index++)
+            {
+                var skill = skills[index];
+                var capturedSkill = skill;
+                var top = 0.64f - index * 0.155f;
+                var selected = directiveSelections.TryGetValue(focus.Id, out var selectedSkill) && selectedSkill == skill.Id;
+                CreateButton(panel, skill.Name + "\n" + skill.Description,
+                    selected ? Hex("DDEFE8") : Color.white, Ink,
+                    new Vector2(0.04f, top - 0.135f), new Vector2(0.96f, top),
+                    () => SelectDirectiveSkill(focus, capturedSkill.Id));
+                var visual = CreateText(panel, "Visual" + index, skill.VisualCue, 9, FontStyle.Bold, Teal,
+                    new Vector2(0.70f, top - 0.13f), new Vector2(0.93f, top - 0.02f), TextAnchor.MiddleRight);
+                visual.raycastTarget = false;
+            }
+
+            var execute = CreateButton(panel, "지시 실행", Mustard, Ink,
+                new Vector2(0.58f, 0.035f), new Vector2(0.96f, 0.16f), ExecuteDirectiveSelection);
+            execute.interactable = directiveSelections.Count == team.Length;
+            CreateText(panel, "SelectionSummary", DirectiveSelectionSummary(team), 9, FontStyle.Bold, Ink,
+                new Vector2(0.04f, 0.035f), new Vector2(0.55f, 0.16f), TextAnchor.MiddleLeft);
+        }
+
+        private void SelectDirectiveSkill(Employee employee, DirectiveSkillId skill)
+        {
+            directiveSelections[employee.Id] = skill;
+            var team = game.GetProjectTeam().Take(3).ToArray();
+            var next = team.FirstOrDefault(member => !directiveSelections.ContainsKey(member.Id));
+            if (next != null) directiveFocusEmployeeId = next.Id;
+            ShowDirectiveOverlay();
+        }
+
+        private string DirectiveSelectionSummary(IEnumerable<Employee> team)
+        {
+            return string.Join(" → ", team.Select(employee =>
+                directiveSelections.TryGetValue(employee.Id, out var skillId)
+                    ? DirectiveSkillCatalog.Find(skillId).Name
+                    : "미선택"));
+        }
+
+        private void ExecuteDirectiveSelection()
+        {
+            if (!game.CurrentBattle.ExecuteDirective(directiveSelections, out var message))
+            {
+                notice = message;
+                ShowDirectiveOverlay();
+                return;
+            }
+            if (directiveOverlay != null) Destroy(directiveOverlay);
+            directiveOverlay = null;
+            directiveSelections.Clear();
+            directiveFocusEmployeeId = null;
+            ShowDirectiveEffect(message);
+            RefreshBattle();
+        }
+
+        private void ShowDirectiveEffect(string message)
+        {
+            if (battleArena == null) return;
+            var effect = CreatePanel(battleArena, "DirectiveEffect", Ink.WithAlpha(0.94f), Vector2.zero, Vector2.one);
+            directiveEffect = effect.gameObject;
+            for (var index = 0; index < 5; index++)
+            {
+                var beam = CreateImage(effect, "Beam" + index, index % 2 == 0 ? Mustard.WithAlpha(0.78f) : Teal.WithAlpha(0.78f),
+                    new Vector2(-0.12f, 0.17f + index * 0.16f), new Vector2(1.12f, 0.22f + index * 0.16f));
+                beam.rectTransform.localRotation = Quaternion.Euler(0f, 0f, index % 2 == 0 ? 18f : -18f);
+            }
+            CreateText(effect, "Perfect", "PERFECT WORKFLOW", 25, FontStyle.Bold, Mustard,
+                new Vector2(0.05f, 0.47f), new Vector2(0.95f, 0.66f), TextAnchor.MiddleCenter);
+            CreateText(effect, "Detail", message.Replace("PERFECT WORKFLOW · ", string.Empty), 12, FontStyle.Bold, Color.white,
+                new Vector2(0.08f, 0.35f), new Vector2(0.92f, 0.48f), TextAnchor.MiddleCenter);
+            directiveEffectTimer = 1.2f;
         }
 
         private void AnimateAttackEffects()
@@ -829,9 +981,16 @@ namespace OfficeRaid.Runtime
             battleWorkload = null;
             battleLog = null;
             battleStatus = null;
+            battleAuto = null;
+            directiveGaugeText = null;
             battleWorkFill = null;
+            directiveGaugeFill = null;
+            battleArena = null;
             battleResult = null;
             battleResultText = null;
+            directiveOverlay = null;
+            directiveEffect = null;
+            directiveEffectTimer = 0f;
             salesEffect = null;
             developerEffect = null;
         }

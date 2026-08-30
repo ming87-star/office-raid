@@ -37,6 +37,29 @@ const EQUIPMENT_CATALOG = [
   ["마감 수호 텀블러", "personal"], ["새벽의 커피", "personal"], ["행운의 부적", "personal"]
 ];
 
+const DIRECTIVE_SKILLS = {
+  sales: [
+    { id: "requirement-brief", name: "요구사항 정리", description: "약점 노출 · 연계 피해 증가", visual: "승인 도장" },
+    { id: "client-persuasion", name: "고객 설득", description: "불리한 상태 제거 · 안정 처리", visual: "프레젠테이션" },
+    { id: "contract-close", name: "계약 확정", description: "약점 노출 시 강력한 마무리", visual: "계약서 폭발" }
+  ],
+  pm: [
+    { id: "schedule-shift", name: "일정 재배치", description: "마감 +1턴 · 최대 2회", visual: "거대 캘린더" },
+    { id: "work-allocation", name: "업무 분담", description: "팀 모멘텀과 연계 피해 증가", visual: "업무 연결선" },
+    { id: "emergency-command", name: "전사 긴급 지시", description: "이번 지시 효과 20% 증가", visual: "지휘 방송" }
+  ],
+  dev: [
+    { id: "focus-development", name: "집중 개발", description: "핵심에 강한 즉시 업무 처리", visual: "코드 폭포" },
+    { id: "automation-deploy", name: "자동화 배포", description: "즉시 처리 + 2턴 지속 처리", visual: "자동화 드론" },
+    { id: "night-shift", name: "밤샘 해결", description: "가장 강력한 단일 업무 처리", visual: "오류창 파쇄" }
+  ],
+  finance: [
+    { id: "budget-approval", name: "추가 예산 승인", description: "이번 지시 효과 20% 증가", visual: "황금 결재" },
+    { id: "cost-defense", name: "비용 방어", description: "불리한 상태 제거 · 손실 차단", visual: "예산 장벽" },
+    { id: "emergency-approval", name: "긴급 결재", description: "마감 +1턴과 즉시 업무 처리", visual: "결재 도장" }
+  ]
+};
+
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
 const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서연", "현우", "유진", "수빈", "지훈", "예린", "시우", "채원"];
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
@@ -460,7 +483,9 @@ function startBattle() {
   battle = {
     max: 190, workload: 190, action: 0, deadline: 8, momentum: 0, requirements: false,
     result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
-    eventText: "", nextEventRound: 2, eventCursor: randomInt(4)
+    eventText: "", nextEventRound: 2, eventCursor: randomInt(4), preparedRound: 0,
+    directiveGauge: 50, awaitingDirective: false, directiveReason: "", directiveSelections: {}, directiveFocusId: null,
+    thresholdSeventy: false, thresholdForty: false, deadlineBonus: 0, automationDamage: 0, automationTurns: 0, skillFx: null
   };
   renderBattle();
   battleTimer = window.setTimeout(battleStep, 900);
@@ -472,17 +497,26 @@ function clearBattleTimer() {
 }
 
 function battleStep() {
-  if (currentView !== "battle" || battle.result) return;
+  if (currentView !== "battle" || battle.result || battle.awaitingDirective || battle.skillFx) return;
   const team = currentTeam();
   const member = team[battle.action % team.length];
   const round = Math.floor(battle.action / team.length) + 1;
-  if (battle.action % team.length === 0) {
+  if (battle.action % team.length === 0 && battle.preparedRound !== round) {
+    battle.preparedRound = round;
     advanceBattleStatus();
     battle.eventText = "";
+    if (battle.automationTurns > 0) {
+      battle.workload = Math.max(0, battle.workload - battle.automationDamage);
+      battle.automationTurns -= 1;
+      battle.eventText = `✓ 자동화 배포! 업무량 ${battle.automationDamage} 처리`;
+      checkWorkloadThresholds();
+      if (battle.workload <= 0) return finishBattleSuccess();
+    }
     if (round >= battle.nextEventRound) {
       triggerBattleEvent();
       battle.nextEventRound += 2;
     }
+    if (battle.directiveGauge >= 100) return openDirective();
   }
   const stats = effectiveStats(member);
   let damage = Math.round(stats.work * .72 + stats.collaboration * .25);
@@ -512,21 +546,13 @@ function battleStep() {
   battle.log = `${eventLine}${member.name}의 ${skill}! 업무량 ${damage} 처리`;
   battle.eventText = "";
   battle.action += 1;
+  addDirectiveGauge(10, "팀의 업무 흐름이 모였습니다.");
+  checkWorkloadThresholds();
   animatePacket(member.department, battle.action % 3);
   updateBattleNumbers(round);
 
-  if (battle.workload <= 0) {
-    battle.result = "success";
-    if (!battle.rewardClaimed) {
-      battle.rewardClaimed = true;
-      state.cash += 700;
-      state.reputation += 12;
-      battle.reward = generateEquipmentReward();
-      state.equipment.push(battle.reward);
-    }
-    battleTimer = window.setTimeout(renderBattle, 650);
-    return;
-  }
+  if (battle.workload <= 0) return finishBattleSuccess();
+  if (battle.directiveGauge >= 100) return openDirective();
   if (round >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
     battle.log = "마감을 넘겼습니다. 팀을 재편성해 다시 도전하세요.";
@@ -534,6 +560,137 @@ function battleStep() {
     return;
   }
   battleTimer = window.setTimeout(battleStep, 950);
+}
+
+function finishBattleSuccess(scheduleRender = true) {
+  battle.result = "success";
+  battle.workload = 0;
+  if (!battle.rewardClaimed) {
+    battle.rewardClaimed = true;
+    state.cash += 700;
+    state.reputation += 12;
+    battle.reward = generateEquipmentReward();
+    state.equipment.push(battle.reward);
+  }
+  if (scheduleRender) battleTimer = window.setTimeout(renderBattle, 650);
+}
+
+function addDirectiveGauge(amount, reason) {
+  battle.directiveGauge = Math.min(100, battle.directiveGauge + amount);
+  if (battle.directiveGauge >= 100) battle.directiveReason = reason;
+}
+
+function checkWorkloadThresholds() {
+  const ratio = battle.workload / battle.max;
+  if (!battle.thresholdSeventy && ratio <= .70) {
+    battle.thresholdSeventy = true;
+    addDirectiveGauge(30, "프로젝트의 첫 약점이 노출됐습니다.");
+  }
+  if (!battle.thresholdForty && ratio <= .40) {
+    battle.thresholdForty = true;
+    addDirectiveGauge(30, "프로젝트의 핵심 약점이 노출됐습니다.");
+  }
+}
+
+function openDirective() {
+  clearBattleTimer();
+  const team = currentTeam();
+  battle.awaitingDirective = true;
+  battle.directiveSelections = {};
+  battle.directiveFocusId = team[0]?.id || null;
+  battle.log = `긴급 지시 · ${battle.directiveReason || "스킬을 선택하세요."}`;
+  renderBattle();
+}
+
+function directivePanel(team) {
+  if (!battle.awaitingDirective) return "";
+  const focus = team.find(member => member.id === battle.directiveFocusId) || team[0];
+  const selectedCount = Object.keys(battle.directiveSelections).length;
+  const tabs = team.map(member => {
+    const selected = battle.directiveSelections[member.id];
+    return `<button class="directive-tab ${member.id === focus.id ? "active" : ""} ${selected ? "done" : ""}" data-directive-member="${member.id}">${selected ? "✓ " : ""}${escapeHtml(member.name)}</button>`;
+  }).join("");
+  const options = directiveSkillsFor(focus.department).map(skill => `<button class="skill-option ${battle.directiveSelections[focus.id] === skill.id ? "selected" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}"><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(skill.description)}</span><em>${escapeHtml(skill.visual)}</em></button>`).join("");
+  const summary = team.map(member => {
+    const skill = directiveSkillsFor(member.department).find(option => option.id === battle.directiveSelections[member.id]);
+    return skill ? skill.name : "미선택";
+  }).join(" → ");
+  return `<div class="directive-panel"><div class="directive-head"><div><strong>긴급 지시</strong><small>${escapeHtml(battle.directiveReason)}</small></div><b>${selectedCount}/${team.length}</b></div><div class="directive-tabs">${tabs}</div><div class="skill-options">${options}</div><div class="directive-footer"><small>${escapeHtml(summary)}</small><button id="execute-directive" class="mustard" ${selectedCount < team.length ? "disabled" : ""}>지시 실행</button></div></div>`;
+}
+
+function directiveSkillsFor(department) {
+  if (DIRECTIVE_SKILLS[department]) return DIRECTIVE_SKILLS[department];
+  if (department === "design" || department === "marketing") return DIRECTIVE_SKILLS.sales;
+  if (department === "hr" || department === "legal") return DIRECTIVE_SKILLS.finance;
+  if (department === "qa" || department === "it") return DIRECTIVE_SKILLS.dev;
+  return DIRECTIVE_SKILLS.pm;
+}
+
+function selectDirectiveMember(id) {
+  battle.directiveFocusId = id;
+  renderBattle();
+}
+
+function selectDirectiveSkill(memberId, skillId) {
+  battle.directiveSelections[memberId] = skillId;
+  const next = currentTeam().find(member => !battle.directiveSelections[member.id]);
+  if (next) battle.directiveFocusId = next.id;
+  renderBattle();
+}
+
+function clearNegativeBattleStatus() {
+  if (!battle.status || battle.status.tone === "good") return false;
+  battle.status = null;
+  return true;
+}
+
+function executeDirective() {
+  const team = currentTeam();
+  if (team.some(member => !battle.directiveSelections[member.id])) return;
+  const skills = Object.values(battle.directiveSelections);
+  let total = 0;
+  let cleared = false;
+  const boosted = skills.includes("emergency-command") || skills.includes("budget-approval");
+  team.forEach(member => {
+    const stats = effectiveStats(member);
+    const skill = battle.directiveSelections[member.id];
+    if (skill === "requirement-brief") { battle.requirements = true; total += 8 + Math.floor(stats.collaboration / 2); }
+    else if (skill === "client-persuasion") { cleared = clearNegativeBattleStatus() || cleared; total += 6 + Math.floor(stats.collaboration / 2); }
+    else if (skill === "contract-close") total += 15 + stats.work + (battle.requirements ? 10 : 0);
+    else if (skill === "schedule-shift") { if (battle.deadlineBonus < 2) { battle.deadline += 1; battle.deadlineBonus += 1; } total += 6 + Math.floor(stats.collaboration / 3); }
+    else if (skill === "work-allocation") { battle.momentum += 8; total += 8 + stats.collaboration; }
+    else if (skill === "emergency-command") total += 8 + team.length * 3;
+    else if (skill === "focus-development") total += 16 + stats.work + (battle.requirements ? 8 : 0);
+    else if (skill === "automation-deploy") { battle.automationDamage = 8 + Math.floor(stats.work / 2); battle.automationTurns = 2; total += 8; }
+    else if (skill === "night-shift") total += 24 + stats.work;
+    else if (skill === "budget-approval") total += 6 + Math.floor(member.speed / 2);
+    else if (skill === "cost-defense") { cleared = clearNegativeBattleStatus() || cleared; total += 7 + Math.floor(stats.collaboration / 2); }
+    else if (skill === "emergency-approval") { if (battle.deadlineBonus < 2) { battle.deadline += 1; battle.deadlineBonus += 1; } total += 12 + member.speed; }
+  });
+  let combo = "";
+  if (skills.includes("requirement-brief") && skills.includes("focus-development")) { total += 18; combo = "명확한 목표"; }
+  else if (skills.includes("work-allocation") && skills.includes("automation-deploy")) { total += 14; battle.automationTurns += 1; combo = "완벽한 업무 흐름"; }
+  if (boosted) total = Math.round(total * 1.2);
+  battle.workload = Math.max(0, battle.workload - total);
+  battle.directiveGauge = 0;
+  battle.awaitingDirective = false;
+  battle.directiveReason = "";
+  checkWorkloadThresholds();
+  const detail = `업무량 ${total} 처리${combo ? ` · ${combo} 연계` : ""}${cleared ? " · 상태 제거" : ""}`;
+  battle.log = `PERFECT WORKFLOW! ${detail}`;
+  battle.skillFx = { title: combo || "PERFECT WORKFLOW", detail };
+  if (battle.workload <= 0) finishBattleSuccess(false);
+  else if (Math.floor(battle.action / team.length) >= battle.deadline && battle.action % team.length === 0) {
+    battle.result = "failure";
+    battle.log = "마감 직전 긴급 지시로도 업무를 끝내지 못했습니다.";
+  }
+  renderBattle();
+  window.setTimeout(() => {
+    if (currentView !== "battle") return;
+    battle.skillFx = null;
+    renderBattle();
+    if (!battle.result) battleTimer = window.setTimeout(battleStep, 650);
+  }, 1300);
 }
 
 function advanceBattleStatus() {
@@ -551,16 +708,20 @@ function triggerBattleEvent() {
     battle.requirements = false;
     battle.status = { name: "재작업", turns: 1, efficiency: .9, flat: 0, tone: "bad" };
     battle.eventText = `⚠ 요구사항 변경! 업무량 +${added}`;
+    addDirectiveGauge(20, "요구사항 변경에 대응해야 합니다.");
   } else if (event === 1) {
     battle.status = { name: "긴급회의", turns: 1, efficiency: .75, flat: 0, tone: "bad" };
     battle.eventText = "⚠ 긴급회의! 오늘 업무 효율 -25%";
+    addDirectiveGauge(20, "긴급회의 대응이 필요합니다.");
   } else if (event === 2) {
     battle.status = { name: "예산 압박", turns: 2, efficiency: 1, flat: -3, tone: "bad" };
     battle.eventText = "⚠ 예산 삭감! 2턴 동안 처리량 -3";
+    addDirectiveGauge(20, "예산 삭감에 대응해야 합니다.");
   } else {
     battle.momentum += 4;
     battle.status = { name: "합의 완료", turns: 2, efficiency: 1, flat: 4, tone: "good" };
     battle.eventText = "✓ 고객의 빠른 승인! 2턴 동안 처리량 +4";
+    addDirectiveGauge(12, "고객 승인을 활용할 기회입니다.");
   }
 }
 
@@ -573,15 +734,20 @@ function renderBattle() {
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
   const statusTone = battle.status ? battle.status.tone : "good";
-  app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : "업무 효과는 직원에서 프로젝트를 향해 올라갑니다.")}
+  const directive = directivePanel(team);
+  const skillFx = battle.skillFx ? `<div class="skill-cinematic"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
+  app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원별 스킬을 선택하세요." : "지시 게이지가 가득 차면 전투가 잠시 멈춥니다.")}
     <section class="screen battle-screen">
-      <div class="boss-card panel"><div class="boss-row"><strong>끝없는 수정 요청</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div></div>
-      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div></div>
+      <div class="boss-card panel"><div class="boss-row"><strong>끝없는 수정 요청</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
+      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div>${directive}${skillFx}</div>
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <button class="ink" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>
     </section>`;
   drawBoss(document.querySelector("#boss-canvas"));
   mountPortraits();
+  document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
+  document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
+  document.querySelector("#execute-directive")?.addEventListener("click", executeDirective);
   document.querySelector("#leave-battle").addEventListener("click", () => renderOffice(battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다."));
 }
 
@@ -592,6 +758,8 @@ function updateBattleNumbers(round) {
   const log = document.querySelector("#battle-log");
   const boss = document.querySelector("#boss-canvas");
   const status = document.querySelector("#status-chip");
+  const directiveGauge = document.querySelector("#directive-gauge");
+  const directiveText = document.querySelector("#directive-text");
   if (!bar) return;
   bar.style.width = `${Math.min(100, battle.workload / battle.max * 100)}%`;
   text.textContent = `업무량 ${battle.workload}/${battle.max}`;
@@ -599,6 +767,8 @@ function updateBattleNumbers(round) {
   log.textContent = battle.log;
   status.textContent = battle.status ? `STATUS · ${battle.status.name} ${battle.status.turns}턴` : "STATUS · 안정";
   status.className = `status-chip ${battle.status ? battle.status.tone : "good"}`;
+  directiveGauge.style.width = `${battle.directiveGauge}%`;
+  directiveText.textContent = battle.directiveGauge >= 100 ? "READY" : `${battle.directiveGauge}%`;
   boss.classList.remove("hit");
   void boss.offsetWidth;
   boss.classList.add("hit");

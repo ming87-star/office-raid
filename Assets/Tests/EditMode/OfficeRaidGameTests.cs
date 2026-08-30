@@ -61,10 +61,11 @@ namespace OfficeRaid.Tests
             while (!battle.IsComplete)
             {
                 battle.Step();
+                ResolveDirectiveIfNeeded(battle, game.GetProjectTeam());
             }
 
             Assert.That(battle.IsSuccess, Is.True);
-            Assert.That(battle.Turn, Is.LessThanOrEqualTo(battle.Project.DeadlineTurns));
+            Assert.That(battle.Turn, Is.LessThanOrEqualTo(battle.EffectiveDeadlineTurns));
         }
 
         [Test]
@@ -75,6 +76,7 @@ namespace OfficeRaid.Tests
             var battle = new BattleSimulator(game.CreatePrototypeProject(), game.GetProjectTeam(), 99, 100);
 
             battle.Step();
+            ResolveDirectiveIfNeeded(battle, game.GetProjectTeam());
             battle.Step();
 
             Assert.That(battle.LastEvent, Is.Not.EqualTo(ProjectEventType.None));
@@ -84,13 +86,63 @@ namespace OfficeRaid.Tests
         }
 
         [Test]
+        public void DirectiveGauge_GuaranteesSkillPauseWithoutDamageThreshold()
+        {
+            var game = new OfficeRaidGame(18);
+            game.CreateCompany("테스트 회사");
+            var project = new Project("대형 프로젝트", 2000, 20, 8, 100, 1, new Department[0]);
+            var battle = new BattleSimulator(project, game.GetProjectTeam(), 5, 0);
+
+            battle.Step();
+            Assert.That(battle.AwaitingDirective, Is.False);
+            battle.Step();
+
+            Assert.That(battle.AwaitingDirective, Is.True);
+            Assert.That(battle.DirectiveGauge, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void DirectiveSkills_RequireEveryEmployeeAndResumeBattle()
+        {
+            var game = new OfficeRaidGame(19);
+            game.CreateCompany("테스트 회사");
+            var battle = new BattleSimulator(game.CreatePrototypeProject(), game.GetProjectTeam(), 7, 0);
+            while (!battle.AwaitingDirective && !battle.IsComplete) battle.Step();
+            var before = battle.RemainingWorkload;
+            var team = game.GetProjectTeam();
+            var incomplete = new System.Collections.Generic.Dictionary<string, DirectiveSkillId>
+            {
+                [team[0].Id] = DirectiveSkillId.WorkAllocation
+            };
+            Assert.That(battle.ExecuteDirective(incomplete, out var incompleteMessage), Is.False);
+            Assert.That(incompleteMessage, Does.Contain("모든 참가자"));
+            Assert.That(battle.AwaitingDirective, Is.True);
+
+            var selections = new System.Collections.Generic.Dictionary<string, DirectiveSkillId>
+            {
+                [team[0].Id] = DirectiveSkillId.WorkAllocation,
+                [team[1].Id] = DirectiveSkillId.FocusDevelopment,
+                [team[2].Id] = DirectiveSkillId.RequirementBrief
+            };
+
+            Assert.That(battle.ExecuteDirective(selections, out var message), Is.True);
+            Assert.That(battle.AwaitingDirective, Is.False);
+            Assert.That(battle.RemainingWorkload, Is.LessThan(before));
+            Assert.That(message, Does.Contain("PERFECT WORKFLOW"));
+        }
+
+        [Test]
         public void SuccessfulProject_GrantsCurrencyReputationAndEquipment()
         {
             var game = new OfficeRaidGame(11);
             game.CreateCompany("테스트 회사");
             var startingCash = game.Company.Cash;
             var battle = game.StartPrototypeBattle();
-            while (!battle.IsComplete) battle.Step();
+            while (!battle.IsComplete)
+            {
+                battle.Step();
+                ResolveDirectiveIfNeeded(battle, game.GetProjectTeam());
+            }
 
             var equipment = game.ClaimBattleResult(out var message);
 
@@ -138,6 +190,15 @@ namespace OfficeRaid.Tests
             var invalid = game.Company.Employees.Take(2).Select(employee => employee.Id).Concat(new[] { "퇴사자" });
             Assert.That(game.TrySetProjectTeam(invalid, out var employeeMessage), Is.False);
             Assert.That(employeeMessage, Does.Contain("재직 중"));
+        }
+
+        private static void ResolveDirectiveIfNeeded(BattleSimulator battle, System.Collections.Generic.IReadOnlyList<Employee> team)
+        {
+            if (!battle.AwaitingDirective) return;
+            var selections = team.ToDictionary(
+                employee => employee.Id,
+                employee => DirectiveSkillCatalog.For(employee.Department)[0].Id);
+            Assert.That(battle.ExecuteDirective(selections, out _), Is.True);
         }
 
         [Test]

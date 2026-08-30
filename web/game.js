@@ -65,10 +65,15 @@ const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서�
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
 const COMPANY_PREFIXES = ["반짝", "단단", "빠른", "작은", "푸른", "새벽", "모아", "한걸음"];
 const COMPANY_SUFFIXES = ["랩", "스튜디오", "웍스", "컴퍼니", "프로젝트", "오피스", "팩토리", "파트너스"];
+const POSTING_REFRESH_MAX = 2;
+const PAID_POSTING_REFRESH_COST = 200;
 
 const app = document.querySelector("#app");
 let currentView = "setup";
-let candidates = [];
+let regularCandidates = [];
+let specialCandidates = [];
+let recruitmentMode = "regular";
+let regularPostingInitialized = false;
 let teamDraft = [];
 let battleTimer = null;
 let battle = null;
@@ -85,7 +90,10 @@ const state = {
   capacity: 6,
   equipment: [],
   employees: [],
-  teamIds: []
+  teamIds: [],
+  postingRefreshes: POSTING_REFRESH_MAX,
+  projectClears: 0,
+  specialRecruitmentTickets: 0
 };
 
 function randomInt(max) { return Math.floor(Math.random() * max); }
@@ -298,6 +306,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
         <h2>${escapeHtml(state.companyName)}</h2>
         <p>직원 ${state.employees.length}/${state.capacity}　현금 ${state.cash}　평판 ${state.reputation}</p>
         <p>프로젝트 팀: ${currentTeam().map(member => escapeHtml(member.name)).join(" · ")}</p>
+        <p>프로젝트 성공 ${state.projectClears}회　특별채용 ${state.specialRecruitmentTickets > 0 ? state.specialRecruitmentTickets + "장" : specialRecruitmentProgress()}</p>
       </div>
       <div class="actions">
         <button class="blue" id="interview">면접</button>
@@ -374,17 +383,22 @@ function unequipItem(itemId) {
   renderEquipment("장비를 보관함으로 옮겼습니다.");
 }
 
-function rollRank() {
+function rollRank(mode = "regular") {
   const roll = randomInt(100);
+  if (mode === "special") {
+    if (roll < 55) return 1;
+    if (roll < 85) return 2;
+    if (roll < 98) return 3;
+    return 4;
+  }
   if (roll < 60) return 0;
-  if (roll < 85) return 1;
-  if (roll < 95) return 2;
-  if (roll < 99) return 3;
-  return 4;
+  if (roll < 90) return 1;
+  if (roll < 99) return 2;
+  return 3;
 }
 
-function generateCandidate() {
-  const rank = rollRank();
+function generateCandidate(mode = "regular") {
+  const rank = rollRank(mode);
   const bonus = RANKS[rank].bonus;
   const departments = Object.keys(DEPARTMENTS);
   const candidate = employee(
@@ -396,13 +410,44 @@ function generateCandidate() {
   return candidate;
 }
 
-function openInterview(notice = "능력과 연봉 조건을 비교해 동료를 채용하세요.") {
+function openInterview(notice = "공고에 지원한 후보자의 능력과 조건을 비교하세요.") {
   currentView = "interview";
-  candidates = [generateCandidate(), generateCandidate(), generateCandidate()];
+  if (recruitmentMode === "regular" && !regularPostingInitialized) {
+    regularCandidates = generateCandidates(3, "regular");
+    regularPostingInitialized = true;
+  }
+  if (recruitmentMode === "special" && state.specialRecruitmentTickets > 0 && specialCandidates.length === 0) specialCandidates = generateCandidates(5, "special");
+  renderInterview(notice);
+}
+
+function generateCandidates(count, mode) {
+  return Array.from({ length: count }, () => generateCandidate(mode));
+}
+
+function activeRecruitmentCandidates() {
+  return recruitmentMode === "special" ? specialCandidates : regularCandidates;
+}
+
+function specialRecruitmentProgress() {
+  if (state.projectClears < 5) return `${state.projectClears}/5`;
+  return `${(state.projectClears - 5) % 10}/10`;
+}
+
+function switchRecruitmentMode(mode) {
+  recruitmentMode = mode;
+  if (mode === "regular" && !regularPostingInitialized) {
+    regularCandidates = generateCandidates(3, "regular");
+    regularPostingInitialized = true;
+  }
+  if (mode === "special" && state.specialRecruitmentTickets > 0 && specialCandidates.length === 0) specialCandidates = generateCandidates(5, "special");
+  const notice = mode === "special"
+    ? state.specialRecruitmentTickets > 0 ? "헤드헌팅권 1장으로 후보자 한 명을 채용할 수 있습니다." : "프로젝트를 성공해 특별채용 기회를 확보하세요."
+    : "상시채용 공고에 지원한 후보자입니다.";
   renderInterview(notice);
 }
 
 function renderInterview(notice) {
+  const candidates = activeRecruitmentCandidates();
   const cards = candidates.map(candidate => {
     const department = DEPARTMENTS[candidate.department];
     const rank = RANKS[candidate.rank];
@@ -414,26 +459,48 @@ function renderInterview(notice) {
       <p>계약금 ${candidate.signingCost} · 월급 ${candidate.salary}</p></div>
       <button class="teal" data-hire="${candidate.id}">채용</button>
     </article>`;
-  }).join("");
-  app.innerHTML = `${header("면접실", notice)}<section class="screen">
+  }).join("") || `<div class="empty-recruitment">${recruitmentMode === "special" ? `특별채용은 헤드헌팅권이 필요합니다.<br>현재 진행 ${specialRecruitmentProgress()}` : "현재 공고에 남은 지원자가 없습니다.<br>공고를 갱신하거나 프로젝트를 진행하세요."}</div>`;
+  const refreshCost = state.postingRefreshes === POSTING_REFRESH_MAX ? 0 : PAID_POSTING_REFRESH_COST;
+  const regularFooter = `<button class="mustard" id="refresh-posting" ${state.postingRefreshes <= 0 ? "disabled" : ""}>${state.postingRefreshes > 0 ? `공고 갱신 ${state.postingRefreshes}/${POSTING_REFRESH_MAX}${refreshCost > 0 ? ` · ${refreshCost}` : ""}` : "공고 갱신 완료"}</button>`;
+  const specialFooter = `<button class="mustard" disabled>헤드헌팅권 ${state.specialRecruitmentTickets}장</button>`;
+  app.innerHTML = `${header("면접실", notice)}<section class="screen interview-screen">
+    <div class="recruitment-tabs"><button class="${recruitmentMode === "regular" ? "active" : ""}" data-recruitment-mode="regular">상시채용</button><button class="${recruitmentMode === "special" ? "active" : ""}" data-recruitment-mode="special">특별채용 · ${state.specialRecruitmentTickets > 0 ? state.specialRecruitmentTickets + "장" : specialRecruitmentProgress()}</button></div>
     <div class="card-list">${cards}</div>
-    <div class="footer-actions"><button class="ink" id="back-office">← 사무실</button><button class="mustard" id="reroll">새 후보</button></div>
+    <div class="footer-actions"><button class="ink" id="back-office">← 사무실</button>${recruitmentMode === "regular" ? regularFooter : specialFooter}</div>
   </section>`;
   document.querySelectorAll("[data-candidate]").forEach(canvas => drawPortrait(canvas, candidates.find(candidate => candidate.id === canvas.dataset.candidate)));
   document.querySelectorAll("[data-hire]").forEach(button => button.addEventListener("click", () => hireCandidate(button.dataset.hire)));
+  document.querySelectorAll("[data-recruitment-mode]").forEach(button => button.addEventListener("click", () => switchRecruitmentMode(button.dataset.recruitmentMode)));
   document.querySelector("#back-office").addEventListener("click", () => renderOffice());
-  document.querySelector("#reroll").addEventListener("click", () => openInterview("새로운 지원자 3명이 도착했습니다."));
+  document.querySelector("#refresh-posting")?.addEventListener("click", refreshJobPosting);
 }
 
 function hireCandidate(id) {
+  const candidates = activeRecruitmentCandidates();
   const candidate = candidates.find(item => item.id === id);
+  if (!candidate) return renderInterview("채용할 지원자를 찾을 수 없습니다.");
   if (state.employees.length >= state.capacity) return renderInterview("직원 정원이 가득 찼습니다. 사무실 확장이 필요합니다.");
   if (state.cash < candidate.signingCost) return renderInterview("계약금이 부족합니다. 프로젝트를 먼저 완료하세요.");
   state.cash -= candidate.signingCost;
   state.employees.push(candidate);
-  candidates = candidates.filter(item => item.id !== id);
-  while (candidates.length < 3) candidates.push(generateCandidate());
+  if (recruitmentMode === "special") {
+    state.specialRecruitmentTickets = Math.max(0, state.specialRecruitmentTickets - 1);
+    specialCandidates = state.specialRecruitmentTickets > 0 ? generateCandidates(5, "special") : [];
+  } else {
+    regularCandidates = regularCandidates.filter(item => item.id !== id);
+  }
   renderInterview(`${candidate.name} 님을 채용했습니다.`);
+}
+
+function refreshJobPosting() {
+  if (state.postingRefreshes <= 0) return renderInterview("다음 프로젝트 성공 시 공고 갱신 횟수가 회복됩니다.");
+  const cost = state.postingRefreshes === POSTING_REFRESH_MAX ? 0 : PAID_POSTING_REFRESH_COST;
+  if (state.cash < cost) return renderInterview(`공고 갱신에 필요한 자금 ${cost}이 부족합니다.`);
+  state.cash -= cost;
+  state.postingRefreshes -= 1;
+  regularCandidates = generateCandidates(3, "regular");
+  regularPostingInitialized = true;
+  renderInterview(cost > 0 ? `자금 ${cost}을 사용해 채용 공고를 갱신했습니다.` : "채용 공고를 무료로 갱신했습니다.");
 }
 
 function openTeam() {
@@ -569,6 +636,14 @@ function finishBattleSuccess(scheduleRender = true) {
     battle.rewardClaimed = true;
     state.cash += 700;
     state.reputation += 12;
+    state.projectClears += 1;
+    state.postingRefreshes = POSTING_REFRESH_MAX;
+    const specialUnlocked = state.projectClears === 5 || (state.projectClears > 5 && (state.projectClears - 5) % 10 === 0);
+    if (specialUnlocked) {
+      state.specialRecruitmentTickets += 1;
+      specialCandidates = [];
+    }
+    battle.recruitmentNotice = specialUnlocked ? "헤드헌팅권 1장 획득!" : `공고 갱신 ${POSTING_REFRESH_MAX}/${POSTING_REFRESH_MAX} 회복`;
     battle.reward = generateEquipmentReward();
     state.equipment.push(battle.reward);
   }
@@ -728,7 +803,7 @@ function triggerBattleEvent() {
 function renderBattle() {
   const team = currentTeam();
   const reward = battle.reward;
-  const rewardText = reward ? `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} 획득<br>실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}` : "장비 보상 확인 중";
+  const rewardText = reward ? `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} 획득<br>실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}${battle.recruitmentNotice ? `<br>${escapeHtml(battle.recruitmentNotice)}` : ""}` : "장비 보상 확인 중";
   const result = battle.result === "success" ? `<div class="battle-result"><h2>PROJECT CLEAR</h2><p>현금 +700 · 평판 +12<br>${rewardText}</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);

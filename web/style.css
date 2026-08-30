@@ -440,8 +440,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .boss-row span { color: var(--red); font-size: 11px; font-weight: 900; }
 .boss-card.boss-active { border-color: var(--red); background: #fff2e7; box-shadow: 4px 4px 0 var(--red); }
 .boss-card.boss-active .boss-row small { color: var(--red); }
-.bar { height: 14px; margin-top: 7px; padding: 2px; border: 2px solid var(--ink); background: #d9d9d9; }
+.bar { position: relative; height: 14px; margin-top: 7px; padding: 2px; border: 2px solid var(--ink); background: #d9d9d9; }
 .bar > i { display: block; width: 100%; height: 100%; background: var(--red); transition: width .35s ease; }
+.workload-preview { position: absolute; z-index: 2; top: 2px; bottom: 2px; overflow: hidden; background: repeating-linear-gradient(135deg, var(--mustard) 0 4px, #ffe09a 4px 7px); border-left: 2px solid white; animation: preview-pulse .75s steps(2) infinite; }
 .directive-meter { display: grid; grid-template-columns: 54px 1fr 38px; align-items: center; gap: 6px; margin-top: 6px; font-size: 8px; font-weight: 900; }
 .directive-meter > div { height: 8px; overflow: hidden; border: 1px solid var(--ink); background: var(--paper-dark); }
 .directive-meter > div i { display: block; height: 100%; background: linear-gradient(90deg, var(--mustard), var(--red)); transition: width .25s ease; }
@@ -469,12 +470,19 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .directive-tab.active { background: var(--teal); color: white; }
 .directive-tab.done:not(.active) { background: var(--blue); color: white; }
 .skill-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-.skill-option { position: relative; min-height: 54px; padding: 4px 3px; background: white; color: var(--ink); text-align: center; }
+.skill-option { position: relative; min-height: 64px; padding: 4px 3px; overflow: hidden; background: white; color: var(--ink); text-align: center; }
 .skill-option strong, .skill-option span { display: block; }
 .skill-option strong { font-size: 9px; }
 .skill-option span { margin-top: 3px; font-size: 7px; font-weight: 700; line-height: 1.2; }
 .skill-option em { display: none; }
 .skill-option.selected { background: #e0f1e9; outline: 3px solid var(--teal); outline-offset: -5px; }
+.skill-effect { display: flex !important; align-items: center; justify-content: center; gap: 3px; min-height: 19px; margin: -4px -3px 3px !important; padding: 2px; background: var(--red); color: white; }
+.skill-effect i { display: grid; width: 15px; height: 15px; place-items: center; border: 1px solid currentColor; font-size: 9px; font-style: normal; line-height: 1; }
+.skill-effect b { overflow: hidden; font-size: 8px; white-space: nowrap; text-overflow: ellipsis; }
+.skill-option.effect-team .skill-effect, .skill-option.effect-boost .skill-effect { background: var(--teal); }
+.skill-option.effect-time .skill-effect { background: var(--mustard); color: var(--ink); }
+.skill-option.effect-cleanse .skill-effect { background: var(--blue); }
+.skill-option.effect-mark .skill-effect, .skill-option.effect-lasting .skill-effect { background: #8a668f; }
 .directive-footer { display: grid; grid-template-columns: 1fr 78px; align-items: center; gap: 5px; }
 .directive-footer small { overflow: hidden; color: var(--muted); font-size: 7px; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
 .directive-footer button { min-height: 28px; padding: 0 3px; font-size: 9px; }
@@ -490,6 +498,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .skill-cinematic span { margin-top: 8px; font-size: 11px; font-weight: 900; }
 @keyframes cinematic-pop { 0% { opacity: 0; transform: scale(.7); } 25%, 85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.08); } }
 @keyframes cinematic-paper { from { margin-top: -4px; } to { margin-top: 5px; } }
+@keyframes preview-pulse { 50% { filter: brightness(1.25); } }
 
 #boss-canvas { position: absolute; top: 10px; left: 50%; width: 118px; height: 118px; transform: translateX(-50%); image-rendering: pixelated; }
 .boss-arena #boss-canvas { top: 8px; width: clamp(180px, 44vw, 210px); height: clamp(180px, 44vw, 210px); filter: drop-shadow(7px 9px 0 rgba(23,54,74,.28)); }
@@ -497,10 +506,12 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .status-chip { position: absolute; top: 7px; left: 8px; max-width: 48%; padding: 4px 6px; border: 2px solid var(--ink); color: white; font-size: 9px; font-weight: 900; }
 .status-chip.good { background: var(--teal); }
 .status-chip.bad { background: var(--red); }
+.status-chip.preview-target, .deadline.preview-target { z-index: 7; outline: 4px solid white; box-shadow: 0 0 0 7px var(--mustard); animation: preview-pulse .75s steps(2) infinite; }
 .battle-team { position: absolute; right: 4px; bottom: 7px; left: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .fighter { min-width: 0; text-align: center; }
 .fighter canvas { width: 74px; max-width: 100%; image-rendering: pixelated; }
 .fighter strong { display: block; overflow: hidden; font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+.fighter.preview-target canvas { outline: 3px solid var(--mustard); outline-offset: -2px; background: rgba(22,140,139,.24); filter: drop-shadow(0 0 5px white); animation: preview-pulse .75s steps(2) infinite; }
 .boss-arena .battle-team { right: 28px; bottom: 5px; left: 28px; }
 .boss-arena .fighter canvas { width: 48px; }
 .boss-arena .fighter strong { font-size: 8px; }
@@ -511,6 +522,28 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .hit { animation: hit .22s steps(2) 2; }
 @keyframes hit { 50% { filter: brightness(1.8) saturate(1.7); transform: translateX(-50%) translateY(-3px); } }
 
+.effect-preview { position: absolute; z-index: 6; top: 112px; left: 50%; width: min(84%, 260px); min-height: 46px; padding: 5px 7px; display: flex; align-items: center; gap: 7px; border: 3px solid var(--ink); background: rgba(255,250,240,.96); box-shadow: 4px 4px 0 var(--ink); transform: translateX(-50%); pointer-events: none; }
+.effect-preview > i { display: grid; flex: 0 0 30px; height: 30px; place-items: center; border: 2px solid var(--ink); background: var(--red); color: white; font-size: 17px; font-style: normal; }
+.effect-preview div { min-width: 0; }
+.effect-preview small, .effect-preview strong, .effect-preview span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.effect-preview small { color: var(--muted); font-size: 7px; font-weight: 900; }
+.effect-preview strong { color: var(--red); font-size: 13px; }
+.effect-preview span { font-size: 8px; font-weight: 800; }
+.effect-preview.effect-team > i, .effect-preview.effect-boost > i { background: var(--teal); }
+.effect-preview.effect-team strong, .effect-preview.effect-boost strong { color: var(--teal); }
+.effect-preview.effect-time > i { background: var(--mustard); color: var(--ink); }
+.effect-preview.effect-time strong { color: #a36f00; }
+.effect-preview.effect-cleanse > i { background: var(--blue); }
+.effect-preview.effect-cleanse strong { color: var(--blue); }
+.effect-preview.effect-mark > i, .effect-preview.effect-lasting > i { background: #8a668f; }
+.effect-preview.effect-mark strong, .effect-preview.effect-lasting strong { color: #75517a; }
+.effect-preview.target-team { top: auto; bottom: 69px; }
+.effect-preview.target-status { top: 42px; left: 8px; width: min(82%, 250px); transform: none; }
+.effect-preview.target-deadline { top: 42px; right: 8px; left: auto; width: min(82%, 250px); transform: none; }
+.preview-project #boss-canvas { filter: drop-shadow(0 0 6px white) drop-shadow(0 0 8px var(--red)); animation: preview-boss .75s steps(2) infinite; }
+.boss-arena.preview-project #boss-canvas { filter: drop-shadow(7px 9px 0 rgba(23,54,74,.28)) drop-shadow(0 0 10px var(--red)); }
+@keyframes preview-boss { 50% { filter: brightness(1.35) drop-shadow(0 0 9px var(--mustard)); } }
+
 .battle-log { min-height: 43px; padding: 7px 9px; font-size: 10px; font-weight: 800; line-height: 1.35; }
 .battle-result { text-align: center; }
 .battle-result h2 { margin: 4px 0; color: var(--green); }
@@ -520,9 +553,17 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .directive-panel { padding: 4px; gap: 3px; }
   .directive-head small { display: none; }
   .directive-tab { min-height: 22px; }
-  .skill-option { min-height: 46px; padding: 2px; }
+  .skill-option { min-height: 54px; padding: 2px; }
+  .skill-effect { min-height: 16px; margin: -2px -2px 2px !important; padding: 1px; }
+  .skill-effect i { width: 12px; height: 12px; font-size: 7px; }
+  .skill-effect b { font-size: 7px; }
   .skill-option span { font-size: 6px; }
   .directive-footer button { min-height: 25px; }
+  .effect-preview { top: 79px; min-height: 38px; padding: 3px 5px; }
+  .effect-preview > i { flex-basis: 25px; height: 25px; font-size: 14px; }
+  .effect-preview strong { font-size: 11px; }
+  .effect-preview.target-team { top: auto; bottom: 56px; }
+  .effect-preview.target-status, .effect-preview.target-deadline { top: 36px; }
   .boss-arena #boss-canvas { top: 7px; width: 138px; height: 138px; }
   .boss-arena::before { top: 14px; width: 132px; height: 132px; }
   .boss-arena .fighter canvas { width: 42px; }

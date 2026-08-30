@@ -33,9 +33,9 @@ const EQUIPMENT_RARITIES = [
   { name: "전설", color: "#d6a12c" }
 ];
 const EQUIPMENT_CATALOG = [
-  ["집중형 노트북", "work"], ["기획자의 태블릿", "work"], ["정밀 계산기", "work"],
-  ["협업 헤드셋", "support"], ["정리의 다이어리", "support"], ["황금 명함지갑", "support"],
-  ["마감 수호 텀블러", "personal"], ["새벽의 커피", "personal"], ["행운의 부적", "personal"]
+  ["집중형 노트북", "work", "laptop"], ["기획자의 태블릿", "work", "tablet"], ["정밀 계산기", "work", "calculator"],
+  ["협업 헤드셋", "support", "headset"], ["정리의 다이어리", "support", "planner"], ["황금 명함지갑", "support", "wallet"],
+  ["마감 수호 텀블러", "personal", "tumbler"], ["새벽의 커피", "personal", "coffee"], ["행운의 부적", "personal", "charm"]
 ];
 
 const DIRECTIVE_SKILLS = {
@@ -553,10 +553,30 @@ function scheduleOfficeDialogue(delay = 1400) {
   officeDialogueTimer = window.setTimeout(runOfficeDialogue, delay);
 }
 
+function equipmentArtFor(item) {
+  if (item.art) return item.art;
+  return EQUIPMENT_CATALOG.find(([name]) => name === item.name)?.[2] || item.slot || "personal";
+}
+
+function equipmentIconMarkup(item, className = "") {
+  return `<canvas class="equipment-icon ${className}" width="24" height="24" data-equipment-icon="${escapeHtml(equipmentArtFor(item))}" data-equipment-rarity="${item.rarity}" aria-label="${escapeHtml(item.name)} 아이콘"></canvas>`;
+}
+
+function officeEquipmentMarkup(member) {
+  const equippedCount = Object.values(member.equipment || {}).filter(Boolean).length;
+  const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
+    const item = member.equipment?.[slot];
+    return item
+      ? `<span class="office-gear-slot filled" style="--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}" aria-label="${escapeHtml(info.name)} 장착: ${escapeHtml(item.name)}">${equipmentIconMarkup(item)}</span>`
+      : `<span class="office-gear-slot empty" aria-label="${escapeHtml(info.name)} 비어 있음">${info.icon}</span>`;
+  }).join("");
+  return `<div class="office-gear" aria-label="장비 ${equippedCount}/3 장착">${slots}</div>`;
+}
+
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
   currentView = "office";
   clearBattleTimer();
-  const desks = currentTeam().map(member => `<div class="desk"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
+  const desks = currentTeam().map(member => `<div class="desk"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small>${officeEquipmentMarkup(member)}</div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
       <div class="office-room panel">${desks}</div>
@@ -574,6 +594,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
       </div>
     </section>`;
   mountPortraits();
+  mountEquipmentIcons();
   document.querySelector("#interview").addEventListener("click", () => openInterview());
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
@@ -585,10 +606,10 @@ function generateEquipmentReward(minimumRarity = 0) {
   const roll = randomInt(100);
   const rolledRarity = roll < 60 ? 0 : roll < 85 ? 1 : roll < 96 ? 2 : roll < 99 ? 3 : 4;
   const rarity = Math.max(minimumRarity, rolledRarity);
-  const [name, slot] = EQUIPMENT_CATALOG[randomInt(EQUIPMENT_CATALOG.length)];
+  const [name, slot, art] = EQUIPMENT_CATALOG[randomInt(EQUIPMENT_CATALOG.length)];
   const bonus = 2 + rarity * 2;
   return {
-    id: `equipment-${nextId++}`, name, slot, rarity,
+    id: `equipment-${nextId++}`, name, slot, art, rarity,
     workBonus: slot === "work" ? bonus + 1 : bonus,
     collaborationBonus: slot === "support" ? bonus : Math.max(1, Math.floor(bonus / 2))
   };
@@ -662,9 +683,9 @@ function renderEquipment(notice) {
   const people = state.employees.map(member => `<button class="${member.id === target.id ? "active" : ""}" data-equipment-target="${member.id}">${escapeHtml(member.name)}</button>`).join("");
   const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
     const item = target.equipment[slot];
-    return `<article class="equipment-slot ${item ? "filled" : ""}"><span>${info.icon}</span><div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}</article>`;
+    return `<article class="equipment-slot ${item ? "filled" : ""}"><span style="${item ? `--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}` : ""}">${item ? equipmentIconMarkup(item) : info.icon}</span><div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}</article>`;
   }).join("");
-  const inventory = state.equipment.length ? state.equipment.map(item => `<article class="equipment-item"><span style="background:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_SLOTS[item.slot].icon}</span><div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div><button class="teal" data-equip="${item.id}">장착</button></article>`).join("") : `<div class="empty-inventory">프로젝트를 완료하면 장비를 획득합니다.</div>`;
+  const inventory = state.equipment.length ? state.equipment.map(item => `<article class="equipment-item"><span style="--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}">${equipmentIconMarkup(item)}</span><div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div><button class="teal" data-equip="${item.id}">장착</button></article>`).join("") : `<div class="empty-inventory">프로젝트를 완료하면 장비를 획득합니다.</div>`;
   app.innerHTML = `${header("장비 관리", `${target.name} · 실무 ${stats.work} · 협업 ${stats.collaboration} · ${notice}`)}<section class="screen equipment-screen">
     <div class="equipment-people">${people}</div>
     <div class="equipment-slots panel">${slots}</div>
@@ -672,6 +693,7 @@ function renderEquipment(notice) {
     <div class="equipment-inventory">${inventory}</div>
     <button class="ink" id="back-from-equipment">← 사무실</button>
   </section>`;
+  mountEquipmentIcons();
   document.querySelectorAll("[data-equipment-target]").forEach(button => button.addEventListener("click", () => { equipmentTargetId = button.dataset.equipmentTarget; renderEquipment("장착 대상을 변경했습니다."); }));
   document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
   document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
@@ -1262,12 +1284,19 @@ function triggerBattleEvent() {
   }
 }
 
+function equipmentRewardCard(reward) {
+  const rarity = EQUIPMENT_RARITIES[reward.rarity];
+  const sparkle = reward.rarity >= 2 ? `<span class="reward-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i></span>` : "";
+  return `<article class="reward-item rarity-${reward.rarity} ${reward.rarity >= 2 ? "good-drop" : ""}" style="--rarity-color:${rarity.color}">${sparkle}<span class="reward-icon">${equipmentIconMarkup(reward)}</span><div><small>${rarity.name} · ${EQUIPMENT_SLOTS[reward.slot].name}</small><strong>${escapeHtml(reward.name)}</strong><em>실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}</em></div></article>`;
+}
+
 function renderBattle() {
   const team = currentTeam();
   const preview = activeDirectivePreview(team);
   const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
-  const rewardText = rewards.length ? rewards.map(reward => `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} · 실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}`).join("<br>") + (battle.recruitmentNotice ? `<br>${escapeHtml(battle.recruitmentNotice)}` : "") : "장비 보상 확인 중";
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}<br>${rewardText}</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
+  const bestRewardRarity = rewards.length ? Math.max(...rewards.map(reward => reward.rarity)) : 0;
+  const rewardShowcase = rewards.length ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div></div>` : "";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const fighters = team.map(member => `<div class="fighter ${preview?.target === "team" ? "preview-target" : ""}"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
@@ -1295,6 +1324,7 @@ function renderBattle() {
     </section>`;
   drawBoss(document.querySelector("#boss-canvas"), battle.project.id, battle.phase);
   mountPortraits();
+  mountEquipmentIcons();
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
   document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
   document.querySelector("#execute-directive")?.addEventListener("click", executeDirective);
@@ -1343,6 +1373,52 @@ function mountPortraits() {
       else drawPortrait(canvas, member);
     }
   });
+}
+
+function mountEquipmentIcons() {
+  document.querySelectorAll("[data-equipment-icon]").forEach(canvas => {
+    drawEquipmentIcon(canvas, canvas.dataset.equipmentIcon, Number(canvas.dataset.equipmentRarity || 0));
+  });
+}
+
+function drawEquipmentIcon(canvas, art, rarity = 0) {
+  if (!canvas) return;
+  const context = pixelContext(canvas);
+  const pixel = (color, x, y, width, height) => {
+    context.fillStyle = color;
+    context.fillRect(x, y, width, height);
+  };
+  const outline = COLORS.ink;
+  const accent = EQUIPMENT_RARITIES[Math.max(0, Math.min(EQUIPMENT_RARITIES.length - 1, rarity))].color;
+  const light = rarity >= 3 ? "#ffe6a1" : COLORS.paper;
+  if (rarity >= 2) {
+    pixel(accent, 1, 10, 3, 3); pixel(accent, 20, 5, 2, 2); pixel(accent, 19, 19, 3, 3);
+    pixel(light, 2, 3, 2, 2); pixel(light, 21, 13, 2, 2);
+  }
+  if (art === "laptop") {
+    pixel(outline, 4, 3, 16, 13); pixel("#4a70a8", 6, 5, 12, 9); pixel(light, 8, 7, 8, 2);
+    pixel(outline, 2, 16, 20, 4); pixel(accent, 5, 17, 14, 1); pixel(light, 10, 18, 4, 1);
+  } else if (art === "tablet") {
+    pixel(outline, 5, 2, 14, 20); pixel(accent, 7, 4, 10, 15); pixel(light, 9, 6, 6, 2); pixel(light, 11, 19, 2, 1);
+  } else if (art === "calculator") {
+    pixel(outline, 5, 2, 14, 20); pixel("#6d7c8c", 7, 4, 10, 5); pixel(light, 8, 5, 8, 2);
+    [[7,11],[11,11],[15,11],[7,15],[11,15],[15,15],[7,19],[11,19],[15,19]].forEach(([x,y], index) => pixel(index === 8 ? accent : COLORS.paper, x, y, 2, 2));
+  } else if (art === "headset") {
+    pixel(outline, 5, 3, 14, 3); pixel(outline, 3, 6, 4, 11); pixel(outline, 17, 6, 4, 11);
+    pixel(accent, 5, 6, 2, 8); pixel(accent, 17, 6, 2, 8); pixel(outline, 4, 14, 5, 6); pixel(outline, 15, 14, 5, 6); pixel(light, 6, 16, 3, 2); pixel(light, 15, 16, 3, 2);
+  } else if (art === "planner") {
+    pixel(outline, 4, 2, 16, 20); pixel(accent, 7, 4, 11, 16); pixel(light, 9, 7, 7, 2); pixel(light, 9, 11, 7, 1); pixel(light, 9, 14, 5, 1);
+    pixel(outline, 4, 5, 3, 2); pixel(outline, 4, 10, 3, 2); pixel(outline, 4, 15, 3, 2);
+  } else if (art === "wallet") {
+    pixel(outline, 3, 7, 18, 12); pixel(accent, 5, 9, 14, 8); pixel(outline, 12, 10, 9, 6); pixel(light, 14, 12, 2, 2); pixel("#d6a12c", 5, 5, 12, 3);
+  } else if (art === "tumbler") {
+    pixel(outline, 7, 3, 10, 19); pixel(accent, 9, 6, 6, 13); pixel(light, 10, 8, 2, 8); pixel(outline, 6, 2, 12, 4); pixel("#6d7c8c", 9, 0, 6, 3);
+  } else if (art === "coffee") {
+    pixel(outline, 4, 8, 14, 12); pixel("#fffaf0", 6, 10, 10, 8); pixel("#7c4f36", 7, 10, 8, 3); pixel(outline, 17, 11, 5, 7); pixel("#fffaf0", 18, 13, 2, 3);
+    pixel(accent, 7, 3, 2, 4); pixel(accent, 12, 2, 2, 5); pixel(accent, 16, 4, 2, 3);
+  } else {
+    pixel(outline, 10, 1, 4, 5); pixel(accent, 6, 6, 12, 10); pixel(light, 9, 8, 6, 6); pixel(outline, 10, 16, 4, 6); pixel(accent, 7, 20, 3, 3); pixel(accent, 14, 20, 3, 3);
+  }
 }
 
 function pixelContext(canvas) {

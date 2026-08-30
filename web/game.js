@@ -61,6 +61,18 @@ const DIRECTIVE_SKILLS = {
   ]
 };
 
+const PROJECTS = [
+  { id: "revision", name: "끝없는 수정 요청" },
+  { id: "schedule", name: "엉킨 출시 일정" },
+  { id: "migration", name: "데이터 이전 대작전" },
+  { id: "campaign", name: "긴급 캠페인 런칭" }
+];
+
+const DEFAULT_REPRESENTATIVE_APPEARANCE = {
+  face: 0, skin: 1, hair: 1, eyes: 0, eyebrows: 0,
+  nose: 0, mouth: 3, accessory: 0, outfit: 0
+};
+
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
 const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서연", "현우", "유진", "수빈", "지훈", "예린", "시우", "채원"];
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
@@ -202,7 +214,7 @@ let teamDraft = [];
 let battleTimer = null;
 let battle = null;
 let nextId = 10;
-let representativeDraft = { name: "서대표", appearance: appearance(1103) };
+let representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
 let representativeMode = "basic";
 let openingPage = 0;
 let equipmentTargetId = null;
@@ -767,7 +779,9 @@ function saveTeam() {
 
 function startBattle() {
   currentView = "battle";
+  const project = PROJECTS[state.projectClears % PROJECTS.length];
   battle = {
+    project,
     max: 190, workload: 190, action: 0, deadline: 8, momentum: 0, requirements: false,
     result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
     eventText: "", nextEventRound: 2, eventCursor: randomInt(4), preparedRound: 0,
@@ -1033,13 +1047,13 @@ function renderBattle() {
   const skillFx = battle.skillFx ? `<div class="skill-cinematic"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
   app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요." : "지시 게이지가 가득 차면 전투가 잠시 멈춥니다.")}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
-      <div class="boss-card panel"><div class="boss-row"><strong>끝없는 수정 요청</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
-      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div>${skillFx}</div>
+      <div class="boss-card panel"><div class="boss-row"><strong>${escapeHtml(battle.project.name)}</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
+      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div>${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <button class="ink" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>
     </section>`;
-  drawBoss(document.querySelector("#boss-canvas"));
+  drawBoss(document.querySelector("#boss-canvas"), battle.project.id);
   mountPortraits();
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
   document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
@@ -1244,9 +1258,7 @@ function drawPortrait(canvas, member) {
   if (look.accessory === 8) { rect(context, COLORS.ink, 4, 20, 16, 2); rect(context, "#d6a12c", 5, 21, 14, 2); }
 }
 
-function drawBoss(canvas) {
-  if (!canvas) return;
-  const context = pixelContext(canvas);
+function drawRevisionProject(context) {
   rect(context, COLORS.ink, 4, 7, 56, 48);
   rect(context, "#6d7c8c", 7, 10, 50, 42);
   rect(context, "#9aa6ab", 10, 13, 44, 13);
@@ -1260,6 +1272,76 @@ function drawBoss(canvas) {
   rect(context, "#c84b3c", 42, 22, 17, 17);
   rect(context, COLORS.paper, 49, 25, 2, 8);
   rect(context, COLORS.paper, 49, 31, 6, 2);
+}
+
+function drawScheduleProject(context) {
+  rect(context, COLORS.ink, 6, 7, 52, 50);
+  rect(context, COLORS.paper, 9, 10, 46, 43);
+  rect(context, "#c84b3c", 9, 43, 46, 10);
+  rect(context, COLORS.ink, 15, 51, 4, 10);
+  rect(context, COLORS.ink, 45, 51, 4, 10);
+  rect(context, "#d6a12c", 13, 32, 9, 7);
+  rect(context, "#4a70a8", 27, 32, 9, 7);
+  rect(context, "#168c8b", 41, 32, 9, 7);
+  rect(context, "#9aa6ab", 13, 20, 9, 7);
+  rect(context, "#c84b3c", 27, 20, 9, 7);
+  rect(context, "#9aa6ab", 41, 20, 9, 7);
+  rect(context, COLORS.ink, 24, 5, 28, 28);
+  rect(context, COLORS.paper, 27, 8, 22, 22);
+  rect(context, COLORS.ink, 37, 18, 3, 10);
+  rect(context, COLORS.ink, 37, 17, 9, 3);
+  rect(context, "#c84b3c", 36, 16, 5, 5);
+}
+
+function drawMigrationProject(context) {
+  rect(context, COLORS.ink, 5, 8, 24, 49);
+  rect(context, "#4a70a8", 8, 11, 18, 43);
+  rect(context, COLORS.ink, 11, 43, 12, 3);
+  rect(context, COLORS.ink, 11, 32, 12, 3);
+  rect(context, COLORS.ink, 11, 21, 12, 3);
+  rect(context, "#168c8b", 11, 48, 4, 3);
+  rect(context, "#d6a12c", 18, 48, 4, 3);
+  rect(context, "#168c8b", 11, 37, 4, 3);
+  rect(context, "#c84b3c", 18, 37, 4, 3);
+  rect(context, COLORS.ink, 35, 13, 24, 44);
+  rect(context, "#6d7c8c", 38, 16, 18, 38);
+  rect(context, COLORS.ink, 41, 43, 12, 3);
+  rect(context, COLORS.ink, 41, 32, 12, 3);
+  rect(context, COLORS.ink, 41, 21, 12, 3);
+  rect(context, "#d6a12c", 41, 48, 4, 3);
+  rect(context, "#168c8b", 48, 48, 4, 3);
+  rect(context, "#168c8b", 27, 7, 10, 4);
+  rect(context, "#168c8b", 31, 3, 4, 8);
+  rect(context, "#c84b3c", 27, 2, 5, 5);
+  rect(context, "#d6a12c", 36, 2, 5, 5);
+}
+
+function drawCampaignProject(context) {
+  rect(context, COLORS.ink, 6, 13, 43, 38);
+  rect(context, COLORS.paper, 9, 16, 37, 32);
+  rect(context, "#4a70a8", 12, 37, 31, 7);
+  rect(context, "#d6a12c", 12, 25, 12, 7);
+  rect(context, "#168c8b", 28, 25, 15, 7);
+  rect(context, COLORS.ink, 19, 9, 16, 5);
+  rect(context, COLORS.ink, 25, 5, 4, 7);
+  rect(context, COLORS.ink, 43, 22, 16, 25);
+  rect(context, "#c84b3c", 47, 25, 12, 19);
+  rect(context, COLORS.paper, 50, 29, 6, 11);
+  rect(context, COLORS.ink, 52, 17, 5, 9);
+  rect(context, "#c84b3c", 55, 48, 4, 9);
+  rect(context, "#c84b3c", 59, 45, 3, 5);
+  rect(context, COLORS.ink, 2, 50, 17, 11);
+  rect(context, COLORS.paper, 5, 53, 11, 5);
+  rect(context, "#168c8b", 8, 55, 5, 2);
+}
+
+function drawBoss(canvas, projectId = "revision") {
+  if (!canvas) return;
+  const context = pixelContext(canvas);
+  if (projectId === "schedule") drawScheduleProject(context);
+  else if (projectId === "migration") drawMigrationProject(context);
+  else if (projectId === "campaign") drawCampaignProject(context);
+  else drawRevisionProject(context);
 }
 
 renderOpening();

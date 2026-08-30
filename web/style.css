@@ -442,7 +442,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .boss-card.boss-active .boss-row small { color: var(--red); }
 .bar { position: relative; height: 14px; margin-top: 7px; padding: 2px; border: 2px solid var(--ink); background: #d9d9d9; }
 .bar > i { display: block; width: 100%; height: 100%; background: var(--red); transition: width .35s ease; }
-.workload-preview { position: absolute; z-index: 2; top: 2px; bottom: 2px; overflow: hidden; background: repeating-linear-gradient(135deg, var(--mustard) 0 4px, #ffe09a 4px 7px); border-left: 2px solid white; animation: preview-pulse .75s steps(2) infinite; }
+.workload-preview { position: absolute; z-index: 2; top: 2px; bottom: 2px; overflow: hidden; animation: preview-pulse .75s steps(2) infinite; }
+.workload-preview.guaranteed { background: var(--mustard); border-left: 2px solid white; }
+.workload-preview.possible { background: repeating-linear-gradient(135deg, #ffe09a 0 3px, rgba(255,255,255,.7) 3px 6px); border-left: 1px dashed var(--ink); }
 .directive-meter { display: grid; grid-template-columns: 54px 1fr 38px; align-items: center; gap: 6px; margin-top: 6px; font-size: 8px; font-weight: 900; }
 .directive-meter > div { height: 8px; overflow: hidden; border: 1px solid var(--ink); background: var(--paper-dark); }
 .directive-meter > div i { display: block; height: 100%; background: linear-gradient(90deg, var(--mustard), var(--red)); transition: width .25s ease; }
@@ -470,7 +472,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .directive-tab.active { background: var(--teal); color: white; }
 .directive-tab.done:not(.active) { background: var(--blue); color: white; }
 .skill-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-.skill-option { position: relative; min-height: 64px; padding: 4px 3px; overflow: hidden; background: white; color: var(--ink); text-align: center; }
+.skill-option { position: relative; min-height: 70px; padding: 4px 3px 14px; overflow: hidden; background: white; color: var(--ink); text-align: center; }
 .skill-option strong, .skill-option span { display: block; }
 .skill-option strong { font-size: 9px; }
 .skill-option span { margin-top: 3px; font-size: 7px; font-weight: 700; line-height: 1.2; }
@@ -483,6 +485,10 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .skill-option.effect-time .skill-effect { background: var(--mustard); color: var(--ink); }
 .skill-option.effect-cleanse .skill-effect { background: var(--blue); }
 .skill-option.effect-mark .skill-effect, .skill-option.effect-lasting .skill-effect { background: #8a668f; }
+.skill-cooldown { position: absolute; right: 2px; bottom: 2px; margin: 0 !important; padding: 2px 4px; border: 1px solid var(--ink); background: var(--paper-dark); color: var(--ink); font-size: 6px; font-weight: 900; line-height: 1; }
+.skill-cooldown.waiting { background: var(--red); color: white; }
+.skill-option.cooling:disabled { filter: grayscale(.45); opacity: .76; }
+.skill-option.cooling .skill-effect { background: var(--muted); }
 .directive-footer { display: grid; grid-template-columns: 1fr 78px; align-items: center; gap: 5px; }
 .directive-footer small { overflow: hidden; color: var(--muted); font-size: 7px; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
 .directive-footer button { min-height: 28px; padding: 0 3px; font-size: 9px; }
@@ -553,10 +559,11 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .directive-panel { padding: 4px; gap: 3px; }
   .directive-head small { display: none; }
   .directive-tab { min-height: 22px; }
-  .skill-option { min-height: 54px; padding: 2px; }
+  .skill-option { min-height: 60px; padding: 2px 2px 12px; }
   .skill-effect { min-height: 16px; margin: -2px -2px 2px !important; padding: 1px; }
   .skill-effect i { width: 12px; height: 12px; font-size: 7px; }
   .skill-effect b { font-size: 7px; }
+  .skill-cooldown { font-size: 5px; }
   .skill-option span { font-size: 6px; }
   .directive-footer button { min-height: 25px; }
   .effect-preview { top: 79px; min-height: 38px; padding: 3px 5px; }

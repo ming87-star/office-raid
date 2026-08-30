@@ -454,7 +454,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   overflow: hidden;
   background: #e2d8c4;
 }
-.boss-arena { background: linear-gradient(#d7c7b6, #e2d8c4 48%, #cbb79e); }
+.boss-arena { background: linear-gradient(#bba58e, #e2d8c4 52%, #cbb79e); }
+.boss-arena::before { content: ""; position: absolute; top: 18px; left: 50%; width: 190px; height: 190px; border: 3px solid rgba(200,75,60,.28); box-shadow: 0 0 0 12px rgba(214,161,44,.12), 0 0 0 25px rgba(23,54,74,.06); transform: translateX(-50%) rotate(45deg); }
 
 .directive-active .arena { min-height: 220px; flex-grow: .72; }
 .directive-panel { position: relative; z-index: 10; flex: 0 0 auto; padding: 6px; display: grid; gap: 4px; border: 3px solid var(--ink); background: rgba(255,250,240,.98); box-shadow: 4px 4px 0 var(--ink); }
@@ -491,6 +492,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 @keyframes cinematic-paper { from { margin-top: -4px; } to { margin-top: 5px; } }
 
 #boss-canvas { position: absolute; top: 10px; left: 50%; width: 118px; height: 118px; transform: translateX(-50%); image-rendering: pixelated; }
+.boss-arena #boss-canvas { top: 8px; width: clamp(164px, 42vw, 196px); height: clamp(164px, 42vw, 196px); filter: drop-shadow(7px 9px 0 rgba(23,54,74,.28)); }
 .deadline { position: absolute; top: 7px; right: 8px; padding: 4px 6px; border: 2px solid var(--ink); background: var(--mustard); font-size: 10px; font-weight: 900; }
 .status-chip { position: absolute; top: 7px; left: 8px; max-width: 48%; padding: 4px 6px; border: 2px solid var(--ink); color: white; font-size: 9px; font-weight: 900; }
 .status-chip.good { background: var(--teal); }
@@ -499,8 +501,13 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .fighter { min-width: 0; text-align: center; }
 .fighter canvas { width: 74px; max-width: 100%; image-rendering: pixelated; }
 .fighter strong { display: block; overflow: hidden; font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+.boss-arena .battle-team { right: 28px; bottom: 5px; left: 28px; }
+.boss-arena .fighter canvas { width: 48px; }
+.boss-arena .fighter strong { font-size: 8px; }
+.boss-arena .packet { width: 9px; height: 9px; animation-name: boss-deliver; }
 .packet { position: absolute; z-index: 4; width: 12px; height: 12px; border: 2px solid var(--ink); background: var(--mustard); animation: deliver .72s ease-in forwards; }
 @keyframes deliver { from { bottom: 88px; opacity: 1; } to { bottom: 215px; opacity: .1; transform: scale(.7); } }
+@keyframes boss-deliver { from { bottom: 58px; opacity: 1; } to { bottom: 215px; opacity: .1; transform: scale(.55); } }
 .hit { animation: hit .22s steps(2) 2; }
 @keyframes hit { 50% { filter: brightness(1.8) saturate(1.7); transform: translateX(-50%) translateY(-3px); } }
 
@@ -516,7 +523,14 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .skill-option { min-height: 46px; padding: 2px; }
   .skill-option span { font-size: 6px; }
   .directive-footer button { min-height: 25px; }
+  .boss-arena #boss-canvas { top: 7px; width: 138px; height: 138px; }
+  .boss-arena::before { top: 14px; width: 132px; height: 132px; }
+  .boss-arena .fighter canvas { width: 42px; }
 }
+
+.directive-active .boss-arena #boss-canvas { width: 142px; height: 142px; }
+.directive-active .boss-arena::before { width: 138px; height: 138px; }
+.directive-active .boss-arena .fighter canvas { width: 42px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
@@ -527,6 +541,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .candidate, .team-card { min-height: 104px; }
   .arena { min-height: 230px; }
   #boss-canvas { width: 92px; height: 92px; }
+  .directive-active .boss-arena #boss-canvas { width: 120px; height: 120px; }
+  .directive-active .boss-arena::before { width: 116px; height: 116px; }
+  .directive-active .boss-arena .fighter canvas { width: 38px; }
   .representative > canvas { width: 82px; height: 82px; }
   .custom-row button { min-height: 29px; }
   .opening-card { padding: 10px 12px; }

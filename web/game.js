@@ -20,6 +20,7 @@ const RANKS = [
   { name: "에이스", bonus: 12, color: "#9b6d9d" },
   { name: "업계 전설", bonus: 18, color: "#d6a12c" }
 ];
+const POSITIONS = ["사원", "대리", "과장", "부장", "임원"];
 
 const EQUIPMENT_SLOTS = {
   work: { name: "업무 도구", icon: "▣" },
@@ -65,7 +66,7 @@ const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서�
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
 const OFFICE_DIALOGUES = [
   {
-    id: "schedule", opener: "오늘 일정, 조금 당길 수 있을까요?",
+    id: "schedule", opener: "오늘 일정을 조금 당길 수 있을까요?", formalOpener: "오늘 일정을 조금 당겨도 될까요?", representativeOpener: "오늘 일정은 조금 당겨서 진행하죠.", representativeResponse: "품질을 해치지 않는 선에서 일정을 조정하세요.",
     responses: {
       perfectionist: "검수 시간까지 확보된다면 가능합니다.",
       mood: "좋죠! 대신 끝나고 커피 한 잔 부탁해요.",
@@ -76,7 +77,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "lunch", opener: "점심 메뉴 정하셨어요?",
+    id: "lunch", opener: "점심 메뉴 정하셨어요?", formalOpener: "점심 메뉴는 정하셨나요?", representativeOpener: "점심 메뉴는 정해졌나요?", representativeResponse: "업무를 정리하고 편한 메뉴로 다녀오세요.",
     responses: {
       perfectionist: "어제 목록부터 겹치지 않게 볼까요?",
       mood: "오늘은 다수결 말고 사다리 타기 어때요?",
@@ -87,7 +88,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "meeting", opener: "회의 자료, 먼저 공유할까요?",
+    id: "meeting", opener: "회의 자료, 먼저 공유할까요?", formalOpener: "회의 자료를 먼저 공유드릴까요?", representativeOpener: "회의 자료는 먼저 공유해주세요.", representativeResponse: "확인해보고 필요한 부분을 정리하겠습니다.",
     responses: {
       perfectionist: "마지막 숫자만 다시 확인하고 올려주세요.",
       mood: "네, 제가 오타 탐정 한번 해볼게요.",
@@ -98,7 +99,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "file", opener: "최종 파일이 어느 거였죠?",
+    id: "file", opener: "최종 파일이 어느 거였죠?", formalOpener: "최종 파일을 다시 확인해도 될까요?", representativeOpener: "최종 파일 위치를 공유해주세요.", representativeResponse: "공유 폴더 기준으로 하나만 남겨주세요.",
     responses: {
       perfectionist: "최종_진짜최종 말고 날짜 버전입니다.",
       mood: "이번엔 이름에 진짜최종 금지입니다.",
@@ -109,7 +110,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "coffee", opener: "커피 내려오는데 같이 가실래요?",
+    id: "coffee", opener: "커피 내려오는데 같이 가실래요?", formalOpener: "커피 내려오는데 함께 가시겠어요?", representativeOpener: "잠깐 커피 마시고 다시 시작하죠.", representativeResponse: "좋아요. 잠깐 쉬었다가 진행하세요.",
     responses: {
       perfectionist: "이 문단만 마무리하고 내려갈게요.",
       mood: "좋아요. 오늘은 제가 살게요!",
@@ -120,7 +121,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "handoff", opener: "이 업무, 제가 이어받을까요?",
+    id: "handoff", opener: "이 업무, 제가 이어받을까요?", formalOpener: "이 업무를 제가 이어받을까요?", representativeOpener: "막힌 업무가 있으면 바로 공유해주세요.", representativeResponse: "현재 상태를 정리해서 넘겨주세요.",
     responses: {
       perfectionist: "체크리스트까지 정리해서 넘겨드릴게요.",
       mood: "감사합니다. 다음엔 제가 도와드릴게요.",
@@ -131,7 +132,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "temperature", opener: "사무실이 조금 춥지 않아요?",
+    id: "temperature", opener: "사무실이 조금 춥지 않아요?", formalOpener: "사무실 온도가 조금 낮지 않으세요?", representativeOpener: "사무실 온도는 괜찮은가요?", representativeResponse: "불편하지 않게 한 도 조정하세요.",
     responses: {
       perfectionist: "온도는 그대로 두고 담요를 쓰겠습니다.",
       mood: "제 자리만 겨울인 줄 알았어요.",
@@ -142,7 +143,7 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
-    id: "wrap-up", opener: "오늘은 제시간에 갈 수 있겠죠?",
+    id: "wrap-up", opener: "오늘은 제시간에 갈 수 있겠죠?", formalOpener: "오늘은 정시에 마무리할 수 있을까요?", representativeOpener: "오늘은 정시에 마무리합시다.", representativeResponse: "남은 업무를 정리하고 무리하지 말고 마칩시다.",
     responses: {
       perfectionist: "마지막 검수만 끝나면 가능합니다.",
       mood: "그 말을 하면 꼭 일이 생기던데요.",
@@ -153,6 +154,39 @@ const OFFICE_DIALOGUES = [
     }
   }
 ];
+const FORMAL_OFFICE_RESPONSES = {
+  "좋죠! 대신 끝나고 커피 한 잔 부탁해요.": "마무리까지 힘내보겠습니다.",
+  "어제 목록부터 겹치지 않게 볼까요?": "어제 메뉴와 겹치지 않게 정리해보겠습니다.",
+  "오늘은 다수결 말고 사다리 타기 어때요?": "사다리 타기로 정해보겠습니다.",
+  "가까운 곳이요. 오후 회의가 있습니다.": "오후 회의가 있으니 가까운 곳으로 정하겠습니다.",
+  "새로 생긴 가게를 한번 가보고 싶어요.": "새로 생긴 가게도 괜찮을 것 같습니다.",
+  "마지막 숫자만 다시 확인하고 올려주세요.": "마지막 숫자를 확인하고 올리겠습니다.",
+  "네, 제가 오타 탐정 한번 해볼게요.": "제가 오타까지 확인해보겠습니다.",
+  "올려주시면 바로 보겠습니다.": "자료를 올리고 바로 확인하겠습니다.",
+  "이번엔 이름에 진짜최종 금지입니다.": "이번에는 날짜 기준으로 정리해두겠습니다.",
+  "색깔 태그로 구분해두면 덜 헷갈리겠어요.": "색깔 태그로 구분해두겠습니다.",
+  "이 문단만 마무리하고 내려갈게요.": "이 문단만 마무리하고 내려가겠습니다.",
+  "좋아요. 오늘은 제가 살게요!": "제가 준비하겠습니다.",
+  "십 분 뒤 회의라 테이크아웃으로 하죠.": "십 분 뒤 회의가 있으니 테이크아웃으로 하겠습니다.",
+  "감사합니다. 다음엔 제가 도와드릴게요.": "막히는 부분은 바로 공유하겠습니다.",
+  "체크리스트까지 정리해서 넘겨드릴게요.": "체크리스트까지 정리해서 넘겨드리겠습니다.",
+  "막힌 부분만 부탁드리겠습니다.": "막힌 부분을 정리해 공유드리겠습니다.",
+  "제가 하던 방식도 같이 설명드릴게요.": "제가 하던 방식도 함께 설명드리겠습니다.",
+  "제 자리만 겨울인 줄 알았어요.": "제 자리가 조금 추웠습니다.",
+  "한 도만 올려보고 다시 확인하죠.": "한 도 올린 뒤 다시 확인하겠습니다.",
+  "그 말을 하면 꼭 일이 생기던데요.": "남은 업무부터 정리하겠습니다.",
+  "제가 맡은 부분부터 오늘 끝내보죠.": "제가 맡은 부분부터 오늘 마무리하겠습니다.",
+  "제일 빨리 나오는 메뉴로 가죠.": "제일 빨리 나오는 메뉴로 정하겠습니다.",
+  "핵심 성과가 더 잘 보이게 바꿔보죠.": "핵심 성과가 더 잘 보이게 바꾸겠습니다.",
+  "첫 장에 비교 그림을 넣어보면 어때요?": "첫 장에 비교 그림을 넣어보겠습니다.",
+  "좋습니다. 돌아와서 집중해서 끝내죠.": "돌아와서 집중해서 마무리하겠습니다.",
+  "커피 마시면서 새 아이디어도 이야기해요.": "새 아이디어도 정리해서 말씀드리겠습니다.",
+  "좋아요. 같이 오늘 안에 끝내죠.": "오늘 안에 마무리하겠습니다.",
+  "창가 자리랑 한번 바꿔볼까요?": "창가 자리와 바꿔보겠습니다.",
+  "남은 것까지 빨리 끝내고 갑시다.": "남은 것까지 마무리하고 가겠습니다.",
+  "회의만 짧으면 가능할 것 같아요.": "회의가 길어지지 않으면 가능할 것 같습니다.",
+  "반복 작업부터 묶으면 빨라질 것 같아요.": "반복 작업부터 묶으면 빨라질 것 같습니다."
+};
 const COMPANY_PREFIXES = ["반짝", "단단", "빠른", "작은", "푸른", "새벽", "모아", "한걸음"];
 const COMPANY_SUFFIXES = ["랩", "스튜디오", "웍스", "컴퍼니", "프로젝트", "오피스", "팩토리", "파트너스"];
 const POSTING_REFRESH_MAX = 2;
@@ -213,7 +247,7 @@ function employee(name, department, trait, work, collaboration, speed, look, ran
     name, department, trait, work, collaboration, speed,
     focus: Math.round((work + collaboration) / 2),
     salary: 120 + rank * 72,
-    rank, equipment: { work: null, support: null, personal: null },
+    rank, isRepresentative: false, equipment: { work: null, support: null, personal: null },
     appearance: appearance(look)
   };
 }
@@ -375,6 +409,7 @@ function changeRepresentativePart(part, delta) {
 function createCompany() {
   saveRepresentativeName();
   const representative = employee(representativeDraft.name, "pm", "침착한 조율자", 17, 18, 14, 1103);
+  representative.isRepresentative = true;
   representative.appearance = { ...representativeDraft.appearance };
   state.employees = [
     representative,
@@ -397,6 +432,33 @@ function officePersonality(member) {
   return "creative";
 }
 
+function employeePosition(member) {
+  if (member?.isRepresentative) return "대표";
+  return POSITIONS[Math.max(0, Math.min(POSITIONS.length - 1, member?.rank || 0))];
+}
+
+function officeAuthority(member) {
+  return member?.isRepresentative ? 100 : member?.rank || 0;
+}
+
+function officeOpener(speaker, listener, dialogue) {
+  if (speaker.isRepresentative) return dialogue.representativeOpener;
+  const listenerTitle = listener.isRepresentative
+    ? "대표님"
+    : officeAuthority(listener) > officeAuthority(speaker) ? `${employeePosition(listener)}님` : "";
+  return listenerTitle ? `${listenerTitle}, ${dialogue.formalOpener}` : dialogue.opener;
+}
+
+function officeResponse(listener, speaker, dialogue) {
+  if (listener.isRepresentative) return dialogue.representativeResponse;
+  let response = dialogue.responses[officePersonality(listener)] || dialogue.responses.realist;
+  if (officeAuthority(speaker) > officeAuthority(listener)) {
+    response = FORMAL_OFFICE_RESPONSES[response] || response;
+    if (!/^(네|알겠습니다|좋습니다)/.test(response)) response = `네. ${response}`;
+  }
+  return response;
+}
+
 function clearOfficeDialogue() {
   if (officeDialogueTimer) window.clearTimeout(officeDialogueTimer);
   officeDialogueTimer = null;
@@ -410,7 +472,7 @@ function showOfficeSpeech(member, line) {
   bubble.replaceChildren();
   const speaker = document.createElement("b");
   const message = document.createElement("span");
-  speaker.textContent = member.name;
+  speaker.textContent = `${member.name} · ${employeePosition(member)}`;
   message.textContent = line;
   bubble.append(speaker, message);
   bubble.classList.add("show");
@@ -434,10 +496,10 @@ function runOfficeDialogue() {
   const speaker = members[speakerIndex];
   const listener = members[listenerIndex];
   const dialogue = pickOfficeDialogue();
-  if (!showOfficeSpeech(speaker, dialogue.opener)) return;
+  if (!showOfficeSpeech(speaker, officeOpener(speaker, listener, dialogue))) return;
   officeDialogueTimer = window.setTimeout(() => {
     if (currentView !== "office") return;
-    const response = dialogue.responses[officePersonality(listener)] || dialogue.responses.realist;
+    const response = officeResponse(listener, speaker, dialogue);
     if (!showOfficeSpeech(listener, response)) return;
     officeDialogueTimer = window.setTimeout(() => {
       if (currentView !== "office") return;
@@ -455,7 +517,7 @@ function scheduleOfficeDialogue(delay = 1400) {
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
   currentView = "office";
   clearBattleTimer();
-  const desks = currentTeam().map(member => `<div class="desk"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short}</small></div>`).join("");
+  const desks = currentTeam().map(member => `<div class="desk"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
       <div class="office-room panel">${desks}</div>
@@ -612,7 +674,7 @@ function renderInterview(notice) {
     return `<article class="candidate">
       <canvas width="24" height="24" data-candidate="${candidate.id}"></canvas>
       <div><h3>${escapeHtml(candidate.name)} <span class="rank" style="background:${rank.color}">${rank.name}</span></h3>
-      <p class="dept">${department.name} · ${escapeHtml(candidate.trait)}</p>
+      <p class="dept">${department.name} · ${employeePosition(candidate)} · ${escapeHtml(candidate.trait)}</p>
       <p>실무 ${candidate.work}　협업 ${candidate.collaboration}　속도 ${candidate.speed}</p>
       <p>계약금 ${candidate.signingCost} · 월급 ${candidate.salary}</p></div>
       <button class="teal" data-hire="${candidate.id}">채용</button>
@@ -674,7 +736,7 @@ function renderTeam(notice) {
     return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
       <div><h3>${selectedIndex >= 0 ? `<span class="order">${selectedIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
-      <p class="dept">${DEPARTMENTS[member.department].name} · ${escapeHtml(member.trait)}</p>
+      <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
       <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${member.speed}</p></div>
       <button class="${selectedIndex >= 0 ? "red" : "teal"}" data-toggle="${member.id}">${selectedIndex >= 0 ? "제외" : "선택"}</button>
     </article>`;

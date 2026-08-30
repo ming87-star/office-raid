@@ -1006,12 +1006,72 @@ function directivePanel(team) {
     const selected = battle.directiveSelections[member.id];
     return `<button class="directive-tab ${member.id === focus.id ? "active" : ""} ${selected ? "done" : ""}" data-directive-member="${member.id}">${selected ? "✓ " : ""}${escapeHtml(member.name)}</button>`;
   }).join("");
-  const options = directiveSkillsFor(focus.department).map(skill => `<button class="skill-option ${battle.directiveSelections[focus.id] === skill.id ? "selected" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}"><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(skill.description)}</span><em>${escapeHtml(skill.visual)}</em></button>`).join("");
+  const options = directiveSkillsFor(focus.department).map(skill => {
+    const preview = directiveSkillPreview(focus, skill.id);
+    const selected = battle.directiveSelections[focus.id] === skill.id;
+    return `<button class="skill-option effect-${preview.tone} ${selected ? "selected" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}" aria-pressed="${selected}"><span class="skill-effect"><i>${preview.icon}</i><b>${escapeHtml(preview.primary)}</b></span><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(preview.secondary)}</span><em>${escapeHtml(skill.visual)}</em></button>`;
+  }).join("");
   const summary = team.map(member => {
     const skill = directiveSkillsFor(member.department).find(option => option.id === battle.directiveSelections[member.id]);
     return skill ? skill.name : "미선택";
   }).join(" → ");
-  return `<div class="directive-panel"><div class="directive-head"><div><strong>긴급 지시</strong><small>${escapeHtml(battle.directiveReason)}</small></div><b>${selectedCount}/${team.length}</b></div><div class="directive-tabs">${tabs}</div><div class="skill-options">${options}</div><div class="directive-footer"><small>${escapeHtml(summary)}</small><button id="execute-directive" class="mustard" ${selectedCount < team.length ? "disabled" : ""}>지시 실행</button></div></div>`;
+  const actionText = selectedCount < team.length ? `${team.length - selectedCount}명 선택` : "지시 실행";
+  return `<div class="directive-panel"><div class="directive-head"><div><strong>긴급 지시</strong><small>스킬을 누르면 전투 화면에 효과가 표시됩니다.</small></div><b>${selectedCount}/${team.length}</b></div><div class="directive-tabs">${tabs}</div><div class="skill-options">${options}</div><div class="directive-footer"><small>${escapeHtml(summary)}</small><button id="execute-directive" class="mustard" ${selectedCount < team.length ? "disabled" : ""}>${actionText}</button></div></div>`;
+}
+
+function directiveSkillPreview(member, skillId) {
+  const stats = effectiveStats(member);
+  const badStatus = battle.status && battle.status.tone === "bad";
+  if (skillId === "requirement-brief") return { icon: "◎", tone: "mark", target: "project", primary: `업무 -${8 + Math.floor(stats.collaboration / 2)}`, secondary: "약점 노출 · 연계 강화", damage: 8 + Math.floor(stats.collaboration / 2) };
+  if (skillId === "client-persuasion") return { icon: "◇", tone: "cleanse", target: badStatus ? "status" : "project", primary: badStatus ? "상태 제거" : `업무 -${6 + Math.floor(stats.collaboration / 2)}`, secondary: `불리한 효과 해제 · 업무 -${6 + Math.floor(stats.collaboration / 2)}`, damage: 6 + Math.floor(stats.collaboration / 2) };
+  if (skillId === "contract-close") {
+    const damage = 15 + stats.work + (battle.requirements ? 10 : 0);
+    return { icon: "✦", tone: "damage", target: "project", primary: `업무 -${damage}`, secondary: battle.requirements ? "약점 보너스 +10 적용" : "약점 노출 시 +10", damage };
+  }
+  if (skillId === "schedule-shift") {
+    const damage = 6 + Math.floor(stats.collaboration / 3);
+    const available = battle.deadlineBonus < 2;
+    return { icon: "＋", tone: "time", target: "deadline", primary: available ? "마감 +1턴" : "연장 한도", secondary: `업무 -${damage} · 최대 2회`, damage, deadline: available ? 1 : 0 };
+  }
+  if (skillId === "work-allocation") return { icon: "↗", tone: "team", target: "team", primary: "전원 강화", secondary: `모멘텀 +8 · 업무 -${8 + stats.collaboration}`, damage: 8 + stats.collaboration };
+  if (skillId === "emergency-command") return { icon: "×", tone: "boost", target: "team", primary: "전체 ×1.2", secondary: `모든 지시 강화 · 업무 -${8 + currentTeam().length * 3}`, damage: 8 + currentTeam().length * 3 };
+  if (skillId === "focus-development") {
+    const damage = 16 + stats.work + (battle.requirements ? 8 : 0);
+    return { icon: "◆", tone: "damage", target: "project", primary: `업무 -${damage}`, secondary: battle.requirements ? "약점 보너스 +8 적용" : "약점 노출 시 +8", damage };
+  }
+  if (skillId === "automation-deploy") {
+    const repeat = 8 + Math.floor(stats.work / 2);
+    return { icon: "↻", tone: "lasting", target: "project", primary: `즉시 -8`, secondary: `이후 2턴 × -${repeat}`, damage: 8, repeat };
+  }
+  if (skillId === "night-shift") {
+    const damage = 24 + stats.work;
+    return { icon: "⚡", tone: "damage", target: "project", primary: `업무 -${damage}`, secondary: "강력한 단일 처리", damage };
+  }
+  if (skillId === "budget-approval") {
+    const damage = 6 + Math.floor(member.speed / 2);
+    return { icon: "×", tone: "boost", target: "team", primary: "전체 ×1.2", secondary: `모든 지시 강화 · 업무 -${damage}`, damage };
+  }
+  if (skillId === "cost-defense") return { icon: "▣", tone: "cleanse", target: badStatus ? "status" : "project", primary: badStatus ? "상태 제거" : `업무 -${7 + Math.floor(stats.collaboration / 2)}`, secondary: `불리한 효과 해제 · 업무 -${7 + Math.floor(stats.collaboration / 2)}`, damage: 7 + Math.floor(stats.collaboration / 2) };
+  if (skillId === "emergency-approval") {
+    const damage = 12 + member.speed;
+    const available = battle.deadlineBonus < 2;
+    return { icon: "＋", tone: "time", target: "deadline", primary: available ? "마감 +1턴" : `업무 -${damage}`, secondary: `즉시 업무 -${damage}${available ? " · 마감 연장" : " · 연장 한도"}`, damage, deadline: available ? 1 : 0 };
+  }
+  return { icon: "◆", tone: "damage", target: "project", primary: "효과 확인", secondary: "업무를 처리합니다.", damage: 0 };
+}
+
+function activeDirectivePreview(team) {
+  if (!battle.awaitingDirective) return null;
+  const focus = team.find(member => member.id === battle.directiveFocusId) || team[0];
+  const skillId = battle.directiveSelections[focus.id];
+  if (!skillId) return null;
+  const skill = directiveSkillsFor(focus.department).find(option => option.id === skillId);
+  return { member: focus, skill, ...directiveSkillPreview(focus, skillId) };
+}
+
+function directivePreviewOverlay(preview) {
+  if (!preview) return "";
+  return `<div class="effect-preview effect-${preview.tone} target-${preview.target}"><i>${preview.icon}</i><div><small>${escapeHtml(preview.member.name)} · ${escapeHtml(preview.skill.name)}</small><strong>${escapeHtml(preview.primary)}</strong><span>${escapeHtml(preview.secondary)}</span></div></div>`;
 }
 
 function directiveSkillsFor(department) {
@@ -1029,8 +1089,7 @@ function selectDirectiveMember(id) {
 
 function selectDirectiveSkill(memberId, skillId) {
   battle.directiveSelections[memberId] = skillId;
-  const next = currentTeam().find(member => !battle.directiveSelections[member.id]);
-  if (next) battle.directiveFocusId = next.id;
+  battle.directiveFocusId = memberId;
   renderBattle();
 }
 
@@ -1123,20 +1182,27 @@ function triggerBattleEvent() {
 
 function renderBattle() {
   const team = currentTeam();
+  const preview = activeDirectivePreview(team);
   const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
   const rewardText = rewards.length ? rewards.map(reward => `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} · 실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}`).join("<br>") + (battle.recruitmentNotice ? `<br>${escapeHtml(battle.recruitmentNotice)}` : "") : "장비 보상 확인 중";
   const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}<br>${rewardText}</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
-  const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
+  const fighters = team.map(member => `<div class="fighter ${preview?.target === "team" ? "preview-target" : ""}"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
   const statusTone = battle.status ? battle.status.tone : "good";
   const directive = directivePanel(team);
   const skillFx = battle.skillFx ? `<div class="skill-cinematic"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
   const phaseText = battle.project.boss ? `PHASE ${battle.phase}/3 · ${battle.project.phaseNames[battle.phase - 1]}` : battle.project.difficulty;
+  const workloadPercent = Math.min(100, battle.workload / battle.max * 100);
+  const previewDamage = preview?.damage || 0;
+  const previewPercent = Math.min(workloadPercent, previewDamage / battle.max * 100);
+  const previewAfterPercent = Math.max(0, workloadPercent - previewPercent);
+  const workloadPreview = previewDamage ? `<span class="workload-preview" style="left:${previewAfterPercent}%;width:${previewPercent}%" aria-label="예상 업무 처리량 ${previewDamage}"></span>` : "";
+  const arenaPreview = directivePreviewOverlay(preview);
   app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요." : "지시 게이지가 가득 차면 전투가 잠시 멈춥니다.")}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
-      <div class="boss-card panel ${battle.project.boss ? "boss-active" : ""}"><div class="boss-row"><div><strong>${escapeHtml(battle.project.name)}</strong><small>${escapeHtml(phaseText)}</small></div><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
-      <div class="arena panel ${battle.project.boss ? "boss-arena" : ""}" id="arena"><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div>${skillFx}</div>
+      <div class="boss-card panel ${battle.project.boss ? "boss-active" : ""}"><div class="boss-row"><div><strong>${escapeHtml(battle.project.name)}</strong><small>${escapeHtml(phaseText)}</small></div><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${workloadPercent}%"></i>${workloadPreview}</div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
+      <div class="arena panel ${battle.project.boss ? "boss-arena" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="status-chip ${statusTone} ${preview?.target === "status" ? "preview-target" : ""}" id="status-chip">STATUS · ${statusName}</div><div class="deadline ${preview?.target === "deadline" ? "preview-target" : ""}" id="deadline">마감 ${round}/${battle.deadline}${preview?.deadline ? " → " + (battle.deadline + preview.deadline) : ""}</div><div class="battle-team">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <button class="ink" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>

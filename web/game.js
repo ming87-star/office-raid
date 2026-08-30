@@ -62,10 +62,19 @@ const DIRECTIVE_SKILLS = {
 };
 
 const PROJECTS = [
-  { id: "revision", name: "끝없는 수정 요청" },
-  { id: "schedule", name: "엉킨 출시 일정" },
-  { id: "migration", name: "데이터 이전 대작전" },
-  { id: "campaign", name: "긴급 캠페인 런칭" }
+  { id: "revision", name: "끝없는 수정 요청", difficulty: "초급", workload: 210, deadline: 8, cash: 700, reputation: 12, eventEvery: 2, summary: "쌓여가는 수정표와 최종 파일을 정리합니다." },
+  { id: "schedule", name: "엉킨 출시 일정", difficulty: "초급+", workload: 240, deadline: 8, cash: 780, reputation: 14, eventEvery: 2, summary: "겹쳐버린 일정과 마감 시계를 다시 맞춥니다." },
+  { id: "migration", name: "데이터 이전 대작전", difficulty: "중급", workload: 275, deadline: 9, cash: 880, reputation: 16, eventEvery: 2, summary: "두 시스템 사이의 데이터를 안전하게 옮깁니다." },
+  { id: "campaign", name: "긴급 캠페인 런칭", difficulty: "중급", workload: 310, deadline: 9, cash: 980, reputation: 18, eventEvery: 2, summary: "광고 소재와 고객 요청을 동시에 처리합니다." },
+  { id: "audit", name: "전사 보안 감사", difficulty: "중상급", workload: 345, deadline: 10, cash: 1100, reputation: 21, eventEvery: 2, summary: "누락된 문서와 위험 항목을 전부 찾아냅니다." },
+  { id: "outage", name: "서비스 장애 수습", difficulty: "상급", workload: 385, deadline: 10, cash: 1250, reputation: 24, eventEvery: 1, summary: "오류가 번지기 전에 서버와 고객 대응을 복구합니다." },
+  { id: "launch", name: "해외 서비스 출시", difficulty: "상급", workload: 430, deadline: 11, cash: 1420, reputation: 28, eventEvery: 1, summary: "시차와 현지 요구사항을 맞춰 서비스를 출시합니다." },
+  { id: "integration", name: "합병 조직 통합", difficulty: "최상급", workload: 475, deadline: 12, cash: 1600, reputation: 32, eventEvery: 1, summary: "서로 다른 두 회사의 업무 체계를 하나로 합칩니다." }
+];
+
+const BOSS_PROJECTS = [
+  { id: "boss-transformation", name: "전사 시스템 대전환", difficulty: "BOSS", workload: 780, deadline: 18, cash: 2600, reputation: 55, eventEvery: 1, boss: true, summary: "회사의 모든 시스템을 멈춤 없이 교체하는 장기 프로젝트입니다.", phaseNames: ["현황 분석", "병행 전환", "최종 가동"] },
+  { id: "boss-global-launch", name: "글로벌 초대형 런칭", difficulty: "BOSS+", workload: 1050, deadline: 22, cash: 3600, reputation: 75, eventEvery: 1, boss: true, summary: "여러 국가의 출시 일정과 대규모 캠페인을 동시에 지휘합니다.", phaseNames: ["지역별 준비", "동시 출시", "전 세계 안정화"] }
 ];
 
 const DEFAULT_REPRESENTATIVE_APPEARANCE = {
@@ -231,6 +240,7 @@ const state = {
   teamIds: [],
   postingRefreshes: POSTING_REFRESH_MAX,
   projectClears: 0,
+  bossClears: 0,
   specialRecruitmentTickets: 0
 };
 
@@ -550,13 +560,14 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#interview").addEventListener("click", () => openInterview());
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
-  document.querySelector("#project").addEventListener("click", startBattle);
+  document.querySelector("#project").addEventListener("click", renderProjectBoard);
   scheduleOfficeDialogue();
 }
 
-function generateEquipmentReward() {
+function generateEquipmentReward(minimumRarity = 0) {
   const roll = randomInt(100);
-  const rarity = roll < 60 ? 0 : roll < 85 ? 1 : roll < 96 ? 2 : roll < 99 ? 3 : 4;
+  const rolledRarity = roll < 60 ? 0 : roll < 85 ? 1 : roll < 96 ? 2 : roll < 99 ? 3 : 4;
+  const rarity = Math.max(minimumRarity, rolledRarity);
   const [name, slot] = EQUIPMENT_CATALOG[randomInt(EQUIPMENT_CATALOG.length)];
   const bonus = 2 + rarity * 2;
   return {
@@ -564,6 +575,61 @@ function generateEquipmentReward() {
     workBonus: slot === "work" ? bonus + 1 : bonus,
     collaborationBonus: slot === "support" ? bonus : Math.max(1, Math.floor(bonus / 2))
   };
+}
+
+function scaledProject(project) {
+  const growth = Math.floor(state.projectClears / 4);
+  const workloadBonus = growth * (project.boss ? 55 : 22);
+  return {
+    ...project,
+    max: project.workload + workloadBonus,
+    cash: project.cash + growth * (project.boss ? 300 : 90),
+    reputation: project.reputation + growth * (project.boss ? 5 : 2)
+  };
+}
+
+function regularProjectOptions() {
+  const start = state.projectClears % PROJECTS.length;
+  return [0, 1, 2].map(offset => scaledProject(PROJECTS[(start + offset) % PROJECTS.length]));
+}
+
+function nextBossProject() {
+  return scaledProject(BOSS_PROJECTS[state.bossClears % BOSS_PROJECTS.length]);
+}
+
+function bossProjectReady() {
+  return state.projectClears >= state.bossClears * 5 + 4;
+}
+
+function bossProjectProgress() {
+  return Math.min(4, Math.max(0, state.projectClears - state.bossClears * 5));
+}
+
+function projectCard(project, locked = false) {
+  const reward = project.boss ? `현금 ${project.cash} · 희귀 장비 2개` : `현금 ${project.cash} · 평판 ${project.reputation}`;
+  return `<article class="project-card panel ${project.boss ? "boss-project" : ""} ${locked ? "locked" : ""}">
+    <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><strong>${escapeHtml(project.name)}</strong></div>
+    <p>${escapeHtml(project.summary)}</p>
+    <div class="project-spec"><span>업무량 ${project.max}</span><span>마감 ${project.deadline}턴</span></div>
+    <div class="project-reward">${locked ? `일반 프로젝트 ${bossProjectProgress()}/4 완료` : escapeHtml(reward)}</div>
+    <button class="${project.boss ? "red" : "teal"}" data-project-id="${project.id}" ${locked ? "disabled" : ""}>${locked ? "보스 계약 잠김" : project.boss ? "장기 프로젝트 도전" : "계약 선택"}</button>
+  </article>`;
+}
+
+function renderProjectBoard() {
+  currentView = "projects";
+  clearBattleTimer();
+  clearOfficeDialogue();
+  const regularCards = regularProjectOptions().map(project => projectCard(project)).join("");
+  const boss = nextBossProject();
+  const bossCard = projectCard(boss, !bossProjectReady());
+  app.innerHTML = `${header("프로젝트 선택", "난이도와 마감, 보상을 비교해 계약을 선택하세요.")}
+    <section class="screen project-board">
+      <div class="project-list">${regularCards}${bossCard}</div>
+      <button class="ink" id="back-from-projects">← 사무실</button>
+    </section>`;
+  document.querySelectorAll("[data-project-id]:not(:disabled)").forEach(button => button.addEventListener("click", () => startBattle(button.dataset.projectId)));
+  document.querySelector("#back-from-projects").addEventListener("click", () => renderOffice());
 }
 
 function openEquipment(notice = "직원을 선택하고 장비를 장착하세요.") {
@@ -777,16 +843,19 @@ function saveTeam() {
   renderOffice("프로젝트 팀 편성을 저장했습니다.");
 }
 
-function startBattle() {
+function startBattle(projectId) {
   currentView = "battle";
-  const project = PROJECTS[state.projectClears % PROJECTS.length];
+  const source = [...PROJECTS, ...BOSS_PROJECTS].find(project => project.id === projectId) || PROJECTS[0];
+  if (source.boss && !bossProjectReady()) return renderProjectBoard();
+  const project = scaledProject(source);
   battle = {
     project,
-    max: 190, workload: 190, action: 0, deadline: 8, momentum: 0, requirements: false,
+    max: project.max, workload: project.max, action: 0, deadline: project.deadline, momentum: 0, requirements: false,
     result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
-    eventText: "", nextEventRound: 2, eventCursor: randomInt(4), preparedRound: 0,
+    eventText: "", nextEventRound: project.eventEvery, eventCursor: randomInt(4), preparedRound: 0,
     directiveGauge: 50, awaitingDirective: false, directiveReason: "", directiveSelections: {}, directiveFocusId: null,
-    thresholdSeventy: false, thresholdForty: false, deadlineBonus: 0, automationDamage: 0, automationTurns: 0, skillFx: null
+    thresholdSeventy: false, thresholdForty: false, phase: 1, phaseAnnouncement: "",
+    deadlineBonus: 0, automationDamage: 0, automationTurns: 0, skillFx: null
   };
   renderBattle();
   battleTimer = window.setTimeout(battleStep, 900);
@@ -815,7 +884,7 @@ function battleStep() {
     }
     if (round >= battle.nextEventRound) {
       triggerBattleEvent();
-      battle.nextEventRound += 2;
+      battle.nextEventRound += battle.project.eventEvery;
     }
     if (battle.directiveGauge >= 100) return openDirective();
   }
@@ -868,9 +937,10 @@ function finishBattleSuccess(scheduleRender = true) {
   battle.workload = 0;
   if (!battle.rewardClaimed) {
     battle.rewardClaimed = true;
-    state.cash += 700;
-    state.reputation += 12;
+    state.cash += battle.project.cash;
+    state.reputation += battle.project.reputation;
     state.projectClears += 1;
+    if (battle.project.boss) state.bossClears += 1;
     state.postingRefreshes = POSTING_REFRESH_MAX;
     const specialUnlocked = state.projectClears === 5 || (state.projectClears > 5 && (state.projectClears - 5) % 10 === 0);
     if (specialUnlocked) {
@@ -878,8 +948,11 @@ function finishBattleSuccess(scheduleRender = true) {
       specialCandidates = [];
     }
     battle.recruitmentNotice = specialUnlocked ? "헤드헌팅권 1장 획득!" : `공고 갱신 ${POSTING_REFRESH_MAX}/${POSTING_REFRESH_MAX} 회복`;
-    battle.reward = generateEquipmentReward();
-    state.equipment.push(battle.reward);
+    battle.rewards = battle.project.boss
+      ? [generateEquipmentReward(2), generateEquipmentReward(2)]
+      : [generateEquipmentReward()];
+    battle.reward = battle.rewards[0];
+    state.equipment.push(...battle.rewards);
   }
   if (scheduleRender) battleTimer = window.setTimeout(renderBattle, 650);
 }
@@ -893,11 +966,25 @@ function checkWorkloadThresholds() {
   const ratio = battle.workload / battle.max;
   if (!battle.thresholdSeventy && ratio <= .70) {
     battle.thresholdSeventy = true;
-    addDirectiveGauge(30, "프로젝트의 첫 약점이 노출됐습니다.");
+    if (battle.project.boss) {
+      battle.phase = 2;
+      battle.phaseAnnouncement = `PHASE 2 · ${battle.project.phaseNames[1]}`;
+      battle.log = battle.phaseAnnouncement;
+      addDirectiveGauge(40, "보스 프로젝트가 두 번째 단계로 전환됐습니다.");
+    } else {
+      addDirectiveGauge(30, "프로젝트의 첫 약점이 노출됐습니다.");
+    }
   }
   if (!battle.thresholdForty && ratio <= .40) {
     battle.thresholdForty = true;
-    addDirectiveGauge(30, "프로젝트의 핵심 약점이 노출됐습니다.");
+    if (battle.project.boss) {
+      battle.phase = 3;
+      battle.phaseAnnouncement = `FINAL PHASE · ${battle.project.phaseNames[2]}`;
+      battle.log = battle.phaseAnnouncement;
+      addDirectiveGauge(50, "보스 프로젝트의 최종 단계가 시작됐습니다.");
+    } else {
+      addDirectiveGauge(30, "프로젝트의 핵심 약점이 노출됐습니다.");
+    }
   }
 }
 
@@ -1036,24 +1123,25 @@ function triggerBattleEvent() {
 
 function renderBattle() {
   const team = currentTeam();
-  const reward = battle.reward;
-  const rewardText = reward ? `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} 획득<br>실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}${battle.recruitmentNotice ? `<br>${escapeHtml(battle.recruitmentNotice)}` : ""}` : "장비 보상 확인 중";
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>PROJECT CLEAR</h2><p>현금 +700 · 평판 +12<br>${rewardText}</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
+  const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
+  const rewardText = rewards.length ? rewards.map(reward => `${EQUIPMENT_RARITIES[reward.rarity].name} ${escapeHtml(reward.name)} · 실무 +${reward.workBonus} · 협업 +${reward.collaborationBonus}`).join("<br>") + (battle.recruitmentNotice ? `<br>${escapeHtml(battle.recruitmentNotice)}` : "") : "장비 보상 확인 중";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}<br>${rewardText}</p></div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const fighters = team.map(member => `<div class="fighter"><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong></div>`).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
   const statusTone = battle.status ? battle.status.tone : "good";
   const directive = directivePanel(team);
   const skillFx = battle.skillFx ? `<div class="skill-cinematic"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
+  const phaseText = battle.project.boss ? `PHASE ${battle.phase}/3 · ${battle.project.phaseNames[battle.phase - 1]}` : battle.project.difficulty;
   app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요." : "지시 게이지가 가득 차면 전투가 잠시 멈춥니다.")}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
-      <div class="boss-card panel"><div class="boss-row"><strong>${escapeHtml(battle.project.name)}</strong><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
-      <div class="arena panel" id="arena"><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div>${skillFx}</div>
+      <div class="boss-card panel ${battle.project.boss ? "boss-active" : ""}"><div class="boss-row"><div><strong>${escapeHtml(battle.project.name)}</strong><small>${escapeHtml(phaseText)}</small></div><span id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar"><i id="workload-bar" style="width:${Math.min(100, battle.workload / battle.max * 100)}%"></i></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
+      <div class="arena panel ${battle.project.boss ? "boss-arena" : ""}" id="arena"><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="status-chip ${statusTone}" id="status-chip">STATUS · ${statusName}</div><div class="deadline" id="deadline">마감 ${round}/${battle.deadline}</div><div class="battle-team">${fighters}</div>${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <button class="ink" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>
     </section>`;
-  drawBoss(document.querySelector("#boss-canvas"), battle.project.id);
+  drawBoss(document.querySelector("#boss-canvas"), battle.project.id, battle.phase);
   mountPortraits();
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
   document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
@@ -1335,13 +1423,135 @@ function drawCampaignProject(context) {
   rect(context, "#168c8b", 8, 55, 5, 2);
 }
 
-function drawBoss(canvas, projectId = "revision") {
+function drawAuditProject(context) {
+  rect(context, COLORS.ink, 8, 8, 48, 49);
+  rect(context, COLORS.paper, 11, 11, 42, 43);
+  rect(context, "#4a70a8", 15, 43, 25, 6);
+  rect(context, "#168c8b", 15, 34, 5, 5);
+  rect(context, COLORS.ink, 23, 35, 21, 3);
+  rect(context, "#168c8b", 15, 24, 5, 5);
+  rect(context, COLORS.ink, 23, 25, 17, 3);
+  rect(context, "#c84b3c", 15, 14, 5, 5);
+  rect(context, COLORS.ink, 23, 15, 13, 3);
+  rect(context, COLORS.ink, 35, 5, 24, 24);
+  rect(context, "#d6a12c", 38, 8, 18, 18);
+  rect(context, COLORS.paper, 42, 12, 10, 10);
+  rect(context, COLORS.ink, 52, 2, 5, 9);
+}
+
+function drawOutageProject(context) {
+  rect(context, COLORS.ink, 6, 10, 52, 45);
+  rect(context, "#6d7c8c", 9, 13, 46, 39);
+  rect(context, "#c84b3c", 9, 44, 46, 8);
+  rect(context, COLORS.paper, 14, 33, 36, 7);
+  rect(context, COLORS.ink, 18, 35, 28, 3);
+  rect(context, COLORS.paper, 14, 20, 15, 8);
+  rect(context, COLORS.paper, 35, 20, 15, 8);
+  rect(context, "#d6a12c", 15, 5, 7, 11);
+  rect(context, "#c84b3c", 21, 2, 8, 15);
+  rect(context, "#d6a12c", 28, 6, 7, 11);
+  rect(context, COLORS.ink, 40, 4, 4, 12);
+  rect(context, "#d6a12c", 36, 9, 9, 5);
+  rect(context, "#d6a12c", 42, 5, 9, 5);
+}
+
+function drawLaunchProject(context) {
+  rect(context, COLORS.ink, 5, 9, 42, 42);
+  rect(context, "#4a70a8", 8, 12, 36, 36);
+  rect(context, "#168c8b", 11, 22, 30, 8);
+  rect(context, "#168c8b", 17, 14, 8, 32);
+  rect(context, COLORS.paper, 8, 29, 36, 3);
+  rect(context, COLORS.paper, 24, 12, 3, 36);
+  rect(context, COLORS.ink, 39, 7, 20, 40);
+  rect(context, COLORS.paper, 44, 16, 10, 24);
+  rect(context, "#c84b3c", 47, 30, 5, 13);
+  rect(context, "#d6a12c", 44, 8, 4, 10);
+  rect(context, "#d6a12c", 51, 8, 4, 10);
+  rect(context, "#c84b3c", 47, 3, 5, 13);
+}
+
+function drawIntegrationProject(context) {
+  rect(context, COLORS.ink, 3, 8, 24, 46);
+  rect(context, "#4a70a8", 6, 11, 18, 40);
+  rect(context, COLORS.paper, 9, 42, 5, 5);
+  rect(context, COLORS.paper, 17, 42, 4, 5);
+  rect(context, COLORS.paper, 9, 31, 5, 5);
+  rect(context, COLORS.paper, 17, 31, 4, 5);
+  rect(context, COLORS.ink, 37, 8, 24, 46);
+  rect(context, "#9b6d9d", 40, 11, 18, 40);
+  rect(context, COLORS.paper, 43, 42, 5, 5);
+  rect(context, COLORS.paper, 51, 42, 4, 5);
+  rect(context, COLORS.paper, 43, 31, 5, 5);
+  rect(context, COLORS.paper, 51, 31, 4, 5);
+  rect(context, COLORS.ink, 20, 20, 24, 9);
+  rect(context, "#d6a12c", 23, 23, 18, 3);
+  rect(context, "#168c8b", 29, 14, 6, 6);
+}
+
+function drawTransformationBoss(context) {
+  rect(context, COLORS.ink, 4, 4, 56, 56);
+  rect(context, "#243e52", 7, 7, 50, 50);
+  rect(context, "#4a70a8", 10, 10, 12, 44);
+  rect(context, "#6d7c8c", 42, 10, 12, 44);
+  rect(context, COLORS.ink, 14, 43, 4, 4);
+  rect(context, "#168c8b", 14, 33, 4, 4);
+  rect(context, "#d6a12c", 46, 43, 4, 4);
+  rect(context, "#c84b3c", 46, 33, 4, 4);
+  rect(context, COLORS.ink, 20, 16, 24, 32);
+  rect(context, "#168c8b", 23, 19, 18, 26);
+  rect(context, COLORS.paper, 27, 25, 10, 14);
+  rect(context, "#d6a12c", 29, 28, 6, 8);
+  rect(context, "#c84b3c", 30, 30, 4, 4);
+  rect(context, "#168c8b", 14, 3, 36, 4);
+}
+
+function drawGlobalLaunchBoss(context) {
+  rect(context, COLORS.ink, 8, 8, 48, 48);
+  rect(context, "#4a70a8", 11, 11, 42, 42);
+  rect(context, "#168c8b", 15, 24, 34, 12);
+  rect(context, "#168c8b", 24, 14, 16, 36);
+  rect(context, COLORS.paper, 11, 30, 42, 4);
+  rect(context, COLORS.paper, 30, 11, 4, 42);
+  rect(context, COLORS.ink, 0, 40, 18, 20);
+  rect(context, "#c84b3c", 3, 43, 12, 14);
+  rect(context, COLORS.paper, 6, 47, 6, 6);
+  rect(context, COLORS.ink, 46, 40, 18, 20);
+  rect(context, "#d6a12c", 49, 43, 12, 14);
+  rect(context, COLORS.paper, 52, 47, 6, 6);
+  rect(context, COLORS.ink, 22, 2, 20, 14);
+  rect(context, "#c84b3c", 25, 5, 14, 8);
+  rect(context, COLORS.paper, 29, 7, 6, 4);
+}
+
+function drawBossPhase(context, phase) {
+  if (phase >= 2) {
+    rect(context, "#c84b3c", 1, 55, 10, 5);
+    rect(context, "#c84b3c", 53, 55, 10, 5);
+    rect(context, "#c84b3c", 1, 4, 10, 5);
+    rect(context, "#c84b3c", 53, 4, 10, 5);
+  }
+  if (phase >= 3) {
+    rect(context, "#d6a12c", 28, 56, 8, 8);
+    rect(context, "#d6a12c", 28, 0, 8, 8);
+    rect(context, COLORS.paper, 31, 58, 2, 4);
+    rect(context, COLORS.paper, 31, 2, 2, 4);
+  }
+}
+
+function drawBoss(canvas, projectId = "revision", phase = 1) {
   if (!canvas) return;
   const context = pixelContext(canvas);
   if (projectId === "schedule") drawScheduleProject(context);
   else if (projectId === "migration") drawMigrationProject(context);
   else if (projectId === "campaign") drawCampaignProject(context);
+  else if (projectId === "audit") drawAuditProject(context);
+  else if (projectId === "outage") drawOutageProject(context);
+  else if (projectId === "launch") drawLaunchProject(context);
+  else if (projectId === "integration") drawIntegrationProject(context);
+  else if (projectId === "boss-transformation") drawTransformationBoss(context);
+  else if (projectId === "boss-global-launch") drawGlobalLaunchBoss(context);
   else drawRevisionProject(context);
+  if (projectId.startsWith("boss-")) drawBossPhase(context, phase);
 }
 
 renderOpening();

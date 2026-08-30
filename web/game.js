@@ -562,21 +562,32 @@ function equipmentIconMarkup(item, className = "") {
   return `<canvas class="equipment-icon ${className}" width="24" height="24" data-equipment-icon="${escapeHtml(equipmentArtFor(item))}" data-equipment-rarity="${item.rarity}" aria-label="${escapeHtml(item.name)} 아이콘"></canvas>`;
 }
 
+function officeEquipmentUsage(item) {
+  const art = equipmentArtFor(item);
+  if (art === "headset") return "머리에 착용 중";
+  if (["laptop", "tablet", "calculator", "planner"].includes(art)) return "업무에 사용 중";
+  if (art === "wallet") return "영업 활동에 휴대 중";
+  if (["coffee", "tumbler"].includes(art)) return "틈틈이 마시는 중";
+  return "책상에 놓고 사용 중";
+}
+
 function officeEquipmentMarkup(member) {
-  const equippedCount = Object.values(member.equipment || {}).filter(Boolean).length;
-  const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
-    const item = member.equipment?.[slot];
-    return item
-      ? `<span class="office-gear-slot filled" style="--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}" aria-label="${escapeHtml(info.name)} 장착: ${escapeHtml(item.name)}">${equipmentIconMarkup(item)}</span>`
-      : `<span class="office-gear-slot empty" aria-label="${escapeHtml(info.name)} 비어 있음">${info.icon}</span>`;
+  const equipped = Object.values(member.equipment || {}).filter(Boolean);
+  const props = equipped.map(item => {
+    const art = equipmentArtFor(item);
+    const rarity = EQUIPMENT_RARITIES[item.rarity];
+    return `<canvas class="office-equipment-prop prop-${escapeHtml(art)} rarity-${item.rarity}" width="24" height="24" data-equipment-icon="${escapeHtml(art)}" data-equipment-rarity="${item.rarity}" style="--rarity-color:${rarity.color}" aria-label="${escapeHtml(item.name)} · ${officeEquipmentUsage(item)}"></canvas>`;
   }).join("");
-  return `<div class="office-gear" aria-label="장비 ${equippedCount}/3 장착">${slots}</div>`;
+  const details = equipped.length
+    ? equipped.map(item => `<span><b style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${escapeHtml(item.name)}</b><small>${officeEquipmentUsage(item)}</small></span>`).join("")
+    : `<span class="office-no-equipment">사용 중인 장비가 없습니다.</span>`;
+  return `<div class="office-character" aria-hidden="true"><canvas class="office-portrait" width="24" height="24" data-portrait="${member.id}"></canvas>${props}</div><div class="office-loadout-popover" aria-hidden="true"><em>현재 사용 장비</em>${details}</div>`;
 }
 
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
   currentView = "office";
   clearBattleTimer();
-  const desks = currentTeam().map(member => `<div class="desk"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small>${officeEquipmentMarkup(member)}</div>`).join("");
+  const desks = currentTeam().map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
       <div class="office-room panel">${desks}</div>
@@ -599,6 +610,23 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
   document.querySelector("#project").addEventListener("click", renderProjectBoard);
+  document.querySelectorAll("[data-office-worker]").forEach(desk => {
+    const toggleLoadout = () => {
+      const willOpen = !desk.classList.contains("loadout-open");
+      document.querySelectorAll("[data-office-worker].loadout-open").forEach(openDesk => {
+        openDesk.classList.remove("loadout-open");
+        openDesk.querySelector(".office-loadout-popover")?.setAttribute("aria-hidden", "true");
+      });
+      desk.classList.toggle("loadout-open", willOpen);
+      desk.querySelector(".office-loadout-popover")?.setAttribute("aria-hidden", willOpen ? "false" : "true");
+    };
+    desk.addEventListener("click", toggleLoadout);
+    desk.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      toggleLoadout();
+    });
+  });
   scheduleOfficeDialogue();
 }
 

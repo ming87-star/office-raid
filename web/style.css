@@ -276,6 +276,46 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .desk strong { display: block; overflow: hidden; margin-top: 4px; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
 .desk small { display: block; color: var(--teal); font-size: 10px; font-weight: 800; }
 
+.office-speech {
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% - 30px);
+  left: 50%;
+  width: max-content;
+  max-width: min(126px, 36vw);
+  padding: 6px 7px 7px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  box-shadow: 2px 2px 0 rgba(23,54,74,.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity .16s ease;
+}
+.office-speech::after {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: var(--panel);
+  transform: translateX(-50%) rotate(45deg);
+}
+.office-speech.show { opacity: 1; animation: office-speech-pop .22s ease-out; }
+.office-speech b, .office-speech span { display: block; white-space: normal; }
+.office-speech b { margin-bottom: 2px; color: var(--teal); font-size: 8px; line-height: 1.2; }
+.office-speech span { font-size: 9px; font-weight: 800; line-height: 1.35; word-break: keep-all; }
+.desk:first-child .office-speech { left: 0; transform: none; }
+.desk:last-child .office-speech { right: 0; left: auto; transform: none; }
+
+@keyframes office-speech-pop {
+  from { opacity: 0; margin-bottom: -5px; }
+  to { opacity: 1; margin-bottom: 0; }
+}
+
 .company-card { padding: 11px 12px; }
 .company-card h2 { margin: 0 0 6px; font-size: 17px; }
 .company-card p { margin: 3px 0; font-size: 11px; font-weight: 700; line-height: 1.4; }

@@ -1103,6 +1103,75 @@ function rect(context, color, x, y, width, height) {
   context.fillRect(x, context.canvas.height - y - height, width, height);
 }
 
+function centeredRect(context, color, width, y, height, offset = 0) {
+  rect(context, color, Math.floor((24 - width) / 2) + offset, y, width, height);
+}
+
+function drawFaceShape(context, skin, style) {
+  const shapes = [
+    [16, 16, 14, 10], [16, 16, 16, 14], [14, 16, 14, 8], [12, 14, 12, 8],
+    [16, 16, 12, 6], [12, 16, 12, 8], [18, 18, 16, 12], [16, 14, 16, 10]
+  ];
+  const [temple, cheek, jaw, chin] = shapes[style % shapes.length];
+  const layers = [[temple, 15, 4], [cheek, 10, 5], [jaw, 7, 3], [chin, 5, 2]];
+  layers.forEach(([width, y, height]) => centeredRect(context, COLORS.ink, width + 2, y, height));
+  layers.forEach(([width, y, height]) => centeredRect(context, skin, width, y, height));
+}
+
+function drawEyebrows(context, color, style) {
+  const eyebrow = style % 8;
+  if (eyebrow === 0) { rect(context, color, 6, 16, 3, 1); rect(context, color, 15, 16, 3, 1); }
+  if (eyebrow === 1) { rect(context, color, 6, 16, 3, 2); rect(context, color, 15, 16, 3, 2); }
+  if (eyebrow === 2) { rect(context, color, 6, 15, 2, 1); rect(context, color, 8, 16, 2, 1); rect(context, color, 14, 16, 2, 1); rect(context, color, 16, 15, 2, 1); }
+  if (eyebrow === 3) { rect(context, color, 6, 16, 2, 1); rect(context, color, 8, 15, 2, 1); rect(context, color, 14, 15, 2, 1); rect(context, color, 16, 16, 2, 1); }
+  if (eyebrow === 4) { rect(context, color, 7, 16, 2, 1); rect(context, color, 15, 16, 2, 1); }
+  if (eyebrow === 5) { rect(context, color, 5, 16, 4, 1); rect(context, color, 15, 16, 4, 1); }
+  if (eyebrow === 6) { rect(context, color, 6, 17, 3, 1); rect(context, color, 15, 17, 3, 1); }
+  if (eyebrow === 7) { rect(context, color, 6, 16, 1, 1); rect(context, color, 7, 17, 2, 1); rect(context, color, 15, 17, 2, 1); rect(context, color, 17, 16, 1, 1); }
+}
+
+function drawEyes(context, style) {
+  const eye = style % 10;
+  if (eye === 0) { rect(context, COLORS.ink, 7, 13, 2, 1); rect(context, COLORS.ink, 15, 13, 2, 1); }
+  if (eye === 1) { rect(context, COLORS.ink, 6, 13, 3, 1); rect(context, COLORS.ink, 15, 13, 3, 1); }
+  if (eye === 2) { rect(context, COLORS.ink, 7, 12, 2, 2); rect(context, COLORS.ink, 15, 12, 2, 2); }
+  if (eye === 3) { rect(context, COLORS.ink, 7, 12, 1, 2); rect(context, COLORS.ink, 16, 12, 1, 2); }
+  if (eye === 4) { rect(context, COLORS.ink, 7, 12, 2, 1); rect(context, COLORS.ink, 15, 12, 2, 1); }
+  if (eye === 5) { rect(context, COLORS.ink, 6, 13, 3, 2); rect(context, COLORS.paper, 7, 14, 1, 1); rect(context, COLORS.ink, 15, 13, 3, 2); rect(context, COLORS.paper, 16, 14, 1, 1); }
+  if (eye === 6) { rect(context, COLORS.ink, 7, 13, 1, 1); rect(context, COLORS.ink, 8, 12, 1, 1); rect(context, COLORS.ink, 15, 12, 1, 1); rect(context, COLORS.ink, 16, 13, 1, 1); }
+  if (eye === 7) { rect(context, COLORS.ink, 6, 13, 3, 1); rect(context, COLORS.ink, 6, 14, 1, 1); rect(context, COLORS.ink, 15, 13, 3, 1); rect(context, COLORS.ink, 17, 14, 1, 1); }
+  if (eye === 8) { rect(context, COLORS.ink, 7, 13, 1, 1); rect(context, COLORS.ink, 8, 14, 1, 1); rect(context, COLORS.ink, 15, 14, 1, 1); rect(context, COLORS.ink, 16, 13, 1, 1); }
+  if (eye === 9) { rect(context, COLORS.ink, 7, 13, 2, 1); rect(context, COLORS.ink, 6, 14, 1, 1); rect(context, COLORS.ink, 15, 13, 2, 1); rect(context, COLORS.ink, 17, 14, 1, 1); }
+}
+
+function drawNose(context, style) {
+  const color = "rgba(80,35,25,.55)";
+  const nose = style % 8;
+  if (nose === 0) rect(context, color, 11, 10, 1, 1);
+  if (nose === 1) rect(context, color, 12, 10, 1, 1);
+  if (nose === 2) rect(context, color, 11, 10, 1, 2);
+  if (nose === 3) rect(context, color, 12, 10, 1, 2);
+  if (nose === 4) { rect(context, color, 11, 10, 2, 1); rect(context, color, 12, 11, 1, 1); }
+  if (nose === 5) { rect(context, color, 10, 10, 1, 1); rect(context, color, 13, 10, 1, 1); }
+  if (nose === 6) { rect(context, color, 11, 10, 2, 1); rect(context, color, 11, 11, 1, 2); }
+  if (nose === 7) { rect(context, color, 10, 10, 4, 1); rect(context, color, 12, 11, 1, 1); }
+}
+
+function drawMouth(context, style) {
+  const mouth = style % 10;
+  const lip = "#a94d5e";
+  if (mouth === 0) centeredRect(context, COLORS.ink, 3, 8, 1);
+  if (mouth === 1) centeredRect(context, COLORS.ink, 5, 8, 1);
+  if (mouth === 2) centeredRect(context, COLORS.ink, 7, 8, 1);
+  if (mouth === 3) { rect(context, COLORS.ink, 9, 9, 1, 1); rect(context, COLORS.ink, 10, 8, 4, 1); rect(context, COLORS.ink, 14, 9, 1, 1); }
+  if (mouth === 4) { rect(context, COLORS.ink, 9, 8, 1, 1); rect(context, COLORS.ink, 10, 9, 4, 1); rect(context, COLORS.ink, 14, 8, 1, 1); }
+  if (mouth === 5) { centeredRect(context, COLORS.ink, 4, 7, 2); centeredRect(context, COLORS.paper, 2, 8, 1); }
+  if (mouth === 6) { centeredRect(context, COLORS.ink, 6, 7, 2); centeredRect(context, COLORS.paper, 4, 8, 1); }
+  if (mouth === 7) centeredRect(context, lip, 4, 8, 1);
+  if (mouth === 8) { centeredRect(context, lip, 6, 7, 2); centeredRect(context, COLORS.ink, 4, 8, 1); }
+  if (mouth === 9) { centeredRect(context, COLORS.ink, 3, 7, 3); centeredRect(context, lip, 1, 8, 1); }
+}
+
 function drawBackPortrait(canvas, member) {
   if (!canvas || !member) return;
   const context = pixelContext(canvas);
@@ -1131,8 +1200,6 @@ function drawPortrait(canvas, member) {
   const hair = COLORS.hair[Math.floor(look.hair / 3) % COLORS.hair.length];
   const shirt = COLORS.outfit[look.outfit];
   const department = DEPARTMENTS[member.department].color;
-  const width = [16,16,14,14,16,14,16,14][look.face];
-  const left = Math.floor((24 - width) / 2);
 
   rect(context, COLORS.ink, 2, 0, 20, 6);
   rect(context, shirt, 3, 0, 18, 5);
@@ -1140,10 +1207,7 @@ function drawPortrait(canvas, member) {
   if (look.outfit % 3 === 0) rect(context, department, 11, 1, 2, 4);
   else if (look.outfit % 3 === 1) rect(context, department, 9, 2, 6, 2);
 
-  rect(context, COLORS.ink, left - 1, 7, width + 2, 11);
-  rect(context, skin, left, 6, width, 12);
-  rect(context, COLORS.ink, left + 1, 5, width - 2, 2);
-  rect(context, skin, left + 2, 6, width - 4, 2);
+  drawFaceShape(context, skin, look.face);
 
   if (look.hair !== 15) {
     rect(context, COLORS.ink, 4, 17, 16, 4);
@@ -1161,16 +1225,11 @@ function drawPortrait(canvas, member) {
   if (hairStyle === 6) { rect(context, hair, 2, 11, 3, 6); rect(context, hair, 19, 11, 3, 6); }
   if (hairStyle === 7) rect(context, hair, 17, 10, 4, 9);
 
-  const browY = look.eyebrows % 4 === 0 ? 16 : 15;
-  rect(context, hair, 6, browY, 3, 1);
-  rect(context, hair, 15, browY, 3, 1);
-  const eyeY = look.eyes % 5 === 4 ? 12 : 13;
-  const eyeWidth = look.eyes % 3 === 1 ? 3 : 2;
-  rect(context, COLORS.ink, 6, eyeY, eyeWidth, 1);
-  rect(context, COLORS.ink, 16 - eyeWidth + 1, eyeY, eyeWidth, 1);
-  rect(context, "rgba(80,35,25,.55)", 11 + look.nose % 2, 10, 1, 1 + Math.floor(look.nose / 4));
-  const mouthWidth = 3 + look.mouth % 4;
-  rect(context, look.mouth > 6 ? "#a94d5e" : COLORS.ink, Math.floor((24 - mouthWidth) / 2), 8, mouthWidth, look.mouth === 5 ? 2 : 1);
+  const eyebrowColor = hair === COLORS.ink ? "#573b32" : COLORS.ink;
+  drawEyebrows(context, eyebrowColor, look.eyebrows);
+  drawEyes(context, look.eyes);
+  drawNose(context, look.nose);
+  drawMouth(context, look.mouth);
 
   if (look.accessory === 1 || look.accessory === 2) {
     const frame = look.accessory === 1 ? "#4a70a8" : COLORS.ink;
@@ -1180,6 +1239,8 @@ function drawPortrait(canvas, member) {
   if (look.accessory === 3) { rect(context, "#d6a12c", 3, 10, 1, 1); rect(context, "#d6a12c", 20, 10, 1, 1); }
   if (look.accessory === 4) rect(context, "#c84b3c", 16, 20, 3, 1);
   if (look.accessory === 5) { rect(context, COLORS.ink, 2, 11, 2, 7); rect(context, COLORS.ink, 20, 11, 2, 7); rect(context, "#4a70a8", 18, 9, 3, 1); }
+  if (look.accessory === 6) { rect(context, COLORS.ink, 8, 9, 3, 1); rect(context, COLORS.ink, 13, 9, 3, 1); rect(context, COLORS.ink, 10, 8, 4, 1); }
+  if (look.accessory === 7) { rect(context, "#b97862", 6, 10, 1, 1); rect(context, "#b97862", 8, 9, 1, 1); rect(context, "#b97862", 15, 9, 1, 1); rect(context, "#b97862", 17, 10, 1, 1); }
   if (look.accessory === 8) { rect(context, COLORS.ink, 4, 20, 16, 2); rect(context, "#d6a12c", 5, 21, 14, 2); }
 }
 

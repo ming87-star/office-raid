@@ -63,6 +63,96 @@ const DIRECTIVE_SKILLS = {
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
 const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서연", "현우", "유진", "수빈", "지훈", "예린", "시우", "채원"];
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
+const OFFICE_DIALOGUES = [
+  {
+    id: "schedule", opener: "오늘 일정, 조금 당길 수 있을까요?",
+    responses: {
+      perfectionist: "검수 시간까지 확보된다면 가능합니다.",
+      mood: "좋죠! 대신 끝나고 커피 한 잔 부탁해요.",
+      realist: "범위를 조금 줄이면 가능합니다.",
+      quiet: "우선순위만 정해주시면 맞추겠습니다.",
+      competitive: "제가 맡은 부분부터 오늘 끝내보죠.",
+      creative: "반복 작업부터 묶으면 빨라질 것 같아요."
+    }
+  },
+  {
+    id: "lunch", opener: "점심 메뉴 정하셨어요?",
+    responses: {
+      perfectionist: "어제 목록부터 겹치지 않게 볼까요?",
+      mood: "오늘은 다수결 말고 사다리 타기 어때요?",
+      realist: "가까운 곳이요. 오후 회의가 있습니다.",
+      quiet: "저는 아무거나 괜찮습니다.",
+      competitive: "제일 빨리 나오는 메뉴로 가죠.",
+      creative: "새로 생긴 가게를 한번 가보고 싶어요."
+    }
+  },
+  {
+    id: "meeting", opener: "회의 자료, 먼저 공유할까요?",
+    responses: {
+      perfectionist: "마지막 숫자만 다시 확인하고 올려주세요.",
+      mood: "네, 제가 오타 탐정 한번 해볼게요.",
+      realist: "결론을 첫 장에 두면 더 좋겠습니다.",
+      quiet: "올려주시면 바로 보겠습니다.",
+      competitive: "핵심 성과가 더 잘 보이게 바꿔보죠.",
+      creative: "첫 장에 비교 그림을 넣어보면 어때요?"
+    }
+  },
+  {
+    id: "file", opener: "최종 파일이 어느 거였죠?",
+    responses: {
+      perfectionist: "최종_진짜최종 말고 날짜 버전입니다.",
+      mood: "이번엔 이름에 진짜최종 금지입니다.",
+      realist: "공유 폴더 맨 위에 고정해뒀습니다.",
+      quiet: "방금 링크 보내드렸습니다.",
+      competitive: "제가 정리한 버전이 가장 최신입니다.",
+      creative: "색깔 태그로 구분해두면 덜 헷갈리겠어요."
+    }
+  },
+  {
+    id: "coffee", opener: "커피 내려오는데 같이 가실래요?",
+    responses: {
+      perfectionist: "이 문단만 마무리하고 내려갈게요.",
+      mood: "좋아요. 오늘은 제가 살게요!",
+      realist: "십 분 뒤 회의라 테이크아웃으로 하죠.",
+      quiet: "네. 잠깐 쉬고 싶었습니다.",
+      competitive: "좋습니다. 돌아와서 집중해서 끝내죠.",
+      creative: "커피 마시면서 새 아이디어도 이야기해요."
+    }
+  },
+  {
+    id: "handoff", opener: "이 업무, 제가 이어받을까요?",
+    responses: {
+      perfectionist: "체크리스트까지 정리해서 넘겨드릴게요.",
+      mood: "감사합니다. 다음엔 제가 도와드릴게요.",
+      realist: "막힌 부분만 부탁드리겠습니다.",
+      quiet: "네, 현재 상태를 메모해뒀습니다.",
+      competitive: "좋아요. 같이 오늘 안에 끝내죠.",
+      creative: "제가 하던 방식도 같이 설명드릴게요."
+    }
+  },
+  {
+    id: "temperature", opener: "사무실이 조금 춥지 않아요?",
+    responses: {
+      perfectionist: "온도는 그대로 두고 담요를 쓰겠습니다.",
+      mood: "제 자리만 겨울인 줄 알았어요.",
+      realist: "한 도만 올려보고 다시 확인하죠.",
+      quiet: "조금요. 괜찮습니다.",
+      competitive: "전 괜찮습니다. 집중하면 안 춥더라고요.",
+      creative: "창가 자리랑 한번 바꿔볼까요?"
+    }
+  },
+  {
+    id: "wrap-up", opener: "오늘은 제시간에 갈 수 있겠죠?",
+    responses: {
+      perfectionist: "마지막 검수만 끝나면 가능합니다.",
+      mood: "그 말을 하면 꼭 일이 생기던데요.",
+      realist: "새 요청만 없으면 여섯 시에 끝납니다.",
+      quiet: "제 업무는 거의 끝났습니다.",
+      competitive: "남은 것까지 빨리 끝내고 갑시다.",
+      creative: "회의만 짧으면 가능할 것 같아요."
+    }
+  }
+];
 const COMPANY_PREFIXES = ["반짝", "단단", "빠른", "작은", "푸른", "새벽", "모아", "한걸음"];
 const COMPANY_SUFFIXES = ["랩", "스튜디오", "웍스", "컴퍼니", "프로젝트", "오피스", "팩토리", "파트너스"];
 const POSTING_REFRESH_MAX = 2;
@@ -82,6 +172,8 @@ let representativeDraft = { name: "서대표", appearance: appearance(1103) };
 let representativeMode = "basic";
 let openingPage = 0;
 let equipmentTargetId = null;
+let officeDialogueTimer = null;
+let recentOfficeDialogueIds = [];
 
 const state = {
   companyName: "",
@@ -295,10 +387,75 @@ function createCompany() {
 
 function currentTeam() { return state.teamIds.map(id => state.employees.find(member => member.id === id)).filter(Boolean); }
 
+function officePersonality(member) {
+  const trait = member?.trait || "";
+  if (trait.includes("완벽")) return "perfectionist";
+  if (trait.includes("분위기") || trait.includes("발표")) return "mood";
+  if (trait.includes("침착") || trait.includes("기록")) return "realist";
+  if (trait.includes("빠른")) return "quiet";
+  if (trait.includes("위기")) return "competitive";
+  return "creative";
+}
+
+function clearOfficeDialogue() {
+  if (officeDialogueTimer) window.clearTimeout(officeDialogueTimer);
+  officeDialogueTimer = null;
+  document.querySelectorAll(".office-speech.show").forEach(bubble => bubble.classList.remove("show"));
+}
+
+function showOfficeSpeech(member, line) {
+  document.querySelectorAll(".office-speech.show").forEach(bubble => bubble.classList.remove("show"));
+  const bubble = document.querySelector(`[data-office-speech="${member.id}"]`);
+  if (!bubble) return false;
+  bubble.replaceChildren();
+  const speaker = document.createElement("b");
+  const message = document.createElement("span");
+  speaker.textContent = member.name;
+  message.textContent = line;
+  bubble.append(speaker, message);
+  bubble.classList.add("show");
+  return true;
+}
+
+function pickOfficeDialogue() {
+  const available = OFFICE_DIALOGUES.filter(dialogue => !recentOfficeDialogueIds.includes(dialogue.id));
+  const pool = available.length ? available : OFFICE_DIALOGUES;
+  const dialogue = pool[randomInt(pool.length)];
+  recentOfficeDialogueIds = [...recentOfficeDialogueIds.slice(-2), dialogue.id];
+  return dialogue;
+}
+
+function runOfficeDialogue() {
+  if (currentView !== "office") return;
+  const members = currentTeam();
+  if (members.length < 2) return;
+  const speakerIndex = randomInt(members.length);
+  const listenerIndex = (speakerIndex + 1 + randomInt(members.length - 1)) % members.length;
+  const speaker = members[speakerIndex];
+  const listener = members[listenerIndex];
+  const dialogue = pickOfficeDialogue();
+  if (!showOfficeSpeech(speaker, dialogue.opener)) return;
+  officeDialogueTimer = window.setTimeout(() => {
+    if (currentView !== "office") return;
+    const response = dialogue.responses[officePersonality(listener)] || dialogue.responses.realist;
+    if (!showOfficeSpeech(listener, response)) return;
+    officeDialogueTimer = window.setTimeout(() => {
+      if (currentView !== "office") return;
+      clearOfficeDialogue();
+      officeDialogueTimer = window.setTimeout(runOfficeDialogue, 5000 + randomInt(3000));
+    }, 3000);
+  }, 2600);
+}
+
+function scheduleOfficeDialogue(delay = 1400) {
+  clearOfficeDialogue();
+  officeDialogueTimer = window.setTimeout(runOfficeDialogue, delay);
+}
+
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
   currentView = "office";
   clearBattleTimer();
-  const desks = currentTeam().map(member => `<div class="desk"><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short}</small></div>`).join("");
+  const desks = currentTeam().map(member => `<div class="desk"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span><canvas width="24" height="24" data-portrait="${member.id}"></canvas><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
       <div class="office-room panel">${desks}</div>
@@ -320,6 +477,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
   document.querySelector("#project").addEventListener("click", startBattle);
+  scheduleOfficeDialogue();
 }
 
 function generateEquipmentReward() {

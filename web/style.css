@@ -406,10 +406,10 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .desk:nth-child(2) > strong { rotate: 1deg; }
 .desk > small { position: relative; z-index: 7; display: block; width: max-content; max-width: 94%; overflow: hidden; margin: 3px auto 0; padding: 2px 5px; background: rgba(23,54,74,.9); color: var(--paper); font-size: 8px; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
 .office-workspace { position: relative; width: 100%; aspect-ratio: 1; margin: 0 auto; }
-.office-character { position: absolute; z-index: auto; inset: -6% 0 0; }
+.office-character { position: absolute; z-index: auto; inset: -8% 0 0; }
 .office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(58%, 76px); image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
-.office-desk-base { position: absolute; z-index: 2; top: 35%; left: 2%; width: 96%; height: auto; pointer-events: none; }
-.office-monitor-back { position: absolute; z-index: 5; top: 59%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
+.office-desk-base { position: absolute; z-index: 2; top: 44%; left: 2%; width: 96%; height: auto; pointer-events: none; }
+.office-monitor-back { position: absolute; z-index: 5; top: 67%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
 .office-equipment-prop { position: absolute; z-index: 3; width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(0 0 2px var(--rarity-color)); pointer-events: none; }
 .office-equipment-prop.rarity-0, .office-equipment-prop.rarity-1 { filter: none; }
 .prop-laptop { bottom: -7px; left: 50%; width: 48px; height: 48px; translate: -50% 0; animation: office-work-use 1.1s steps(2) infinite; }
@@ -445,8 +445,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 
 .office-speech {
   position: absolute;
-  z-index: 5;
-  bottom: calc(100% - 30px);
+  z-index: 9;
+  bottom: calc(100% + 12px);
   left: 50%;
   width: max-content;
   max-width: min(126px, 36vw);

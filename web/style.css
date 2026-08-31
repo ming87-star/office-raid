@@ -307,7 +307,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   grid-template-columns: repeat(3, 1fr);
   align-items: end;
   gap: 6px;
-  padding: 42px 8px 62px;
+  padding: 42px 8px 146px;
   overflow: hidden;
   isolation: isolate;
   border-color: #0d2838;
@@ -703,7 +703,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   #app { gap: 6px; padding-top: max(7px, env(safe-area-inset-top)); }
   .header { padding-top: 6px; padding-bottom: 6px; }
   .header p { min-height: 0; margin-top: 3px; }
-  .office-room { padding: 30px 8px 48px; }
+  .office-room { padding: 30px 8px 108px; }
   .company-card { padding-top: 6px; padding-bottom: 7px; }
   .company-stats { margin-top: 4px; }
   .company-notes { margin-top: 4px; }

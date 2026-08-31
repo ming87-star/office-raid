@@ -7,11 +7,72 @@ const COLORS = {
 };
 
 const DEPARTMENTS = {
-  pm: { name: "기획/PM", short: "PM", color: "#4a70a8" },
+  management: { name: "경영", short: "경영", color: "#4a70a8" },
+  production: { name: "생산", short: "생산", color: "#b8753a" },
+  quality: { name: "품질", short: "품질", color: "#55778c" },
+  procurement: { name: "구매/자재", short: "구매", color: "#7c6854" },
+  product: { name: "제품개발", short: "제품", color: "#168c8b" },
+  md: { name: "상품기획/MD", short: "MD", color: "#9b6d9d" },
   sales: { name: "영업", short: "영업", color: "#d6a12c" },
-  dev: { name: "개발/R&D", short: "개발", color: "#168c8b" },
+  logistics: { name: "물류", short: "물류", color: "#d17655" },
+  marketing: { name: "마케팅/CS", short: "마케팅", color: "#c84b3c" },
+  planning: { name: "서비스기획", short: "기획", color: "#4a70a8" },
+  dev: { name: "개발", short: "개발", color: "#168c8b" },
+  design: { name: "디자인/UX", short: "UX", color: "#a35c72" },
+  operations: { name: "서비스운영", short: "운영", color: "#3e7852" },
   finance: { name: "회계/재무", short: "재무", color: "#6d7c8c" }
 };
+
+const INDUSTRIES = {
+  manufacturing: {
+    name: "제조업", short: "제조", icon: "⚙", tone: "manufacturing",
+    tagline: "좋은 제품을, 약속한 품질로",
+    departments: ["production", "quality", "procurement", "product"],
+    departmentLabel: "생산 · 품질 · 구매 · 제품개발",
+    combatStyle: "안정적인 지속 처리와 결함 제거",
+    prefixes: ["한빛", "대성", "미래", "세움", "태성", "정우", "새한", "가온"],
+    suffixes: ["정밀", "산업", "기공", "테크", "제작소", "솔루션"],
+    starterNotice: "생산과 품질을 책임질 창립 팀이 모였습니다.",
+    firstGoal: "첫 시제품 납품",
+    starters: [
+      { name: "한기준", department: "production", trait: "빠른 손", work: 18, collaboration: 13, speed: 16, look: 5123 },
+      { name: "윤정밀", department: "quality", trait: "완벽주의", work: 16, collaboration: 16, speed: 12, look: 7821 }
+    ]
+  },
+  commerce: {
+    name: "유통·커머스", short: "유통", icon: "▤", tone: "commerce",
+    tagline: "좋은 상품을, 가장 빠르게",
+    departments: ["md", "sales", "logistics", "marketing"],
+    departmentLabel: "MD · 영업 · 물류 · 마케팅",
+    combatStyle: "빠른 연계와 매출 폭발",
+    prefixes: ["다온", "한결", "모아", "바른", "새봄", "온누리", "가득", "이음"],
+    suffixes: ["유통", "상사", "커머스", "마켓", "트레이딩", "파트너스"],
+    starterNotice: "영업과 물류를 책임질 창립 팀이 모였습니다.",
+    firstGoal: "첫 거래처 입점",
+    starters: [
+      { name: "김세일", department: "sales", trait: "발표 체질", work: 15, collaboration: 14, speed: 17, look: 2471 },
+      { name: "한보람", department: "logistics", trait: "침착한 조율자", work: 16, collaboration: 15, speed: 16, look: 6942 }
+    ]
+  },
+  it: {
+    name: "IT·플랫폼", short: "IT", icon: "⌘", tone: "it",
+    tagline: "작은 기능에서, 거대한 서비스로",
+    departments: ["planning", "dev", "design", "operations"],
+    departmentLabel: "서비스기획 · 개발 · UX · 운영",
+    combatStyle: "스킬 조합과 자동화 집중 처리",
+    prefixes: ["넥스트", "모아", "플로우", "루프", "픽셀", "클라우드", "브릿지", "노바"],
+    suffixes: ["소프트", "웍스", "랩", "시스템즈", "플랫폼", "테크"],
+    starterNotice: "서비스기획과 개발을 책임질 창립 팀이 모였습니다.",
+    firstGoal: "첫 서비스 MVP 출시",
+    starters: [
+      { name: "박다온", department: "planning", trait: "아이디어 뱅크", work: 15, collaboration: 17, speed: 14, look: 4265 },
+      { name: "이코드", department: "dev", trait: "위기 전문가", work: 19, collaboration: 12, speed: 16, look: 3817 }
+    ]
+  }
+};
+
+const COMMON_DEPARTMENTS = ["finance"];
+const RECRUITABLE_DEPARTMENTS = [...new Set([...Object.values(INDUSTRIES).flatMap(industry => industry.departments), ...COMMON_DEPARTMENTS])];
 
 const RANKS = [
   { name: "신입", bonus: 0, color: "#6d7c8c" },
@@ -33,9 +94,12 @@ const EQUIPMENT_RARITIES = [
   { name: "전설", color: "#d6a12c" }
 ];
 const EQUIPMENT_CATALOG = [
-  ["집중형 노트북", "work", "laptop"], ["기획자의 태블릿", "work", "tablet"], ["정밀 계산기", "work", "calculator"],
-  ["협업 헤드셋", "support", "headset"], ["정리의 다이어리", "support", "planner"], ["황금 명함지갑", "support", "wallet"],
-  ["마감 수호 텀블러", "personal", "tumbler"], ["새벽의 커피", "personal", "coffee"], ["행운의 부적", "personal", "charm"]
+  ["집중형 노트북", "work", "laptop", ["it"]], ["기획자의 태블릿", "work", "tablet", ["commerce", "it"]],
+  ["정밀 측정 키트", "work", "calculator", ["manufacturing"]], ["재고 스캐너", "work", "tablet", ["commerce"]],
+  ["디버깅 키보드", "work", "laptop", ["it"]], ["협업 헤드셋", "support", "headset", ["commerce", "it"]],
+  ["라인 체크리스트", "support", "planner", ["manufacturing"]], ["정리의 다이어리", "support", "planner"],
+  ["황금 명함지갑", "support", "wallet", ["commerce"]], ["마감 수호 텀블러", "personal", "tumbler"],
+  ["새벽의 커피", "personal", "coffee"], ["행운의 부적", "personal", "charm"]
 ];
 
 const DIRECTIVE_SKILLS = {
@@ -50,31 +114,41 @@ const DIRECTIVE_SKILLS = {
     { id: "emergency-command", name: "전사 긴급 지시", description: "이번 지시 효과 20% 증가", visual: "지휘 방송", cooldown: 2 }
   ],
   dev: [
-    { id: "focus-development", name: "집중 개발", description: "핵심에 강한 즉시 업무 처리", visual: "코드 폭포", cooldown: 1 },
-    { id: "automation-deploy", name: "자동화 배포", description: "즉시 처리 + 2턴 지속 처리", visual: "자동화 드론", cooldown: 2 },
-    { id: "night-shift", name: "밤샘 해결", description: "가장 강력한 단일 업무 처리", visual: "오류창 파쇄", cooldown: 3 }
+    { id: "focus-development", name: "집중 처리", description: "핵심에 강한 즉시 업무 처리", visual: "업무 폭발", cooldown: 1 },
+    { id: "automation-deploy", name: "자동화 투입", description: "즉시 처리 + 2턴 지속 처리", visual: "자동화 흐름", cooldown: 2 },
+    { id: "night-shift", name: "밤샘 해결", description: "가장 강력한 단일 업무 처리", visual: "마감 파쇄", cooldown: 3 }
   ],
   finance: [
-    { id: "budget-approval", name: "추가 예산 승인", description: "이번 지시 효과 20% 증가", visual: "황금 결재", cooldown: 2 },
-    { id: "cost-defense", name: "비용 방어", description: "불리한 상태 제거 · 손실 차단", visual: "예산 장벽", cooldown: 1 },
-    { id: "emergency-approval", name: "긴급 결재", description: "마감 +1턴과 즉시 업무 처리", visual: "결재 도장", cooldown: 2 }
+    { id: "budget-approval", name: "자원 집중", description: "이번 지시 효과 20% 증가", visual: "자원 집결", cooldown: 2 },
+    { id: "cost-defense", name: "리스크 차단", description: "불리한 상태 제거 · 손실 차단", visual: "안전 장벽", cooldown: 1 },
+    { id: "emergency-approval", name: "긴급 지원", description: "마감 +1턴과 즉시 업무 처리", visual: "긴급 승인", cooldown: 2 }
   ]
 };
 
 const PROJECTS = [
-  { id: "revision", name: "끝없는 수정 요청", difficulty: "초급", workload: 210, deadline: 8, cash: 700, reputation: 12, eventEvery: 2, summary: "쌓여가는 수정표와 최종 파일을 정리합니다." },
-  { id: "schedule", name: "엉킨 출시 일정", difficulty: "초급+", workload: 240, deadline: 8, cash: 780, reputation: 14, eventEvery: 2, summary: "겹쳐버린 일정과 마감 시계를 다시 맞춥니다." },
-  { id: "migration", name: "데이터 이전 대작전", difficulty: "중급", workload: 275, deadline: 9, cash: 880, reputation: 16, eventEvery: 2, summary: "두 시스템 사이의 데이터를 안전하게 옮깁니다." },
-  { id: "campaign", name: "긴급 캠페인 런칭", difficulty: "중급", workload: 310, deadline: 9, cash: 980, reputation: 18, eventEvery: 2, summary: "광고 소재와 고객 요청을 동시에 처리합니다." },
-  { id: "audit", name: "전사 보안 감사", difficulty: "중상급", workload: 345, deadline: 10, cash: 1100, reputation: 21, eventEvery: 2, summary: "누락된 문서와 위험 항목을 전부 찾아냅니다." },
-  { id: "outage", name: "서비스 장애 수습", difficulty: "상급", workload: 385, deadline: 10, cash: 1250, reputation: 24, eventEvery: 1, summary: "오류가 번지기 전에 서버와 고객 대응을 복구합니다." },
-  { id: "launch", name: "해외 서비스 출시", difficulty: "상급", workload: 430, deadline: 11, cash: 1420, reputation: 28, eventEvery: 1, summary: "시차와 현지 요구사항을 맞춰 서비스를 출시합니다." },
-  { id: "integration", name: "합병 조직 통합", difficulty: "최상급", workload: 475, deadline: 12, cash: 1600, reputation: 32, eventEvery: 1, summary: "서로 다른 두 회사의 업무 체계를 하나로 합칩니다." }
+  { id: "revision", industry: "common", art: "revision", name: "끝없는 수정 요청", difficulty: "초급", workload: 210, deadline: 8, cash: 700, reputation: 12, eventEvery: 2, recommended: ["planning", "quality", "sales"], summary: "쌓여가는 수정표와 최종 파일을 정리합니다." },
+  { id: "schedule", industry: "common", art: "schedule", name: "엉킨 납품 일정", difficulty: "초급+", workload: 240, deadline: 8, cash: 780, reputation: 14, eventEvery: 2, recommended: ["management", "production", "logistics", "planning"], summary: "겹쳐버린 일정과 마감 시계를 다시 맞춥니다." },
+
+  { id: "mfg-prototype", industry: "manufacturing", art: "revision", name: "첫 시제품 납품", difficulty: "초급", workload: 225, deadline: 8, cash: 760, reputation: 13, eventEvery: 2, recommended: ["product", "production", "quality"], summary: "설계안을 실제 제품으로 완성해 첫 고객에게 납품합니다." },
+  { id: "mfg-supplier", industry: "manufacturing", art: "migration", name: "핵심 부품 수급 위기", difficulty: "중급", workload: 290, deadline: 9, cash: 930, reputation: 17, eventEvery: 2, recommended: ["procurement", "production", "finance"], summary: "멈춰가는 생산라인에 필요한 부품을 제때 확보합니다." },
+  { id: "mfg-defect", industry: "manufacturing", art: "audit", name: "불량률 0.1% 작전", difficulty: "중상급", workload: 350, deadline: 10, cash: 1120, reputation: 22, eventEvery: 2, recommended: ["quality", "production", "product"], summary: "공정 곳곳에 숨은 불량 원인을 추적해 제거합니다." },
+  { id: "mfg-automation", industry: "manufacturing", art: "integration", name: "스마트 공장 전환", difficulty: "상급", workload: 425, deadline: 11, cash: 1430, reputation: 28, eventEvery: 1, recommended: ["production", "product", "procurement"], summary: "기존 생산라인을 멈추지 않고 자동화 설비로 전환합니다." },
+
+  { id: "com-entry", industry: "commerce", art: "campaign", name: "첫 거래처 입점", difficulty: "초급", workload: 220, deadline: 8, cash: 750, reputation: 13, eventEvery: 2, recommended: ["sales", "md", "logistics"], summary: "상품 구성과 조건을 맞춰 첫 대형 거래처에 입점합니다." },
+  { id: "com-season", industry: "commerce", art: "launch", name: "시즌 초대형 할인전", difficulty: "중급", workload: 300, deadline: 9, cash: 960, reputation: 18, eventEvery: 2, recommended: ["marketing", "md", "sales"], summary: "상품과 광고, 고객 요청이 몰리는 할인전을 성공시킵니다." },
+  { id: "com-inventory", industry: "commerce", art: "migration", name: "창고 재고 대이동", difficulty: "중상급", workload: 355, deadline: 10, cash: 1140, reputation: 22, eventEvery: 2, recommended: ["logistics", "md", "finance"], summary: "뒤섞인 재고를 새 물류센터로 정확하게 옮깁니다." },
+  { id: "com-returns", industry: "commerce", art: "audit", name: "반품 폭주 수습", difficulty: "상급", workload: 420, deadline: 11, cash: 1410, reputation: 27, eventEvery: 1, recommended: ["marketing", "logistics", "sales"], summary: "쏟아지는 반품과 고객 문의를 막아 신뢰를 회복합니다." },
+
+  { id: "it-mvp", industry: "it", art: "campaign", name: "첫 서비스 MVP 출시", difficulty: "초급", workload: 230, deadline: 8, cash: 770, reputation: 14, eventEvery: 2, recommended: ["planning", "dev", "design"], summary: "핵심 기능을 정리해 첫 사용자에게 서비스를 공개합니다." },
+  { id: "it-migration", industry: "it", art: "migration", name: "무중단 서버 이전", difficulty: "중급", workload: 305, deadline: 9, cash: 970, reputation: 18, eventEvery: 2, recommended: ["dev", "operations", "planning"], summary: "서비스를 멈추지 않고 모든 데이터를 새 서버로 옮깁니다." },
+  { id: "it-renewal", industry: "it", art: "revision", name: "전면 UX 개편", difficulty: "중상급", workload: 360, deadline: 10, cash: 1160, reputation: 22, eventEvery: 2, recommended: ["design", "planning", "dev"], summary: "복잡해진 서비스를 사용자가 이해하기 쉽게 다시 설계합니다." },
+  { id: "it-security", industry: "it", art: "audit", name: "보안 취약점 감사", difficulty: "상급", workload: 430, deadline: 11, cash: 1450, reputation: 29, eventEvery: 1, recommended: ["operations", "dev", "planning"], summary: "서비스 곳곳의 위험 요소를 찾아 출시 전에 차단합니다." }
 ];
 
 const BOSS_PROJECTS = [
-  { id: "boss-transformation", name: "전사 시스템 대전환", difficulty: "BOSS", workload: 780, deadline: 18, cash: 2600, reputation: 55, eventEvery: 1, boss: true, summary: "회사의 모든 시스템을 멈춤 없이 교체하는 장기 프로젝트입니다.", phaseNames: ["현황 분석", "병행 전환", "최종 가동"] },
-  { id: "boss-global-launch", name: "글로벌 초대형 런칭", difficulty: "BOSS+", workload: 1050, deadline: 22, cash: 3600, reputation: 75, eventEvery: 1, boss: true, summary: "여러 국가의 출시 일정과 대규모 캠페인을 동시에 지휘합니다.", phaseNames: ["지역별 준비", "동시 출시", "전 세계 안정화"] }
+  { id: "boss-recall", industry: "manufacturing", art: "boss-transformation", name: "전국 제품 리콜", difficulty: "BOSS", workload: 820, deadline: 19, cash: 2800, reputation: 58, eventEvery: 1, boss: true, recommended: ["quality", "production", "product"], summary: "전국에 출고된 제품을 회수하고 원인을 고치는 초대형 장기 프로젝트입니다.", phaseNames: ["원인 추적", "전량 회수", "생산 재개"] },
+  { id: "boss-logistics", industry: "commerce", art: "boss-global-launch", name: "전국 물류망 마비", difficulty: "BOSS", workload: 830, deadline: 19, cash: 2850, reputation: 58, eventEvery: 1, boss: true, recommended: ["logistics", "md", "sales"], summary: "멈춰버린 물류센터와 배송망을 순서대로 복구하는 장기 프로젝트입니다.", phaseNames: ["병목 확인", "거점 복구", "전국 정상화"] },
+  { id: "boss-launch-outage", industry: "it", art: "boss-transformation", name: "출시 당일 서버 대폭주", difficulty: "BOSS", workload: 840, deadline: 19, cash: 2900, reputation: 60, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "예상을 뛰어넘은 접속자를 버티며 장애를 막아내는 장기 프로젝트입니다.", phaseNames: ["트래픽 분석", "긴급 증설", "서비스 안정화"] }
 ];
 
 const DEFAULT_REPRESENTATIVE_APPEARANCE = {
@@ -208,8 +282,6 @@ const FORMAL_OFFICE_RESPONSES = {
   "회의만 짧으면 가능할 것 같아요.": "회의가 길어지지 않으면 가능할 것 같습니다.",
   "반복 작업부터 묶으면 빨라질 것 같아요.": "반복 작업부터 묶으면 빨라질 것 같습니다."
 };
-const COMPANY_PREFIXES = ["반짝", "단단", "빠른", "작은", "푸른", "새벽", "모아", "한걸음"];
-const COMPANY_SUFFIXES = ["랩", "스튜디오", "웍스", "컴퍼니", "프로젝트", "오피스", "팩토리", "파트너스"];
 const POSTING_REFRESH_MAX = 2;
 const PAID_POSTING_REFRESH_COST = 200;
 const NORMAL_DAMAGE_VARIANCE = .12;
@@ -234,6 +306,7 @@ let recentOfficeDialogueIds = [];
 let companyLaunchTimer = null;
 
 const state = {
+  industry: "",
   companyName: "",
   cash: 1200,
   reputation: 0,
@@ -300,6 +373,17 @@ function effectiveStats(member) {
   };
 }
 
+function departmentArchetype(department) {
+  if (["sales", "md", "marketing", "design"].includes(department)) return "sales";
+  if (["dev", "product", "production"].includes(department)) return "dev";
+  if (["quality", "procurement", "finance"].includes(department)) return "finance";
+  return "pm";
+}
+
+function hasProjectAffinity(member, project) {
+  return Boolean(project?.recommended?.includes(member.department));
+}
+
 function header(title, notice) {
   return `<header class="header"><img class="header-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID"><p class="eyebrow">LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
 }
@@ -341,18 +425,46 @@ function renderOpening() {
     <div class="opening-top"><img class="opening-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID"><button id="skip-opening">건너뛰기</button></div>
     <article class="opening-card panel"><p>${escapeHtml(scene.kicker)}</p><h1>${escapeHtml(scene.title).replace("\n", "<br>")}</h1>${visual}</article>
     <div class="opening-dots">${dots}</div>
-    <button id="next-opening" class="teal">${openingPage < 2 ? "다음" : "회사 이름 정하기"}</button>
+    <button id="next-opening" class="teal">${openingPage < 2 ? "다음" : "업종 선택하기"}</button>
   </section>`;
-  document.querySelector("#skip-opening").addEventListener("click", renderSetup);
+  document.querySelector("#skip-opening").addEventListener("click", renderIndustrySelection);
   document.querySelector("#next-opening").addEventListener("click", () => {
     if (openingPage < 2) { openingPage += 1; renderOpening(); }
-    else renderSetup();
+    else renderIndustrySelection();
   });
+}
+
+function currentIndustry() {
+  return INDUSTRIES[state.industry] || null;
+}
+
+function renderIndustrySelection() {
+  currentView = "industry";
+  const cards = Object.entries(INDUSTRIES).map(([id, industry]) => `<button class="industry-card industry-${industry.tone}" data-industry="${id}">
+    <span class="industry-icon" aria-hidden="true">${industry.icon}</span>
+    <span class="industry-copy"><small>STARTING BUSINESS</small><strong>${escapeHtml(industry.name)}</strong><em>${escapeHtml(industry.tagline)}</em></span>
+    <span class="industry-detail"><b>${escapeHtml(industry.departmentLabel)}</b><small>${escapeHtml(industry.combatStyle)}</small></span>
+  </button>`).join("");
+  app.innerHTML = `${header("업종 선택", "어떤 회사를 만들겠습니까?")}
+    <section class="screen industry-screen">
+      <div class="industry-intro panel"><small>FOUNDING STEP 1</small><strong>업종에 따라 동료와 프로젝트가 달라집니다.</strong></div>
+      <div class="industry-list">${cards}</div>
+    </section>`;
+  document.querySelectorAll("[data-industry]").forEach(button => button.addEventListener("click", () => selectIndustry(button.dataset.industry)));
+}
+
+function selectIndustry(industryId) {
+  if (!INDUSTRIES[industryId]) return;
+  state.industry = industryId;
+  state.companyName = generateCompanyName(industryId);
+  renderSetup();
 }
 
 function renderSetup() {
   currentView = "setup";
-  app.innerHTML = `${header("OFFICE RAID", "프로젝트는 거대하고, 퇴근은 멀었다.")}
+  const industry = currentIndustry();
+  if (!industry) return renderIndustrySelection();
+  app.innerHTML = `${header("회사 이름 정하기", `${industry.name} · ${industry.tagline}`)}
     <section class="screen"><div class="setup panel">
       <div class="setup-story-preview" aria-label="거대한 프로젝트에 도전하는 팀의 연출 장면">
         <span class="setup-project-glow" aria-hidden="true"></span>
@@ -362,30 +474,39 @@ function renderSetup() {
         <i class="story-paper story-paper-two" aria-hidden="true"></i>
         <i class="story-paper story-paper-three" aria-hidden="true"></i>
         <div class="setup-story-team">
-          <canvas width="24" height="24" data-setup-member="pm" aria-label="기획 담당자의 뒷모습"></canvas>
-          <canvas width="24" height="24" data-setup-member="dev" aria-label="개발 담당자의 뒷모습"></canvas>
-          <canvas width="24" height="24" data-setup-member="sales" aria-label="영업 담당자의 뒷모습"></canvas>
+          <canvas width="24" height="24" data-setup-member="0" aria-label="대표의 뒷모습"></canvas>
+          <canvas width="24" height="24" data-setup-member="1" aria-label="${escapeHtml(DEPARTMENTS[industry.starters[0].department].name)} 담당자의 뒷모습"></canvas>
+          <canvas width="24" height="24" data-setup-member="2" aria-label="${escapeHtml(DEPARTMENTS[industry.starters[1].department].name)} 담당자의 뒷모습"></canvas>
         </div>
       </div>
-      <h2>작은 팀, 큰 프로젝트</h2>
-      <p>동료를 모아 회사를 키우고<br>거대한 프로젝트를 공략하세요.</p>
-      <span class="genre-tag">인재 수집형 오피스 전투 RPG</span>
+      <h2>${escapeHtml(industry.name)} 창업</h2>
+      <p>${escapeHtml(industry.departmentLabel)}<br>${escapeHtml(industry.combatStyle)}</p>
+      <span class="genre-tag">${escapeHtml(industry.name)} · 창립 준비</span>
       <label class="sr-only" for="company-name">회사 이름</label>
-      <div class="input-with-button"><input id="company-name" maxlength="18" value="${escapeHtml(state.companyName || "오피스 레이드 주식회사")}" autocomplete="organization"><button id="random-company" class="mustard">랜덤 생성</button></div>
-      <button id="create-company">다음 · 대표 만들기</button>
+      <div class="input-with-button"><input id="company-name" maxlength="18" value="${escapeHtml(state.companyName || generateCompanyName(state.industry))}" autocomplete="organization"><button id="random-company" class="mustard">랜덤 생성</button></div>
+      <div class="setup-actions"><button id="back-industry" class="ink">← 업종</button><button id="create-company" class="teal">다음 · 대표 만들기</button></div>
     </div></section>`;
   drawBoss(document.querySelector("#setup-boss"));
-  const setupLooks = { pm: appearance(1103), dev: appearance(3817), sales: appearance(2471) };
-  document.querySelectorAll("[data-setup-member]").forEach(canvas => {
-    drawBackPortrait(canvas, { department: canvas.dataset.setupMember, appearance: setupLooks[canvas.dataset.setupMember] });
+  const setupDepartments = ["management", ...industry.starters.map(member => member.department)];
+  document.querySelectorAll("[data-setup-member]").forEach((canvas, index) => {
+    const department = setupDepartments[index];
+    drawBackPortrait(canvas, { department, appearance: appearance([1103, industry.starters[0].look, industry.starters[1].look][index]) });
   });
   document.querySelector("#random-company").addEventListener("click", randomizeCompanyName);
+  document.querySelector("#back-industry").addEventListener("click", renderIndustrySelection);
   document.querySelector("#create-company").addEventListener("click", openRepresentativeSetup);
   document.querySelector("#company-name").addEventListener("keydown", event => { if (event.key === "Enter") openRepresentativeSetup(); });
 }
 
+function generateCompanyName(industryId = state.industry) {
+  const industry = INDUSTRIES[industryId] || INDUSTRIES.commerce;
+  return `${industry.prefixes[randomInt(industry.prefixes.length)]}${industry.suffixes[randomInt(industry.suffixes.length)]}`;
+}
+
 function randomizeCompanyName() {
-  document.querySelector("#company-name").value = `${COMPANY_PREFIXES[randomInt(COMPANY_PREFIXES.length)]} ${COMPANY_SUFFIXES[randomInt(COMPANY_SUFFIXES.length)]}`;
+  const name = generateCompanyName();
+  state.companyName = name;
+  document.querySelector("#company-name").value = name;
 }
 
 function openRepresentativeSetup() {
@@ -411,7 +532,7 @@ function renderRepresentativeSetup() {
       <div class="custom-list">${rows}</div>
     </div>
     <div class="footer-actions"><button class="ink" id="back-company">← 회사 이름</button><button class="teal" id="finish-company">회사 시작</button></div></section>`;
-  drawPortrait(document.querySelector("#representative-preview"), { department: "pm", appearance: look });
+  drawPortrait(document.querySelector("#representative-preview"), { department: "management", appearance: look });
   document.querySelector("#random-representative-name").addEventListener("click", () => {
     representativeDraft.name = FAMILY[randomInt(FAMILY.length)] + GIVEN[randomInt(GIVEN.length)];
     renderRepresentativeSetup();
@@ -449,13 +570,14 @@ function changeRepresentativePart(part, delta) {
 
 function createCompany() {
   saveRepresentativeName();
-  const representative = employee(representativeDraft.name, "pm", "침착한 조율자", 17, 18, 14, 1103);
+  const industry = currentIndustry();
+  if (!industry) return renderIndustrySelection();
+  const representative = employee(representativeDraft.name, "management", "침착한 조율자", 17, 18, 14, 1103);
   representative.isRepresentative = true;
   representative.appearance = { ...representativeDraft.appearance };
   state.employees = [
     representative,
-    employee("김세일", "sales", "발표 체질", 15, 14, 17, 2471),
-    employee("이코드", "dev", "위기 전문가", 19, 12, 16, 3817)
+    ...industry.starters.map(member => employee(member.name, member.department, member.trait, member.work, member.collaboration, member.speed, member.look))
   ];
   state.teamIds = state.employees.map(member => member.id);
   renderCompanyLaunch();
@@ -469,6 +591,7 @@ function clearCompanyLaunchTimer() {
 function renderCompanyLaunch() {
   currentView = "company-launch";
   clearCompanyLaunchTimer();
+  const industry = currentIndustry();
   const members = state.employees.map((member, index) => `<div class="launch-member launch-member-${index + 1}">
     <span>${member.isRepresentative ? "FOUNDER" : "CREW 0" + index}</span>
     <canvas width="24" height="24" data-portrait="${member.id}" aria-label="${escapeHtml(member.name)} 정면 모습"></canvas>
@@ -482,9 +605,10 @@ function renderCompanyLaunch() {
       <div class="launch-stamp"><span>COMPANY FOUNDED</span><b>설립 완료</b></div>
       <p class="launch-kicker">FIRST RAID TEAM</p>
       <h1>${escapeHtml(state.companyName)}</h1>
-      <p class="launch-message">작은 팀이 모였습니다.<br>이제 첫 프로젝트를 시작할 시간입니다.</p>
+      <p class="launch-industry">${escapeHtml(industry?.name || "신생 기업")}</p>
+      <p class="launch-message">${escapeHtml(industry?.starterNotice || "작은 팀이 모였습니다.")}<br>이제 첫 프로젝트를 시작할 시간입니다.</p>
       <div class="launch-team" aria-label="초기 프로젝트 팀">${members}</div>
-      <div class="launch-mission"><span>첫 번째 목표</span><strong>프로젝트 1건 완료</strong><i>준비 완료</i></div>
+      <div class="launch-mission"><span>첫 번째 목표</span><strong>${escapeHtml(industry?.firstGoal || "프로젝트 1건 완료")}</strong><i>준비 완료</i></div>
     </article>
     <button id="enter-office" class="mustard">사무실로 출근</button>
   </section>`;
@@ -642,12 +766,13 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
   const officeMembers = state.employees.slice(0, state.capacity);
+  const industry = currentIndustry();
   const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
       <div class="office-room panel staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="직원 ${officeMembers.length}명이 근무하는 작은 사무실">${desks}</div>
       <div class="company-card panel">
-        <div class="company-card-head"><div><small>COMPANY FILE</small><h2>${escapeHtml(state.companyName)}</h2></div><b>운영 중</b></div>
+        <div class="company-card-head"><div><small>COMPANY FILE</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")}</b></div>
         <div class="company-stats" aria-label="회사 현황">
           <span><small>직원</small><strong>${state.employees.length}<i>/ ${state.capacity}</i></strong></span>
           <span><small>현금</small><strong>${state.cash}<i>만원</i></strong></span>
@@ -695,7 +820,9 @@ function generateEquipmentReward(minimumRarity = 0) {
   const roll = randomInt(100);
   const rolledRarity = roll < 60 ? 0 : roll < 85 ? 1 : roll < 96 ? 2 : roll < 99 ? 3 : 4;
   const rarity = Math.max(minimumRarity, rolledRarity);
-  const [name, slot, art] = EQUIPMENT_CATALOG[randomInt(EQUIPMENT_CATALOG.length)];
+  const industryCatalog = EQUIPMENT_CATALOG.filter(([, , , industries]) => !industries || industries.includes(state.industry));
+  const rewardPool = Math.random() < .8 && industryCatalog.length ? industryCatalog : EQUIPMENT_CATALOG;
+  const [name, slot, art] = rewardPool[randomInt(rewardPool.length)];
   const bonus = 2 + rarity * 2;
   return {
     id: `equipment-${nextId++}`, name, slot, art, rarity,
@@ -716,12 +843,16 @@ function scaledProject(project) {
 }
 
 function regularProjectOptions() {
-  const start = state.projectClears % PROJECTS.length;
-  return [0, 1, 2].map(offset => scaledProject(PROJECTS[(start + offset) % PROJECTS.length]));
+  const industryProjects = PROJECTS.filter(project => project.industry === state.industry);
+  const commonProjects = PROJECTS.filter(project => project.industry === "common");
+  const pool = [...industryProjects, ...commonProjects];
+  const start = state.projectClears % pool.length;
+  return [0, 1, 2].map(offset => scaledProject(pool[(start + offset) % pool.length]));
 }
 
 function nextBossProject() {
-  return scaledProject(BOSS_PROJECTS[state.bossClears % BOSS_PROJECTS.length]);
+  const pool = BOSS_PROJECTS.filter(project => project.industry === state.industry);
+  return scaledProject(pool[state.bossClears % pool.length] || BOSS_PROJECTS[0]);
 }
 
 function bossProjectReady() {
@@ -734,9 +865,11 @@ function bossProjectProgress() {
 
 function projectCard(project, locked = false) {
   const reward = project.boss ? `현금 ${project.cash} · 희귀 장비 2개` : `현금 ${project.cash} · 평판 ${project.reputation}`;
+  const recommended = (project.recommended || []).map(department => DEPARTMENTS[department]?.short).filter(Boolean).join(" · ");
   return `<article class="project-card panel ${project.boss ? "boss-project" : ""} ${locked ? "locked" : ""}">
     <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><strong>${escapeHtml(project.name)}</strong></div>
     <p>${escapeHtml(project.summary)}</p>
+    <div class="project-affinity"><b>추천 부서</b><span>${escapeHtml(recommended || "모든 부서")}</span><em>상성 피해 +18%</em></div>
     <div class="project-spec"><span>업무량 ${project.max}</span><span>마감 ${project.deadline}턴</span></div>
     <div class="project-reward">${locked ? `일반 프로젝트 ${bossProjectProgress()}/4 완료` : escapeHtml(reward)}</div>
     <button class="${project.boss ? "red" : "teal"}" data-project-id="${project.id}" ${locked ? "disabled" : ""}>${locked ? "보스 계약 잠김" : project.boss ? "장기 프로젝트 도전" : "계약 선택"}</button>
@@ -750,7 +883,8 @@ function renderProjectBoard() {
   const regularCards = regularProjectOptions().map(project => projectCard(project)).join("");
   const boss = nextBossProject();
   const bossCard = projectCard(boss, !bossProjectReady());
-  app.innerHTML = `${header("프로젝트 선택", "난이도와 마감, 보상을 비교해 계약을 선택하세요.")}
+  const industry = currentIndustry();
+  app.innerHTML = `${header("프로젝트 선택", `${industry?.name || "회사"} 계약 · 추천 부서를 편성하면 처리량이 증가합니다.`)}
     <section class="screen project-board">
       <div class="project-list">${regularCards}${bossCard}</div>
       <button class="ink" id="back-from-projects">← 사무실</button>
@@ -826,7 +960,12 @@ function rollRank(mode = "regular") {
 function generateCandidate(mode = "regular") {
   const rank = rollRank(mode);
   const bonus = RANKS[rank].bonus;
-  const departments = Object.keys(DEPARTMENTS);
+  const industryDepartments = currentIndustry()?.departments || RECRUITABLE_DEPARTMENTS;
+  const outsideDepartments = RECRUITABLE_DEPARTMENTS.filter(department => !industryDepartments.includes(department) && !COMMON_DEPARTMENTS.includes(department));
+  const departmentRoll = randomInt(100);
+  const departments = departmentRoll < 70
+    ? industryDepartments
+    : departmentRoll < 90 ? COMMON_DEPARTMENTS : outsideDepartments.length ? outsideDepartments : industryDepartments;
   const candidate = employee(
     FAMILY[randomInt(FAMILY.length)] + GIVEN[randomInt(GIVEN.length)],
     departments[randomInt(departments.length)], TRAITS[randomInt(TRAITS.length)],
@@ -889,7 +1028,8 @@ function renderInterview(notice) {
   const refreshCost = state.postingRefreshes === POSTING_REFRESH_MAX ? 0 : PAID_POSTING_REFRESH_COST;
   const regularFooter = `<button class="mustard" id="refresh-posting" ${state.postingRefreshes <= 0 ? "disabled" : ""}>${state.postingRefreshes > 0 ? `공고 갱신 ${state.postingRefreshes}/${POSTING_REFRESH_MAX}${refreshCost > 0 ? ` · ${refreshCost}` : ""}` : "공고 갱신 완료"}</button>`;
   const specialFooter = `<button class="mustard" disabled>헤드헌팅권 ${state.specialRecruitmentTickets}장</button>`;
-  app.innerHTML = `${header("면접실", notice)}<section class="screen interview-screen">
+  const industry = currentIndustry();
+  app.innerHTML = `${header("면접실", `${industry?.short || "회사"} 인재풀 · ${notice}`)}<section class="screen interview-screen">
     <div class="recruitment-tabs"><button class="${recruitmentMode === "regular" ? "active" : ""}" data-recruitment-mode="regular">상시채용</button><button class="${recruitmentMode === "special" ? "active" : ""}" data-recruitment-mode="special">특별채용 · ${state.specialRecruitmentTickets > 0 ? state.specialRecruitmentTickets + "장" : specialRecruitmentProgress()}</button></div>
     <div class="card-list">${cards}</div>
     <div class="footer-actions"><button class="ink" id="back-office">← 사무실</button>${recruitmentMode === "regular" ? regularFooter : specialFooter}</div>
@@ -1020,29 +1160,32 @@ function battleStep() {
   const stats = effectiveStats(member);
   let damage = Math.round(stats.work * .72 + stats.collaboration * .25);
   let skill = "집중 업무";
-  if (member.department === "sales") {
+  const archetype = departmentArchetype(member.department);
+  if (archetype === "sales") {
     battle.requirements = true;
     damage += 5;
     skill = "요구사항 정리";
-  } else if (member.department === "pm") {
+  } else if (archetype === "pm") {
     battle.momentum += 4;
     damage += battle.momentum;
-    skill = "일정 통합";
-  } else if (member.department === "dev") {
+    skill = "업무 조율";
+  } else if (archetype === "dev") {
     if (battle.requirements) damage += 8;
     damage += battle.momentum;
-    skill = "집중 개발";
-  } else if (member.department === "finance") {
+    skill = "집중 처리";
+  } else if (archetype === "finance") {
     damage += 4;
-    skill = "예산 재배치";
+    skill = "리스크 관리";
   }
+  const affinity = hasProjectAffinity(member, battle.project);
+  if (affinity) damage = Math.round(damage * 1.18);
   if (battle.status) {
     damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
   }
   damage = rollDamage(Math.max(1, damage));
   battle.workload = Math.max(0, battle.workload - damage);
   const eventLine = battle.eventText ? `${battle.eventText}\n` : "";
-  battle.log = `${eventLine}${member.name}의 ${skill}! 업무량 ${damage} 처리`;
+  battle.log = `${eventLine}${member.name}의 ${skill}! 업무량 ${damage} 처리${affinity ? " · 부서 상성!" : ""}`;
   battle.eventText = "";
   battle.action += 1;
   addDirectiveGauge(10, "팀의 업무 흐름이 모였습니다.");
@@ -1230,11 +1373,7 @@ function directivePreviewOverlay(preview) {
 }
 
 function directiveSkillsFor(department) {
-  if (DIRECTIVE_SKILLS[department]) return DIRECTIVE_SKILLS[department];
-  if (department === "design" || department === "marketing") return DIRECTIVE_SKILLS.sales;
-  if (department === "hr" || department === "legal") return DIRECTIVE_SKILLS.finance;
-  if (department === "qa" || department === "it") return DIRECTIVE_SKILLS.dev;
-  return DIRECTIVE_SKILLS.pm;
+  return DIRECTIVE_SKILLS[departmentArchetype(department)];
 }
 
 function directiveCooldownFor(memberId, skillId) {
@@ -1411,7 +1550,7 @@ function renderBattle() {
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <button class="ink" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>
     </section>`;
-  drawBoss(document.querySelector("#boss-canvas"), battle.project.id, battle.phase);
+  drawBoss(document.querySelector("#boss-canvas"), battle.project.art || battle.project.id, battle.phase);
   mountPortraits();
   mountEquipmentIcons();
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));

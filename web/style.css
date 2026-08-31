@@ -116,7 +116,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 @keyframes title-art-enter { from { opacity: 0; scale: 1.035; } to { opacity: 1; scale: 1; } }
 @keyframes title-button-pulse { 50% { filter: brightness(1.12); box-shadow: 4px 4px 0 var(--ink), 0 0 23px rgba(214,161,44,.72); } }
 
-.header { position: relative; flex: 0 0 auto; padding: 8px 48px 9px 11px; border: 3px solid var(--ink); background: linear-gradient(104deg, rgba(255,255,255,.8), rgba(255,250,240,.72)), var(--panel); box-shadow: 4px 4px 0 var(--ink); }
+.header { position: relative; flex: 0 0 auto; min-height: 82px; padding: 8px 48px 9px 84px; border: 3px solid var(--ink); background: linear-gradient(104deg, rgba(255,255,255,.8), rgba(255,250,240,.72)), var(--panel); box-shadow: 4px 4px 0 var(--ink); }
+.header-logo { position: absolute; top: 50%; left: 8px; width: 67px; height: 50px; object-fit: contain; filter: drop-shadow(1px 2px 0 rgba(23,54,74,.28)); transform: translateY(-50%); }
 .header::before { content: ""; position: absolute; top: -5px; right: 19px; width: 29px; height: 13px; background: rgba(214,161,44,.78); border: 1px solid rgba(23,54,74,.32); rotate: 4deg; }
 .header::after { content: "LIVE"; position: absolute; right: 8px; bottom: 8px; padding: 3px 4px; border: 2px solid var(--red); color: var(--red); font-size: 7px; font-weight: 1000; letter-spacing: .7px; rotate: -5deg; }
 .eyebrow { margin: 0 0 2px; color: var(--teal); font-size: 9px; font-weight: 900; letter-spacing: 1.5px; }
@@ -132,11 +133,18 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 }
 
 .opening-screen { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
-.opening-top { display: flex; align-items: center; justify-content: space-between; color: var(--teal); font-size: 13px; letter-spacing: 1.5px; }
+.opening-top { min-height: 48px; display: flex; align-items: center; justify-content: space-between; color: var(--teal); font-size: 13px; letter-spacing: 1.5px; }
+.opening-logo { width: 118px; height: 46px; object-fit: contain; object-position: left center; filter: drop-shadow(1px 2px 0 rgba(23,54,74,.3)); }
 .opening-top button { min-height: 34px; padding: 0 12px; background: var(--paper-dark); color: var(--ink); font-size: 10px; }
-.opening-card { min-height: 0; flex: 1 1 auto; padding: 18px 16px; }
+.opening-card { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; padding: 18px 16px; }
 .opening-card > p { margin: 0 0 8px; color: var(--mustard); font-size: 12px; font-weight: 900; }
 .opening-card > h1 { margin: 0; font-size: clamp(25px, 7vw, 31px); line-height: 1.25; }
+.opening-visual { position: relative; min-height: 0; flex: 1 1 auto; margin: 14px 0 0; overflow: hidden; border: 2px solid var(--ink); background: #e8dbc0; box-shadow: 3px 3px 0 var(--ink); }
+.opening-visual::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.34), inset 0 -30px 48px rgba(5,25,38,.12); pointer-events: none; }
+.opening-visual img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.opening-visual-1 img { object-position: center 53%; }
+.opening-visual-2 img { object-position: center 48%; }
+.opening-visual-3 img { object-position: center 46%; }
 .empty-office { position: relative; height: 56%; margin-top: 20px; overflow: hidden; border: 2px solid var(--ink); background: linear-gradient(to bottom, #eee5cf 0 61%, #c8b99d 61% 100%); box-shadow: inset 0 -2px 0 rgba(23,54,74,.25); }
 .empty-office::after { content: ""; position: absolute; right: 0; bottom: 22%; left: 0; height: 2px; background: rgba(23,54,74,.18); box-shadow: 0 30px 0 rgba(23,54,74,.12), 0 60px 0 rgba(23,54,74,.1); }
 .office-window { position: absolute; top: 10%; left: 7%; width: 31%; height: 35%; border: 4px solid var(--ink); background: #7bb7c5; box-shadow: inset 0 -13px 0 rgba(255,255,255,.22); }
@@ -706,7 +714,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 
 @media (max-height: 650px) {
   #app { gap: 6px; padding-top: max(7px, env(safe-area-inset-top)); }
-  .header { padding-top: 6px; padding-bottom: 6px; }
+  .header { min-height: 68px; padding-top: 6px; padding-bottom: 6px; padding-left: 73px; }
+  .header-logo { width: 58px; height: 43px; }
   .header p { min-height: 0; margin-top: 3px; }
   .office-room { padding: 26px 8px 10px; }
   .company-card { padding-top: 6px; padding-bottom: 7px; }
@@ -722,6 +731,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .representative > canvas { width: 82px; height: 82px; }
   .custom-row button { min-height: 29px; }
   .opening-card { padding: 10px 12px; }
+  .opening-logo { width: 102px; height: 40px; }
   .opening-raid > canvas { width: 100px; height: 100px; }
   .opening-mail-window { height: 61%; }
   .mail-body { font-size: 9px; }

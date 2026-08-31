@@ -300,7 +300,7 @@ function effectiveStats(member) {
 }
 
 function header(title, notice) {
-  return `<header class="header"><p class="eyebrow">OFFICE RAID · LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
+  return `<header class="header"><img class="header-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID"><p class="eyebrow">LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
 }
 
 function renderTitle() {
@@ -327,37 +327,21 @@ function renderOpening() {
     { kicker: "띵! · 새 메일 1", title: "첫 프로젝트가\n도착했다." },
     { kicker: "수정 요청 47건 · 마감 D-8", title: "혼자는 무리다.\n하지만 우리는 셋이다." }
   ];
+  const sceneImages = ["opening-office-v2.webp", "opening-mail-v2.webp", "opening-raid-v2.webp"];
+  const sceneAlts = [
+    "아침 햇살이 들어오는 작은 사무실의 빈 책상 세 자리",
+    "긴급 프로젝트 메일과 첨부파일이 표시된 사무실 모니터",
+    "세 동료가 거대한 프로젝트를 마주하는 연출 장면"
+  ];
   const scene = scenes[openingPage];
   const dots = scenes.map((_, index) => `<i class="${index === openingPage ? "active" : ""}"></i>`).join("");
-  let visual = `<div class="empty-office">
-    <span class="office-window" aria-hidden="true"><i></i><i></i></span>
-    <span class="office-clock" aria-hidden="true"><i class="clock-hour"></i><i class="clock-minute"></i><b></b></span>
-    <span class="office-shelf" aria-hidden="true"><i></i><i></i><i></i></span>
-    <div class="office-workstations">${[0, 1, 2].map((_, index) => `<span class="empty-workstation"><i class="empty-monitor"></i><b class="empty-desk"></b><em class="empty-chair chair-${index + 1}"></em></span>`).join("")}</div>
-  </div>`;
-  if (openingPage === 1) {
-    visual = `<div class="opening-mail-window">
-      <div class="mail-toolbar"><strong>MAIL · 받은편지함</strong><time>오전 8:57</time></div>
-      <div class="mail-sender"><b>대형 고객사</b><small>&lt;project@bigclient.co.kr&gt;</small></div>
-      <div class="mail-subject"><small>제목</small><strong>긴급 프로젝트 의뢰드립니다</strong></div>
-      <div class="mail-body"><p>안녕하세요, 대표님.</p><p>첨부드린 프로젝트를 검토 부탁드립니다.</p><strong>오늘 안에 가능하시죠?</strong></div>
-      <div class="mail-attachment"><canvas id="opening-boss" width="64" height="64" aria-label="첨부 프로젝트 미리보기"></canvas><span><b>project_final_FINAL_v7.zip</b><small>수정사항 47개 · 12.8MB</small></span></div>
-      <div class="mail-actions"><span>↩ 답장</span><span>→ 전달</span></div>
-    </div>`;
-  } else if (openingPage === 2) {
-    visual = `<div class="opening-raid"><canvas id="opening-boss" width="64" height="64" aria-label="거대한 프로젝트"></canvas><div class="opening-team"><canvas width="24" height="24" data-opening-member="pm"></canvas><canvas width="24" height="24" data-opening-member="dev"></canvas><canvas width="24" height="24" data-opening-member="sales"></canvas></div></div>`;
-  }
+  const visual = `<figure class="opening-visual opening-visual-${openingPage + 1}"><img src="assets/${sceneImages[openingPage]}?v=20260831" alt="${sceneAlts[openingPage]}" loading="eager" decoding="async"></figure>`;
   app.innerHTML = `<section class="opening-screen">
-    <div class="opening-top"><strong>OFFICE RAID</strong><button id="skip-opening">건너뛰기</button></div>
+    <div class="opening-top"><img class="opening-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID"><button id="skip-opening">건너뛰기</button></div>
     <article class="opening-card panel"><p>${escapeHtml(scene.kicker)}</p><h1>${escapeHtml(scene.title).replace("\n", "<br>")}</h1>${visual}</article>
     <div class="opening-dots">${dots}</div>
     <button id="next-opening" class="teal">${openingPage < 2 ? "다음" : "회사 이름 정하기"}</button>
   </section>`;
-  if (openingPage > 0) drawBoss(document.querySelector("#opening-boss"));
-  if (openingPage === 2) {
-    const looks = { pm: appearance(1103), dev: appearance(3817), sales: appearance(2471) };
-    document.querySelectorAll("[data-opening-member]").forEach(canvas => drawBackPortrait(canvas, { department: canvas.dataset.openingMember, appearance: looks[canvas.dataset.openingMember] }));
-  }
   document.querySelector("#skip-opening").addEventListener("click", renderSetup);
   document.querySelector("#next-opening").addEventListener("click", () => {
     if (openingPage < 2) { openingPage += 1; renderOpening(); }

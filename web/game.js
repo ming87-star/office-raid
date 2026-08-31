@@ -469,7 +469,7 @@ function clearCompanyLaunchTimer() {
 function renderCompanyLaunch() {
   currentView = "company-launch";
   clearCompanyLaunchTimer();
-  const members = state.employees.map((member, index) => `<div class="launch-member" style="--launch-order:${index}">
+  const members = state.employees.map((member, index) => `<div class="launch-member launch-member-${index + 1}">
     <span>${member.isRepresentative ? "FOUNDER" : "CREW 0" + index}</span>
     <canvas width="24" height="24" data-portrait="${member.id}" aria-label="${escapeHtml(member.name)} 정면 모습"></canvas>
     <strong>${escapeHtml(member.name)}</strong>

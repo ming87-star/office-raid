@@ -297,14 +297,14 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   grid-template-columns: repeat(3, 1fr);
   align-items: end;
 }
-.setup-story-team canvas {
+.setup-story-team :is(canvas, .character-svg) {
   width: 64px;
   max-width: 100%;
   margin: 0 auto;
   image-rendering: pixelated;
   filter: drop-shadow(2px 2px 0 rgba(23,54,74,.28));
 }
-.setup-story-team canvas:nth-child(2) { width: 71px; transform: translateY(6px); }
+.setup-story-team :is(canvas, .character-svg):nth-child(2) { width: 71px; transform: translateY(6px); }
 .story-paper {
   position: absolute;
   z-index: 3;
@@ -337,8 +337,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .input-with-button button { width: auto; min-height: 46px; margin: 0; padding: 0 5px; font-size: 11px; }
 
 .representative { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; overflow: hidden; }
-.representative > canvas { width: 116px; height: 116px; margin: 0 auto; image-rendering: pixelated; }
-.representative > canvas.face-zoom { width: 142px; height: 142px; margin-bottom: -5px; border: 2px solid rgba(23,54,74,.18); background: radial-gradient(circle, rgba(214,161,44,.14), transparent 68%); box-shadow: inset 0 0 0 3px rgba(255,250,240,.58); }
+.representative > :is(canvas, .character-svg) { width: 116px; height: 116px; margin: 0 auto; image-rendering: pixelated; }
+.representative > :is(canvas, .character-svg).face-zoom { width: 142px; height: 142px; margin-bottom: -5px; border: 2px solid rgba(23,54,74,.18); background: radial-gradient(circle, rgba(214,161,44,.14), transparent 68%); box-shadow: inset 0 0 0 3px rgba(255,250,240,.58); }
 .preview-mode-label { align-self: center; margin-top: -5px; padding: 2px 7px; border: 1px solid var(--teal); background: rgba(255,250,240,.9); color: var(--teal); font-size: 8px; font-weight: 900; }
 .representative .full-button { width: 100%; min-height: 38px; }
 .custom-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
@@ -391,7 +391,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .launch-member:nth-child(2) { animation-delay: .43s; }
 .launch-member:nth-child(3) { animation-delay: .58s; }
 .launch-member > span { display: block; margin-bottom: -2px; color: var(--mustard); font-size: 6px; font-weight: 1000; letter-spacing: .5px; }
-.launch-member canvas { display: block; width: min(90px, 100%); margin: 0 auto; image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(23,54,74,.28)); }
+.launch-member :is(canvas, .character-svg) { display: block; width: min(90px, 100%); margin: 0 auto; image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(23,54,74,.28)); }
 .launch-member strong, .launch-member small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .launch-member strong { margin-top: -7px; font-size: 11px; }
 .launch-member small { margin-top: 2px; color: var(--muted); font-size: 7px; font-weight: 900; }
@@ -451,7 +451,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .desk > small { position: relative; z-index: 7; display: block; width: max-content; max-width: 94%; overflow: hidden; margin: 3px auto 0; padding: 2px 5px; background: rgba(23,54,74,.9); color: var(--paper); font-size: 8px; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
 .office-workspace { position: relative; width: 88%; aspect-ratio: 1; margin: 0 auto; }
 .office-character { position: absolute; z-index: auto; inset: -8% 0 0; }
-.office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(54%, 64px); image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
+.character-svg { display: block; overflow: visible; }\n\n.office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(54%, 64px); image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
 .office-desk-base { position: absolute; z-index: 2; top: 40%; left: 2%; width: 96%; height: auto; pointer-events: none; }
 .office-monitor-back { position: absolute; z-index: 5; top: 56%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
 .office-equipment-prop { position: absolute; z-index: 4; width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(0 0 2px var(--rarity-color)); pointer-events: none; }
@@ -612,7 +612,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-.candidate canvas, .team-card canvas { width: 72px; height: 72px; image-rendering: pixelated; }
+.candidate :is(canvas, .character-svg), .team-card :is(canvas, .character-svg) { width: 72px; height: 72px; image-rendering: pixelated; }
 .candidate h3, .team-card h3 { margin: 0 0 4px; font-size: 14px; }
 .candidate p, .team-card p { margin: 2px 0; font-size: 10px; line-height: 1.35; }
 .candidate .dept, .team-card .dept { color: var(--teal); font-weight: 900; }
@@ -778,16 +778,16 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .boss-arena #boss-canvas { top: 8px; width: clamp(180px, 44vw, 210px); height: clamp(180px, 44vw, 210px); filter: drop-shadow(7px 9px 0 rgba(23,54,74,.28)); }
 .battle-team { position: absolute; z-index: 3; right: 4px; bottom: 7px; left: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .fighter { position: relative; min-width: 0; padding-top: 12px; text-align: center; }
-.fighter canvas { width: 74px; max-width: 100%; image-rendering: pixelated; }
+.fighter :is(canvas, .character-svg) { width: 74px; max-width: 100%; image-rendering: pixelated; }
 .fighter strong { display: block; overflow: hidden; font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
 .fighter-role { position: absolute; z-index: 2; top: 5px; left: 50%; max-width: 92%; overflow: hidden; padding: 2px 4px; border: 1px solid var(--ink); background: var(--department-color); color: white; font-size: 6px; font-weight: 1000; white-space: nowrap; text-overflow: ellipsis; translate: -50% 0; }
 .fighter-range { display: block; margin-top: 1px; color: var(--muted); font-size: 7px; font-weight: 900; }
-.fighter.active-fighter canvas { filter: drop-shadow(0 0 5px white) drop-shadow(0 0 4px var(--mustard)); animation: active-fighter-pulse .8s steps(2) infinite; }
+.fighter.active-fighter :is(canvas, .character-svg) { filter: drop-shadow(0 0 5px white) drop-shadow(0 0 4px var(--mustard)); animation: active-fighter-pulse .8s steps(2) infinite; }
 .fighter.active-fighter strong { color: var(--teal); }
 @keyframes active-fighter-pulse { 50% { translate: 0 -2px; } }
-.fighter.preview-target canvas { outline: 3px solid var(--mustard); outline-offset: -2px; background: rgba(22,140,139,.24); filter: drop-shadow(0 0 5px white); animation: preview-pulse .75s steps(2) infinite; }
+.fighter.preview-target :is(canvas, .character-svg) { outline: 3px solid var(--mustard); outline-offset: -2px; background: rgba(22,140,139,.24); filter: drop-shadow(0 0 5px white); animation: preview-pulse .75s steps(2) infinite; }
 .boss-arena .battle-team { right: 28px; bottom: 5px; left: 28px; }
-.boss-arena .fighter canvas { width: 48px; }
+.boss-arena .fighter :is(canvas, .character-svg) { width: 48px; }
 .boss-arena .fighter strong { font-size: 8px; }
 .boss-arena .fighter-role { top: 7px; font-size: 5px; }
 .boss-arena .fighter-range { font-size: 6px; }
@@ -889,18 +889,18 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .boss-arena #boss-canvas { top: 7px; width: 138px; height: 138px; }
   .directive-active .arena:not(.boss-arena) #boss-canvas { width: 92px; height: 92px; }
   .boss-arena::before { top: 14px; width: 132px; height: 132px; }
-  .boss-arena .fighter canvas { width: 42px; }
+  .boss-arena .fighter :is(canvas, .character-svg) { width: 42px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title-art, .title-actions button, .launch-grid, .launch-logo, .launch-card, .launch-member, .office-room.office-entry, .office-room.office-entry .desk, .office-equipment-prop, .execute-directive, .fighter.active-fighter canvas { animation: none; }
+  .title-art, .title-actions button, .launch-grid, .launch-logo, .launch-card, .launch-member, .office-room.office-entry, .office-room.office-entry .desk, .office-equipment-prop, .execute-directive, .fighter.active-fighter :is(canvas, .character-svg) { animation: none; }
   .title-screen, .company-launch-screen { transition: none; }
   .launch-member, .office-room.office-entry .desk { opacity: 1; transform: none; }
 }
 
 .directive-active .boss-arena #boss-canvas { width: 142px; height: 142px; }
 .directive-active .boss-arena::before { width: 138px; height: 138px; }
-.directive-active .boss-arena .fighter canvas { width: 42px; }
+.directive-active .boss-arena .fighter :is(canvas, .character-svg) { width: 42px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
@@ -920,9 +920,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   #boss-canvas { width: 92px; height: 92px; }
   .directive-active .boss-arena #boss-canvas { width: 120px; height: 120px; }
   .directive-active .boss-arena::before { width: 116px; height: 116px; }
-  .directive-active .boss-arena .fighter canvas { width: 38px; }
-  .representative > canvas { width: 82px; height: 82px; }
-  .representative > canvas.face-zoom { width: 102px; height: 102px; }
+  .directive-active .boss-arena .fighter :is(canvas, .character-svg) { width: 38px; }
+  .representative > :is(canvas, .character-svg) { width: 82px; height: 82px; }
+  .representative > :is(canvas, .character-svg).face-zoom { width: 102px; height: 102px; }
   .custom-row button { min-height: 29px; }
   .company-launch-screen { gap: 7px; padding-top: 2px; }
   .industry-screen { gap: 6px; }
@@ -936,7 +936,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .launch-logo { width: 126px; height: 59px; margin-bottom: -8px; }
   .launch-card { padding: 14px 10px 10px; }
   .launch-message { margin: 5px 0 7px; font-size: 9px; }
-  .launch-member canvas { width: min(67px, 100%); }
+  .launch-member :is(canvas, .character-svg) { width: min(67px, 100%); }
   .launch-mission { padding: 5px 7px; }
   .opening-card { padding: 10px 12px; }
   .opening-logo { width: 102px; height: 40px; }
@@ -948,8 +948,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .setup { padding: 12px 14px; }
   .setup-story-preview { height: 128px; margin-bottom: 8px; }
   #setup-boss { width: 69px; height: 69px; }
-  .setup-story-team canvas { width: 43px; }
-  .setup-story-team canvas:nth-child(2) { width: 48px; }
+  .setup-story-team :is(canvas, .character-svg) { width: 43px; }
+  .setup-story-team :is(canvas, .character-svg):nth-child(2) { width: 48px; }
   .story-paper { width: 12px; height: 9px; }
   .story-paper-one { top: 45px; }
   .story-paper-two { top: 62px; }

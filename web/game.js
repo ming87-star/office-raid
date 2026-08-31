@@ -522,8 +522,11 @@ function renderRepresentativeSetup() {
   const look = representativeDraft.appearance;
   const parts = representativeMode === "detail"
     ? [["face", "얼굴형", 8], ["eyes", "눈", 10], ["eyebrows", "눈썹", 8], ["nose", "코", 8], ["mouth", "입", 10]]
-    : [["skin", "피부", 6], ["hair", "머리", 16], ["top", "상의", 12], ["bottom", "하의", 8], ["accessory", "액세서리", 9]];
-  const rows = parts.map(([part, label, count]) => `<div class="custom-row"><strong>${label} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1" aria-label="${label} 이전">◀</button><button data-part="${part}" data-delta="1" aria-label="${label} 다음">▶</button></div>`).join("");
+    : [["skin", "피부", 6], ["hair", "머리", 16], ["top", "상의", 12], ["bottom", "하의", 8], ["accessory", "외형 장식", 9]];
+  const rows = parts.map(([part, label, count]) => {
+    const optionName = part === "accessory" ? ` · ${window.OfficeRaidCharacter.cosmetics[look[part] % window.OfficeRaidCharacter.cosmetics.length]}` : "";
+    return `<div class="custom-row"><strong>${label}${optionName} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1" aria-label="${label} 이전">◀</button><button data-part="${part}" data-delta="1" aria-label="${label} 다음">▶</button></div>`;
+  }).join("");
   app.innerHTML = `${header("대표 만들기", "이름과 외형은 능력치에 영향을 주지 않습니다.")}
     <section class="screen"><div class="representative panel">
       <canvas id="representative-preview" class="${representativeMode === "detail" ? "face-zoom" : ""}" width="48" height="48" aria-label="${representativeMode === "detail" ? "대표 얼굴 확대 미리보기" : "대표 전신 미리보기"}"></canvas>
@@ -1828,24 +1831,16 @@ function drawMouth(context, style) {
   if (mouth === 9) { centeredRect(context, COLORS.ink, 3, 7, 3); centeredRect(context, lip, 1, 8, 1); }
 }
 
-function drawBackPortrait(canvas, member) {
-  drawCharacter48(canvas, member, true);
+function drawBackPortrait(target, member) {
+  return window.OfficeRaidCharacter.mount(target, member, "back", false);
 }
 
-function drawPortrait(canvas, member) {
-  drawCharacter48(canvas, member, false);
+function drawPortrait(target, member) {
+  return window.OfficeRaidCharacter.mount(target, member, "front", false);
 }
 
-function drawFacePreview(canvas, member) {
-  if (!canvas || !member) return;
-  const source = document.createElement("canvas");
-  source.width = 48;
-  source.height = 48;
-  drawPortrait(source, member);
-  canvas.width = 48;
-  canvas.height = 48;
-  const context = pixelContext(canvas);
-  context.drawImage(source, 7, 0, 34, 27, 1, 5, 46, 37);
+function drawFacePreview(target, member) {
+  return window.OfficeRaidCharacter.mount(target, member, "front", true);
 }
 
 const BOTTOM_COLORS = ["#314c68", "#b89b72", "#405a55", "#5c536b", "#65727c", "#725145", "#435f78", "#79636a"];

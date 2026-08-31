@@ -405,9 +405,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .desk > strong { position: relative; z-index: 7; display: inline-block; max-width: 94%; overflow: hidden; margin-top: -5px; padding: 2px 6px; border: 2px solid var(--ink); background: rgba(255,250,240,.96); box-shadow: 2px 2px 0 var(--ink); font-size: 10px; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; rotate: -1deg; }
 .desk:nth-child(2) > strong { rotate: 1deg; }
 .desk > small { position: relative; z-index: 7; display: block; width: max-content; max-width: 94%; overflow: hidden; margin: 3px auto 0; padding: 2px 5px; background: rgba(23,54,74,.9); color: var(--paper); font-size: 8px; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
-.office-workspace { position: relative; width: 100%; aspect-ratio: 1; margin: 0 auto; }
+.office-workspace { position: relative; width: 88%; aspect-ratio: 1; margin: 0 auto; }
 .office-character { position: absolute; z-index: auto; inset: -8% 0 0; }
-.office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(58%, 76px); image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
+.office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(54%, 64px); image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
 .office-desk-base { position: absolute; z-index: 2; top: 40%; left: 2%; width: 96%; height: auto; pointer-events: none; }
 .office-monitor-back { position: absolute; z-index: 5; top: 56%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
 .office-equipment-prop { position: absolute; z-index: 3; width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(0 0 2px var(--rarity-color)); pointer-events: none; }
@@ -477,6 +477,34 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-speech span { font-size: 9px; font-weight: 800; line-height: 1.35; word-break: keep-all; }
 .desk:first-child .office-speech { left: 0; transform: none; }
 .desk:last-child .office-speech { right: 0; left: auto; transform: none; }
+
+.office-room.staff-4,
+.office-room.staff-5,
+.office-room.staff-6 { gap: 5px 4px; padding: 50px 8px 14px; }
+.office-room.staff-4 .office-workspace,
+.office-room.staff-5 .office-workspace,
+.office-room.staff-6 .office-workspace { width: 72%; }
+.office-room.staff-4 .office-portrait,
+.office-room.staff-5 .office-portrait,
+.office-room.staff-6 .office-portrait { width: min(52%, 52px); }
+.office-room.staff-4 .desk > strong,
+.office-room.staff-5 .desk > strong,
+.office-room.staff-6 .desk > strong { margin-top: -3px; padding: 1px 4px; font-size: 8px; }
+.office-room.staff-4 .desk > small,
+.office-room.staff-5 .desk > small,
+.office-room.staff-6 .desk > small { margin-top: 2px; padding: 1px 3px; font-size: 7px; }
+.office-room.staff-4 .office-speech,
+.office-room.staff-5 .office-speech,
+.office-room.staff-6 .office-speech { bottom: calc(100% + 14px); max-width: min(102px, 29vw); padding: 4px 5px 5px; }
+.office-room.staff-4 .office-speech b,
+.office-room.staff-5 .office-speech b,
+.office-room.staff-6 .office-speech b { font-size: 7px; }
+.office-room.staff-4 .office-speech span,
+.office-room.staff-5 .office-speech span,
+.office-room.staff-6 .office-speech span { font-size: 8px; line-height: 1.25; }
+.office-room.staff-4 .office-equipment-prop,
+.office-room.staff-5 .office-equipment-prop,
+.office-room.staff-6 .office-equipment-prop { scale: .82; }
 
 @keyframes office-speech-pop {
   from { opacity: 0; margin-bottom: -5px; }
@@ -782,6 +810,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .header-logo { width: 58px; height: 43px; }
   .header p { min-height: 0; margin-top: 3px; }
   .office-room { padding: 26px 8px 10px; }
+  .office-room.staff-4, .office-room.staff-5, .office-room.staff-6 { padding: 38px 6px 8px; }
   .company-card { padding-top: 6px; padding-bottom: 7px; }
   .company-stats { margin-top: 4px; }
   .company-notes { margin-top: 4px; }

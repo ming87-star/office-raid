@@ -103,6 +103,17 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   background-size: 16px 16px;
 }
 
+#app.title-mode { padding: 0; gap: 0; background: #061c2d; }
+.title-screen { position: relative; width: 100%; height: 100%; overflow: hidden; background: #061c2d; opacity: 1; transition: opacity .24s ease; }
+.title-screen.leaving { opacity: 0; }
+.title-screen::after { content: ""; position: absolute; z-index: 1; right: 0; bottom: 0; left: 0; height: 24%; background: linear-gradient(to bottom, transparent, rgba(3,17,29,.9) 72%); pointer-events: none; }
+.title-art { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; animation: title-art-enter .75s ease-out both; }
+.title-actions { position: absolute; z-index: 2; right: max(22px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); left: max(22px, env(safe-area-inset-left)); text-align: center; }
+.title-actions p { margin: 0 0 10px; color: var(--paper); font-size: 12px; font-weight: 900; letter-spacing: -.2px; text-shadow: 0 2px 0 rgba(0,0,0,.65); }
+.title-actions button { width: 100%; min-height: 54px; background: var(--mustard); color: var(--ink); font-size: 16px; box-shadow: 4px 4px 0 var(--ink), 0 0 16px rgba(214,161,44,.42); animation: title-button-pulse 1.8s steps(3) infinite; }
+@keyframes title-art-enter { from { opacity: 0; scale: 1.035; } to { opacity: 1; scale: 1; } }
+@keyframes title-button-pulse { 50% { filter: brightness(1.12); translate: 0 -2px; } }
+
 .header { flex: 0 0 auto; }
 .eyebrow { margin: 0 0 2px; color: var(--teal); font-size: 11px; font-weight: 900; letter-spacing: 1.6px; }
 .header h1 { margin: 0; font-size: clamp(24px, 7vw, 32px); line-height: 1; letter-spacing: -1px; }
@@ -619,6 +630,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 @keyframes reward-spark { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0); } 45% { opacity: 1; transform: scale(1.5) rotate(90deg); } }
 
 @media (max-height: 650px) {
+  .title-actions { bottom: max(14px, env(safe-area-inset-bottom)); }
+  .title-actions p { margin-bottom: 6px; font-size: 10px; }
+  .title-actions button { min-height: 46px; }
   .directive-active .arena { min-height: 165px; }
   .directive-panel { padding: 4px; gap: 3px; }
   .directive-head small { display: none; }
@@ -638,6 +652,11 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .boss-arena #boss-canvas { top: 7px; width: 138px; height: 138px; }
   .boss-arena::before { top: 14px; width: 132px; height: 132px; }
   .boss-arena .fighter canvas { width: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-art, .title-actions button { animation: none; }
+  .title-screen { transition: none; }
 }
 
 .directive-active .boss-arena #boss-canvas { width: 142px; height: 142px; }

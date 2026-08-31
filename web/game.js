@@ -303,8 +303,25 @@ function header(title, notice) {
   return `<header class="header"><p class="eyebrow">OFFICE RAID · LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
 }
 
+function renderTitle() {
+  currentView = "title";
+  app.classList.add("title-mode");
+  app.innerHTML = `<section class="title-screen">
+    <img class="title-art" src="assets/office-raid-title.webp?v=20260831" alt="세 명의 회사원이 거대한 프로젝트 보스를 마주한 오피스 레이드 타이틀 이미지">
+    <div class="title-actions">
+      <p>프로젝트는 거대하고, 퇴근은 멀었다.</p>
+      <button id="start-game" class="mustard">게임 시작</button>
+    </div>
+  </section>`;
+  document.querySelector("#start-game").addEventListener("click", () => {
+    document.querySelector(".title-screen").classList.add("leaving");
+    window.setTimeout(renderOpening, 240);
+  });
+}
+
 function renderOpening() {
   currentView = "opening";
+  app.classList.remove("title-mode");
   const scenes = [
     { kicker: "창업 첫날 · 오전 8:57", title: "책상은 세 개.\n회사 이름은 아직 없다." },
     { kicker: "띵! · 새 메일 1", title: "첫 프로젝트가\n도착했다." },
@@ -1810,4 +1827,4 @@ function drawBoss(canvas, projectId = "revision", phase = 1) {
   if (projectId.startsWith("boss-")) drawBossPhase(context, phase);
 }
 
-renderOpening();
+renderTitle();

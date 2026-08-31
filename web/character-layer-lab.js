@@ -35,7 +35,10 @@ function defs() {
   return `<defs>
     <linearGradient id="jacket" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#294f64"/><stop offset=".58" stop-color="#17364a"/><stop offset="1" stop-color="#102b3c"/></linearGradient>
     <linearGradient id="cardigan" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#36a09a"/><stop offset=".55" stop-color="#187f7d"/><stop offset="1" stop-color="#11615f"/></linearGradient>
-    <linearGradient id="trouser" x1="0" x2="1"><stop stop-color="#3f494f"/><stop offset="1" stop-color="#252d32"/></linearGradient>
+    <linearGradient id="trouser" x1="0" x2="1"><stop stop-color="#4b565c"/><stop offset=".48" stop-color="#30383e"/><stop offset="1" stop-color="#20282d"/></linearGradient>
+    <linearGradient id="hairShade" x1="0" x2=".85" y1="0" y2="1"><stop stop-color="#263f4e"/><stop offset=".36" stop-color="#102634"/><stop offset="1" stop-color="#091c27"/></linearGradient>
+    <linearGradient id="shirtShade" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#fff8e8"/><stop offset=".62" stop-color="#fff1d3"/><stop offset="1" stop-color="#e6c99d"/></linearGradient>
+    <linearGradient id="shoeShade" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#2b3c46"/><stop offset="1" stop-color="#111d24"/></linearGradient>
     <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#0c2433" flood-opacity=".24"/></filter>
   </defs>`;
 }
@@ -53,8 +56,10 @@ function backHair(style) {
     "M42 59 C35 43 42 29 55 22 C64 12 79 16 85 20 C98 13 118 27 119 44 C126 58 115 81 99 94 L62 93 C51 84 44 73 42 59Z"
   ];
   return `<g data-layer="hair-back" filter="url(#soft-shadow)">
-    <path d="${paths[style]}" fill="${COLORS.hair}" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
+    <path d="${paths[style]}" fill="url(#hairShade)" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
     <path d="M53 42 C65 25 94 22 108 41" fill="none" stroke="${COLORS.hairLight}" stroke-width="5" stroke-linecap="round" opacity=".62"/>
+    <path d="M58 34 Q69 24 79 25 M88 25 Q101 29 109 40" fill="none" stroke="#557080" stroke-width="2.2" stroke-linecap="round" opacity=".48"/>
+    <path d="M52 54 Q48 67 60 83 M108 52 Q113 67 100 84" fill="none" stroke="#071923" stroke-width="2.2" stroke-linecap="round" opacity=".52"/>
   </g>`;
 }
 
@@ -70,8 +75,10 @@ function frontHair(style) {
     "M53 35 Q63 24 73 26 M91 25 Q104 31 111 42"
   ];
   return `<g data-layer="hair-front">
-    <path d="${paths[style]}" fill="${COLORS.hair}" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
+    <path d="${paths[style]}" fill="url(#hairShade)" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
     <path d="${accents[style]}" fill="none" stroke="${COLORS.hairLight}" stroke-width="3" stroke-linecap="round" opacity=".72"/>
+    <path d="M61 29 Q70 22 78 23 M88 24 Q98 27 105 34" fill="none" stroke="#6c8390" stroke-width="1.8" stroke-linecap="round" opacity=".45"/>
+    <path d="M51 48 Q57 39 64 35 M98 34 Q107 39 112 48" fill="none" stroke="#071923" stroke-width="1.8" stroke-linecap="round" opacity=".52"/>
   </g>`;
 }
 
@@ -95,13 +102,21 @@ function frontBody(skin, top) {
   return `<g data-layer="body" filter="url(#soft-shadow)">
     <path d="M58 174 L76 174 L74 222 L51 222 Q50 214 55 207Z" fill="url(#trouser)" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
     <path d="M84 174 L102 174 L109 207 Q112 215 109 222 L86 222Z" fill="url(#trouser)" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
-    <path d="M48 220 Q60 214 75 219 L74 231 L46 231 Q43 226 48 220Z" fill="${COLORS.shoe}" stroke="${COLORS.ink}" stroke-width="4"/>
-    <path d="M86 219 Q101 214 112 220 Q117 227 112 231 L86 231Z" fill="${COLORS.shoe}" stroke="${COLORS.ink}" stroke-width="4"/>
-    <path d="M61 104 Q80 95 99 104 L105 178 Q80 188 55 178Z" fill="${COLORS.shirt}" stroke="${COLORS.ink}" stroke-width="4"/>
+    <path d="M48 220 Q60 214 75 219 L74 231 L46 231 Q43 226 48 220Z" fill="url(#shoeShade)" stroke="${COLORS.ink}" stroke-width="4"/>
+    <path d="M86 219 Q101 214 112 220 Q117 227 112 231 L86 231Z" fill="url(#shoeShade)" stroke="${COLORS.ink}" stroke-width="4"/>
+    <path d="M49 226 Q61 222 71 225 M89 225 Q101 222 111 226" fill="none" stroke="#526a77" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+    <path d="M64 182 Q61 201 61 216 M96 182 Q99 201 99 216" fill="none" stroke="#66747b" stroke-width="2" stroke-linecap="round" opacity=".42"/>
+    <path d="M61 104 Q80 95 99 104 L105 178 Q80 188 55 178Z" fill="url(#shirtShade)" stroke="${COLORS.ink}" stroke-width="4"/>
     <path d="M61 103 Q46 107 42 127 L36 170 Q39 178 49 176 L57 143 L59 180 Q80 187 101 180 L103 143 L111 176 Q121 178 124 170 L118 127 Q114 107 99 103Z" fill="${jacket}" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
     ${lapel}
+    <path d="M69 106 L80 122 L91 106 M80 122 V173" fill="none" stroke="#b9996d" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="80" cy="139" r="1.8" fill="#b68b4c"/><circle cx="80" cy="155" r="1.8" fill="#b68b4c"/>
+    <path d="M52 125 Q48 145 48 163 M108 125 Q112 145 112 163" fill="none" stroke="#517084" stroke-width="2.2" stroke-linecap="round" opacity=".58"/>
+    <path d="M59 158 Q68 155 75 160 M101 158 Q92 155 85 160" fill="none" stroke="#0f2b3b" stroke-width="2.2" stroke-linecap="round" opacity=".72"/>
+    <path d="M63 176 Q80 180 97 176" fill="none" stroke="#5f7b8b" stroke-width="2" stroke-linecap="round" opacity=".48"/>
     <path d="M37 166 Q42 163 50 167 L49 181 Q40 186 34 177Z" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3"/>
     <path d="M110 167 Q118 163 123 168 L126 177 Q120 186 111 181Z" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3"/>
+    <path d="M38 174 Q42 177 47 175 M113 175 Q118 177 122 173" fill="none" stroke="${skin.shade}" stroke-width="1.7" stroke-linecap="round" opacity=".75"/>
   </g>`;
 }
 
@@ -110,13 +125,18 @@ function backBody(skin, top) {
   return `<g data-layer="body" filter="url(#soft-shadow)">
     <path d="M58 174 L76 174 L74 222 L51 222 Q50 214 55 207Z" fill="url(#trouser)" stroke="${COLORS.ink}" stroke-width="4"/>
     <path d="M84 174 L102 174 L109 207 Q112 215 109 222 L86 222Z" fill="url(#trouser)" stroke="${COLORS.ink}" stroke-width="4"/>
-    <path d="M48 220 Q60 214 75 219 L74 231 L46 231 Q43 226 48 220Z" fill="${COLORS.shoe}" stroke="${COLORS.ink}" stroke-width="4"/>
-    <path d="M86 219 Q101 214 112 220 Q117 227 112 231 L86 231Z" fill="${COLORS.shoe}" stroke="${COLORS.ink}" stroke-width="4"/>
+    <path d="M48 220 Q60 214 75 219 L74 231 L46 231 Q43 226 48 220Z" fill="url(#shoeShade)" stroke="${COLORS.ink}" stroke-width="4"/>
+    <path d="M86 219 Q101 214 112 220 Q117 227 112 231 L86 231Z" fill="url(#shoeShade)" stroke="${COLORS.ink}" stroke-width="4"/>
+    <path d="M49 226 Q61 222 71 225 M89 225 Q101 222 111 226" fill="none" stroke="#526a77" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+    <path d="M64 182 Q61 201 61 216 M96 182 Q99 201 99 216" fill="none" stroke="#66747b" stroke-width="2" stroke-linecap="round" opacity=".42"/>
     <path d="M61 103 Q46 107 42 127 L36 170 Q39 178 49 176 L57 143 L59 180 Q80 187 101 180 L103 143 L111 176 Q121 178 124 170 L118 127 Q114 107 99 103Z" fill="${jacket}" stroke="${COLORS.ink}" stroke-width="4"/>
     <path d="M60 108 Q80 118 100 108" fill="none" stroke="${top === 0 ? COLORS.navyLight : COLORS.tealLight}" stroke-width="3" opacity=".8"/>
     <path d="M80 116 V179" fill="none" stroke="${COLORS.ink}" stroke-width="2" opacity=".55"/>
+    <path d="M57 125 Q51 146 50 164 M103 125 Q109 146 110 164" fill="none" stroke="${top === 0 ? COLORS.navyLight : COLORS.tealLight}" stroke-width="2.3" stroke-linecap="round" opacity=".6"/>
+    <path d="M60 174 Q80 181 100 174 M63 151 Q80 158 97 151" fill="none" stroke="#0f2b3b" stroke-width="2" stroke-linecap="round" opacity=".5"/>
     <path d="M37 166 Q42 163 50 167 L49 181 Q40 186 34 177Z" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3"/>
     <path d="M110 167 Q118 163 123 168 L126 177 Q120 186 111 181Z" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3"/>
+    <path d="M38 174 Q42 177 47 175 M113 175 Q118 177 122 173" fill="none" stroke="${skin.shade}" stroke-width="1.7" stroke-linecap="round" opacity=".75"/>
   </g>`;
 }
 
@@ -125,12 +145,16 @@ function head(skin) {
     <path d="M69 96 L70 110 Q80 119 90 110 L91 96Z" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="4"/>
     <ellipse cx="47" cy="67" rx="8" ry="12" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3.5"/>
     <ellipse cx="113" cy="67" rx="8" ry="12" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3.5"/>
+    <path d="M44 65 Q48 60 51 67 M116 65 Q112 60 109 67" fill="none" stroke="${skin.shade}" stroke-width="2" stroke-linecap="round" opacity=".7"/>
     <path d="${facePath(look.face)}" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
     <path d="M53 49 Q59 36 79 34 Q99 35 107 50" fill="none" stroke="${skin.light}" stroke-width="8" stroke-linecap="round" opacity=".54"/>
+    <path d="M104 47 Q112 67 104 84 Q98 95 86 99 Q105 99 111 83 Q116 64 110 48Z" fill="${skin.shade}" opacity=".16"/>
+    <path d="M58 45 Q68 39 78 40" fill="none" stroke="#fff4da" stroke-width="2.4" stroke-linecap="round" opacity=".38"/>
     <ellipse cx="57" cy="79" rx="6" ry="3" fill="#dc795c" opacity=".32"/><ellipse cx="103" cy="79" rx="6" ry="3" fill="#dc795c" opacity=".32"/>
     ${eyes(look.eyes)}
     <path d="M79 72 Q76 78 80 79" fill="none" stroke="${skin.shade}" stroke-width="2" stroke-linecap="round" opacity=".72"/>
     ${mouth(look.mouth)}
+    <path d="M67 96 Q80 102 93 96" fill="none" stroke="${skin.shade}" stroke-width="2" stroke-linecap="round" opacity=".3"/>
   </g>`;
 }
 
@@ -140,6 +164,7 @@ function backHead(skin) {
     <ellipse cx="47" cy="67" rx="8" ry="12" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3.5"/>
     <ellipse cx="113" cy="67" rx="8" ry="12" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="3.5"/>
     <path d="${facePath(look.face)}" fill="${skin.base}" stroke="${COLORS.ink}" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M44 65 Q48 60 51 67 M116 65 Q112 60 109 67" fill="none" stroke="${skin.shade}" stroke-width="2" stroke-linecap="round" opacity=".7"/>
   </g>`;
 }
 
@@ -153,6 +178,7 @@ function equipment(direction) {
     <path d="M47 61 Q48 31 80 29 Q112 31 113 61" fill="none" stroke="#d6a12c" stroke-width="3" stroke-linecap="round"/>
     <rect x="39" y="58" width="13" height="23" rx="6" fill="#294e63" stroke="${COLORS.ink}" stroke-width="3"/>
     <rect x="108" y="58" width="13" height="23" rx="6" fill="#294e63" stroke="${COLORS.ink}" stroke-width="3"/>
+    <path d="M44 63 V72 M113 63 V72" stroke="#6e8998" stroke-width="2.2" stroke-linecap="round" opacity=".72"/>
     ${microphone}
   </g>`;
 }

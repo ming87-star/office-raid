@@ -231,6 +231,7 @@ let openingPage = 0;
 let equipmentTargetId = null;
 let officeDialogueTimer = null;
 let recentOfficeDialogueIds = [];
+let companyLaunchTimer = null;
 
 const state = {
   companyName: "",
@@ -457,7 +458,50 @@ function createCompany() {
     employee("이코드", "dev", "위기 전문가", 19, 12, 16, 3817)
   ];
   state.teamIds = state.employees.map(member => member.id);
-  renderOffice("작지만 강한 첫 프로젝트 팀이 준비됐습니다.");
+  renderCompanyLaunch();
+}
+
+function clearCompanyLaunchTimer() {
+  if (companyLaunchTimer) window.clearTimeout(companyLaunchTimer);
+  companyLaunchTimer = null;
+}
+
+function renderCompanyLaunch() {
+  currentView = "company-launch";
+  clearCompanyLaunchTimer();
+  const members = state.employees.map((member, index) => `<div class="launch-member" style="--launch-order:${index}">
+    <span>${member.isRepresentative ? "FOUNDER" : "CREW 0" + index}</span>
+    <canvas width="24" height="24" data-portrait="${member.id}" aria-label="${escapeHtml(member.name)} 정면 모습"></canvas>
+    <strong>${escapeHtml(member.name)}</strong>
+    <small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small>
+  </div>`).join("");
+  app.innerHTML = `<section class="company-launch-screen">
+    <div class="launch-grid" aria-hidden="true"></div>
+    <img class="launch-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID">
+    <article class="launch-card panel">
+      <div class="launch-stamp"><span>COMPANY FOUNDED</span><b>설립 완료</b></div>
+      <p class="launch-kicker">FIRST RAID TEAM</p>
+      <h1>${escapeHtml(state.companyName)}</h1>
+      <p class="launch-message">작은 팀이 모였습니다.<br>이제 첫 프로젝트를 시작할 시간입니다.</p>
+      <div class="launch-team" aria-label="초기 프로젝트 팀">${members}</div>
+      <div class="launch-mission"><span>첫 번째 목표</span><strong>프로젝트 1건 완료</strong><i>준비 완료</i></div>
+    </article>
+    <button id="enter-office" class="mustard">사무실로 출근</button>
+  </section>`;
+  mountPortraits();
+  document.querySelector("#enter-office").addEventListener("click", enterOfficeFromLaunch);
+  companyLaunchTimer = window.setTimeout(() => document.querySelector("#enter-office")?.classList.add("ready"), 1300);
+}
+
+function enterOfficeFromLaunch() {
+  clearCompanyLaunchTimer();
+  const screen = document.querySelector(".company-launch-screen");
+  if (!screen || screen.classList.contains("leaving")) return;
+  screen.classList.add("leaving");
+  companyLaunchTimer = window.setTimeout(() => {
+    companyLaunchTimer = null;
+    renderOffice("작지만 강한 첫 프로젝트 팀이 준비됐습니다.", true);
+  }, 260);
 }
 
 function currentTeam() { return state.teamIds.map(id => state.employees.find(member => member.id === id)).filter(Boolean); }
@@ -589,8 +633,9 @@ function officeEquipmentMarkup(member) {
   </div><div class="office-loadout-popover" aria-hidden="true"><em>현재 사용 장비</em>${details}</div>`;
 }
 
-function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
+function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.", animateEntry = false) {
   currentView = "office";
+  clearCompanyLaunchTimer();
   clearBattleTimer();
   const teamNames = currentTeam().map(member => escapeHtml(member.name)).join(" · ");
   const specialRecruitment = state.specialRecruitmentTickets > 0
@@ -600,7 +645,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
-      <div class="office-room panel staff-${officeMembers.length}" aria-label="직원 ${officeMembers.length}명이 근무하는 작은 사무실">${desks}</div>
+      <div class="office-room panel staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="직원 ${officeMembers.length}명이 근무하는 작은 사무실">${desks}</div>
       <div class="company-card panel">
         <div class="company-card-head"><div><small>COMPANY FILE</small><h2>${escapeHtml(state.companyName)}</h2></div><b>운영 중</b></div>
         <div class="company-stats" aria-label="회사 현황">

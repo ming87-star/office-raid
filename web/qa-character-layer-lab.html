@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>OFFICE RAID · Character Layer Lab</title>
+  <link rel="stylesheet" href="character-layer-lab.css">
+</head>
+<body>
+  <main class="lab-shell">
+    <header class="lab-header">
+      <div>
+        <small>CHARACTER LAYER LAB · 01</small>
+        <h1>대표 캐릭터 조립 테스트</h1>
+      </div>
+      <button id="randomize" type="button">조합 섞기</button>
+    </header>
+
+    <section class="preview-card" aria-label="조립된 대표 캐릭터 미리보기">
+      <div class="preview-grid">
+        <figure>
+          <div class="character-stage" id="front-preview"></div>
+          <figcaption><b>정면</b><span>사무실 · 면접</span></figcaption>
+        </figure>
+        <figure>
+          <div class="character-stage" id="back-preview"></div>
+          <figcaption><b>뒷면</b><span>프로젝트 전투</span></figcaption>
+        </figure>
+        <figure class="face-figure">
+          <div class="character-stage" id="face-preview"></div>
+          <figcaption><b>동일 얼굴 확대</b><span>세부 커스터마이징</span></figcaption>
+        </figure>
+      </div>
+      <div class="layer-order" aria-label="현재 레이어 순서">
+        <span>뒤 머리</span><i>›</i><span>몸</span><i>›</i><span>얼굴</span><i>›</i><span>앞 머리</span><i>›</i><span>장비</span>
+      </div>
+    </section>
+
+    <section class="control-card">
+      <div class="control-heading">
+        <div><small>LIVE ASSEMBLY</small><strong>파츠를 바꿔도 세 화면이 함께 바뀝니다.</strong></div>
+        <span id="combination-count"></span>
+      </div>
+      <div class="control-list" id="controls"></div>
+    </section>
+  </main>
+  <script src="character-layer-lab.js"></script>
+</body>
+</html>

@@ -338,6 +338,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 
 .representative { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; overflow: hidden; }
 .representative > canvas { width: 116px; height: 116px; margin: 0 auto; image-rendering: pixelated; }
+.representative > canvas.face-zoom { width: 142px; height: 142px; margin-bottom: -5px; border: 2px solid rgba(23,54,74,.18); background: radial-gradient(circle, rgba(214,161,44,.14), transparent 68%); box-shadow: inset 0 0 0 3px rgba(255,250,240,.58); }
+.preview-mode-label { align-self: center; margin-top: -5px; padding: 2px 7px; border: 1px solid var(--teal); background: rgba(255,250,240,.9); color: var(--teal); font-size: 8px; font-weight: 900; }
 .representative .full-button { width: 100%; min-height: 38px; }
 .custom-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .custom-tabs button { min-height: 36px; background: var(--paper-dark); color: var(--ink); font-size: 12px; }
@@ -920,6 +922,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .directive-active .boss-arena::before { width: 116px; height: 116px; }
   .directive-active .boss-arena .fighter canvas { width: 38px; }
   .representative > canvas { width: 82px; height: 82px; }
+  .representative > canvas.face-zoom { width: 102px; height: 102px; }
   .custom-row button { min-height: 29px; }
   .company-launch-screen { gap: 7px; padding-top: 2px; }
   .industry-screen { gap: 6px; }

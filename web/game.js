@@ -526,7 +526,8 @@ function renderRepresentativeSetup() {
   const rows = parts.map(([part, label, count]) => `<div class="custom-row"><strong>${label} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1" aria-label="${label} 이전">◀</button><button data-part="${part}" data-delta="1" aria-label="${label} 다음">▶</button></div>`).join("");
   app.innerHTML = `${header("대표 만들기", "이름과 외형은 능력치에 영향을 주지 않습니다.")}
     <section class="screen"><div class="representative panel">
-      <canvas id="representative-preview" width="24" height="24" aria-label="대표 정면 미리보기"></canvas>
+      <canvas id="representative-preview" class="${representativeMode === "detail" ? "face-zoom" : ""}" width="48" height="48" aria-label="${representativeMode === "detail" ? "대표 얼굴 확대 미리보기" : "대표 전신 미리보기"}"></canvas>
+      ${representativeMode === "detail" ? '<small class="preview-mode-label">얼굴 확대 미리보기</small>' : ""}
       <label class="sr-only" for="representative-name">대표 이름</label>
       <div class="input-with-button"><input id="representative-name" maxlength="10" value="${escapeHtml(representativeDraft.name)}"><button id="random-representative-name" class="mustard">이름 랜덤</button></div>
       <button id="random-appearance" class="blue full-button">외형 전체 랜덤</button>
@@ -534,7 +535,9 @@ function renderRepresentativeSetup() {
       <div class="custom-list">${rows}</div>
     </div>
     <div class="footer-actions"><button class="ink" id="back-company">← 회사 이름</button><button class="teal" id="finish-company">회사 시작</button></div></section>`;
-  drawPortrait(document.querySelector("#representative-preview"), { department: "management", appearance: look });
+  const previewMember = { department: "management", appearance: look };
+  if (representativeMode === "detail") drawFacePreview(document.querySelector("#representative-preview"), previewMember);
+  else drawPortrait(document.querySelector("#representative-preview"), previewMember);
   document.querySelector("#random-representative-name").addEventListener("click", () => {
     representativeDraft.name = FAMILY[randomInt(FAMILY.length)] + GIVEN[randomInt(GIVEN.length)];
     renderRepresentativeSetup();
@@ -1831,6 +1834,18 @@ function drawBackPortrait(canvas, member) {
 
 function drawPortrait(canvas, member) {
   drawCharacter48(canvas, member, false);
+}
+
+function drawFacePreview(canvas, member) {
+  if (!canvas || !member) return;
+  const source = document.createElement("canvas");
+  source.width = 48;
+  source.height = 48;
+  drawPortrait(source, member);
+  canvas.width = 48;
+  canvas.height = 48;
+  const context = pixelContext(canvas);
+  context.drawImage(source, 7, 0, 34, 27, 1, 5, 46, 37);
 }
 
 const BOTTOM_COLORS = ["#314c68", "#b89b72", "#405a55", "#5c536b", "#65727c", "#725145", "#435f78", "#79636a"];

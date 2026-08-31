@@ -455,10 +455,11 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-equipment-prop { position: absolute; z-index: 4; width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(0 0 2px var(--rarity-color)); pointer-events: none; }
 .office-equipment-prop.rarity-0, .office-equipment-prop.rarity-1 { filter: none; }
 .placement-wearable { z-index: 2; }
+.placement-desk-center { z-index: 6; }
 .placement-monitor-mounted { z-index: 6; }
-.prop-laptop { top: 65%; left: 50%; width: 43px; height: 43px; translate: -50% 0; animation: office-work-use 1.1s steps(2) infinite; }
-.prop-tablet { top: 68%; left: 50%; width: 33px; height: 33px; translate: -50% 0; animation: office-work-use 1.3s steps(2) infinite; }
-.prop-calculator { top: 69%; left: 50%; width: 29px; height: 29px; translate: -50% 0; animation: office-work-use .9s steps(2) infinite; }
+.prop-laptop { top: 72%; left: 50%; width: 36px; height: 36px; translate: -50% 0; animation: office-work-use 1.1s steps(2) infinite; }
+.prop-tablet { top: 74%; left: 50%; width: 29px; height: 29px; translate: -50% 0; animation: office-work-use 1.3s steps(2) infinite; }
+.prop-calculator { top: 75%; left: 50%; width: 25px; height: 25px; translate: -50% 0; animation: office-work-use .9s steps(2) infinite; }
 .prop-headset { top: 0; left: 50%; width: 59px; height: 59px; translate: -50% 0; animation: office-headset-use 1.8s steps(2) infinite; }
 .prop-planner { top: 69%; left: 10%; width: 30px; height: 30px; animation: office-note-use 1.15s steps(2) infinite; }
 .prop-wallet { top: 72%; left: 12%; width: 26px; height: 26px; animation: office-wallet-use 1.4s steps(3) infinite; }

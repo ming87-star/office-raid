@@ -604,17 +604,27 @@ function officeEquipmentMarkup(member) {
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
   currentView = "office";
   clearBattleTimer();
+  const teamNames = currentTeam().map(member => escapeHtml(member.name)).join(" · ");
+  const specialRecruitment = state.specialRecruitmentTickets > 0
+    ? `이용권 ${state.specialRecruitmentTickets}장 보유`
+    : specialRecruitmentProgress();
   const desks = currentTeam().map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
-      <div class="office-room panel">${desks}</div>
+      <div class="office-room panel" aria-label="세 명의 직원이 근무하는 작은 사무실">${desks}</div>
       <div class="company-card panel">
-        <h2>${escapeHtml(state.companyName)}</h2>
-        <p>직원 ${state.employees.length}/${state.capacity}　현금 ${state.cash}　평판 ${state.reputation}</p>
-        <p>프로젝트 팀: ${currentTeam().map(member => escapeHtml(member.name)).join(" · ")}</p>
-        <p>프로젝트 성공 ${state.projectClears}회　특별채용 ${state.specialRecruitmentTickets > 0 ? state.specialRecruitmentTickets + "장" : specialRecruitmentProgress()}</p>
+        <div class="company-card-head"><div><small>COMPANY FILE</small><h2>${escapeHtml(state.companyName)}</h2></div><b>운영 중</b></div>
+        <div class="company-stats" aria-label="회사 현황">
+          <span><small>직원</small><strong>${state.employees.length}<i>/ ${state.capacity}</i></strong></span>
+          <span><small>현금</small><strong>${state.cash}<i>만원</i></strong></span>
+          <span><small>평판</small><strong>${state.reputation}<i>점</i></strong></span>
+        </div>
+        <div class="company-notes">
+          <p><b>PROJECT TEAM</b><span>${teamNames}</span></p>
+          <p><b>성과 ${state.projectClears}회</b><span>특별채용 · ${specialRecruitment}</span></p>
+        </div>
       </div>
-      <div class="actions">
+      <div class="actions office-actions">
         <button class="blue" id="interview">면접</button>
         <button class="teal" id="team">팀 편성</button>
         <button class="mustard" id="equipment">장비 ${state.equipment.length}</button>

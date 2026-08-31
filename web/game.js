@@ -734,10 +734,24 @@ function equipmentIconMarkup(item, className = "") {
 function officeEquipmentUsage(item) {
   const art = equipmentArtFor(item);
   if (art === "headset") return "머리에 착용 중";
-  if (["laptop", "tablet", "calculator", "planner"].includes(art)) return "업무에 사용 중";
-  if (art === "wallet") return "영업 활동에 휴대 중";
-  if (["coffee", "tumbler"].includes(art)) return "틈틈이 마시는 중";
-  return "책상에 놓고 사용 중";
+  if (["laptop", "tablet", "calculator"].includes(art)) return "모니터 앞에서 사용 중";
+  if (art === "planner") return "책상 왼쪽에서 사용 중";
+  if (art === "wallet") return "책상 왼쪽에 보관 중";
+  if (["coffee", "tumbler"].includes(art)) return "책상 오른쪽에서 사용 중";
+  return "모니터 모서리에 걸어둠";
+}
+
+function officeEquipmentPlacement(item) {
+  const art = equipmentArtFor(item);
+  if (art === "headset") return "wearable";
+  if (art === "charm") return "monitor-mounted";
+  if (["coffee", "tumbler"].includes(art)) return "desk-right";
+  if (["planner", "wallet"].includes(art)) return "desk-left";
+  return "desk-center";
+}
+
+function equippedEquipmentCount() {
+  return state.employees.reduce((total, member) => total + Object.values(member.equipment || {}).filter(Boolean).length, 0);
 }
 
 function officeEquipmentMarkup(member) {
@@ -745,7 +759,7 @@ function officeEquipmentMarkup(member) {
   const props = equipped.map(item => {
     const art = equipmentArtFor(item);
     const rarity = EQUIPMENT_RARITIES[item.rarity];
-    return `<canvas class="office-equipment-prop prop-${escapeHtml(art)} rarity-${item.rarity}" width="24" height="24" data-equipment-icon="${escapeHtml(art)}" data-equipment-rarity="${item.rarity}" style="--rarity-color:${rarity.color}" aria-label="${escapeHtml(item.name)} · ${officeEquipmentUsage(item)}"></canvas>`;
+    return `<canvas class="office-equipment-prop placement-${officeEquipmentPlacement(item)} prop-${escapeHtml(art)} rarity-${item.rarity}" width="24" height="24" data-equipment-icon="${escapeHtml(art)}" data-equipment-rarity="${item.rarity}" style="--rarity-color:${rarity.color}" aria-label="${escapeHtml(item.name)} · ${officeEquipmentUsage(item)}"></canvas>`;
   }).join("");
   const details = equipped.length
     ? equipped.map(item => `<span><b style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${escapeHtml(item.name)}</b><small>${officeEquipmentUsage(item)}</small></span>`).join("")
@@ -766,6 +780,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
   const officeMembers = state.employees.slice(0, state.capacity);
+  const equippedCount = equippedEquipmentCount();
   const industry = currentIndustry();
   const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
@@ -786,7 +801,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
       <div class="actions office-actions">
         <button class="blue" id="interview">면접</button>
         <button class="teal" id="team">팀 편성</button>
-        <button class="mustard" id="equipment">장비 ${state.equipment.length}</button>
+        <button class="mustard" id="equipment" aria-label="장착 장비 ${equippedCount}개, 보관 장비 ${state.equipment.length}개">장착 ${equippedCount} · 보관 ${state.equipment.length}</button>
         <button class="red" id="project">프로젝트</button>
       </div>
     </section>`;

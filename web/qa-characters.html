@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#17364a">
+  <meta name="robots" content="noindex,nofollow">
+  <title>OFFICE RAID · Character QA</title>
+  <link rel="stylesheet" href="style.css?v=20260831-character-v1">
+  <style>
+    .character-audit { min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 2px 4px 8px 2px; }
+    .character-audit-card { padding: 7px; text-align: center; }
+    .character-audit-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; align-items: end; }
+    .character-audit-pair canvas { width: min(100%, 88px); margin: 0 auto; image-rendering: pixelated; }
+    .character-audit-card strong, .character-audit-card small { display: block; }
+    .character-audit-card strong { margin-top: 3px; font-size: 11px; }
+    .character-audit-card small { color: var(--teal); font-size: 8px; font-weight: 900; }
+    .character-audit-note { grid-column: 1 / -1; padding: 7px 9px; color: var(--muted); font-size: 8px; font-weight: 900; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main id="game-shell" aria-live="polite"><div id="app"></div></main>
+  <aside id="orientation-guard" role="status" aria-label="화면 방향 안내">
+    <span class="rotate-phone" aria-hidden="true"><i></i></span>
+    <strong>세로 화면으로 돌려주세요</strong>
+    <p>캐릭터 점검 화면은 세로 화면에 맞춰져 있습니다.</p>
+  </aside>
+  <script src="game.js?v=20260831-character-v1"></script>
+  <script src="qa-characters.js?v=20260831-character-v1"></script>
+</body>
+</html>

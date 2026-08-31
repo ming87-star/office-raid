@@ -153,7 +153,7 @@ const BOSS_PROJECTS = [
 
 const DEFAULT_REPRESENTATIVE_APPEARANCE = {
   face: 0, skin: 1, hair: 1, eyes: 0, eyebrows: 0,
-  nose: 0, mouth: 3, accessory: 0, outfit: 0
+  nose: 0, mouth: 3, accessory: 0, outfit: 0, top: 0, bottom: 0
 };
 
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
@@ -350,7 +350,9 @@ function appearance(seed = randomInt(10000)) {
     nose: Math.floor(seed / 13) % 8,
     mouth: Math.floor(seed / 17) % 10,
     accessory: Math.floor(seed / 19) % 9,
-    outfit: Math.floor(seed / 23) % 12
+    outfit: Math.floor(seed / 23) % 12,
+    top: Math.floor(seed / 23) % 12,
+    bottom: Math.floor(seed / 29) % 8
   };
 }
 
@@ -520,7 +522,7 @@ function renderRepresentativeSetup() {
   const look = representativeDraft.appearance;
   const parts = representativeMode === "detail"
     ? [["face", "얼굴형", 8], ["eyes", "눈", 10], ["eyebrows", "눈썹", 8], ["nose", "코", 8], ["mouth", "입", 10]]
-    : [["skin", "피부", 6], ["hair", "머리", 16], ["outfit", "의상", 12], ["accessory", "액세서리", 9]];
+    : [["skin", "피부", 6], ["hair", "머리", 16], ["top", "상의", 12], ["bottom", "하의", 8], ["accessory", "액세서리", 9]];
   const rows = parts.map(([part, label, count]) => `<div class="custom-row"><strong>${label} <span>${look[part] + 1}/${count}</span></strong><button data-part="${part}" data-delta="-1" aria-label="${label} 이전">◀</button><button data-part="${part}" data-delta="1" aria-label="${label} 다음">▶</button></div>`).join("");
   app.innerHTML = `${header("대표 만들기", "이름과 외형은 능력치에 영향을 주지 않습니다.")}
     <section class="screen"><div class="representative panel">
@@ -563,8 +565,9 @@ function saveRepresentativeName() {
 
 function changeRepresentativePart(part, delta) {
   saveRepresentativeName();
-  const counts = { face: 8, skin: 6, hair: 16, eyes: 10, eyebrows: 8, nose: 8, mouth: 10, outfit: 12, accessory: 9 };
+  const counts = { face: 8, skin: 6, hair: 16, eyes: 10, eyebrows: 8, nose: 8, mouth: 10, top: 12, bottom: 8, accessory: 9 };
   representativeDraft.appearance[part] = (representativeDraft.appearance[part] + delta + counts[part]) % counts[part];
+  if (part === "top") representativeDraft.appearance.outfit = representativeDraft.appearance.top;
   renderRepresentativeSetup();
 }
 
@@ -1823,75 +1826,219 @@ function drawMouth(context, style) {
 }
 
 function drawBackPortrait(canvas, member) {
-  if (!canvas || !member) return;
-  const context = pixelContext(canvas);
-  const look = member.appearance;
-  const skin = COLORS.skin[look.skin];
-  const hair = COLORS.hair[Math.floor(look.hair / 3) % COLORS.hair.length];
-  const shirt = COLORS.outfit[look.outfit];
-  const department = DEPARTMENTS[member.department].color;
-  rect(context, COLORS.ink, 3, 0, 18, 6);
-  rect(context, shirt, 4, 1, 16, 5);
-  rect(context, department, 10, 1, 4, 5);
-  rect(context, skin, 10, 5, 4, 2);
-  rect(context, COLORS.ink, 4, 7, 16, 13);
-  rect(context, hair, 5, 8, 14, 12);
-  rect(context, COLORS.ink, 5, 18, 14, 4);
-  rect(context, hair, 6, 19, 12, 4);
-  if (look.hair % 4 === 2) { rect(context, hair, 3, 8, 3, 10); rect(context, hair, 18, 8, 3, 10); }
-  if (look.hair % 4 === 3) { rect(context, hair, 2, 6, 4, 12); rect(context, hair, 18, 6, 4, 12); }
+  drawCharacter48(canvas, member, true);
 }
 
 function drawPortrait(canvas, member) {
+  drawCharacter48(canvas, member, false);
+}
+
+const BOTTOM_COLORS = ["#314c68", "#b89b72", "#405a55", "#5c536b", "#65727c", "#725145", "#435f78", "#79636a"];
+
+function shadeColor(hex, amount) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const channel = shift => Math.max(0, Math.min(255, ((value >> shift) & 255) + amount)).toString(16).padStart(2, "0");
+  return `#${channel(16)}${channel(8)}${channel(0)}`;
+}
+
+function centeredRect48(context, color, width, y, height, offset = 0) {
+  rect(context, color, Math.floor((48 - width) / 2) + offset, y, width, height);
+}
+
+function characterLook(member) {
+  const look = member.appearance || {};
+  const legacyOutfit = Number.isFinite(look.outfit) ? look.outfit : 0;
+  return {
+    face: look.face || 0, skin: look.skin || 0, hair: look.hair || 0,
+    eyes: look.eyes || 0, eyebrows: look.eyebrows || 0, nose: look.nose || 0,
+    mouth: look.mouth || 0, accessory: look.accessory || 0,
+    top: Number.isFinite(look.top) ? look.top : legacyOutfit,
+    bottom: Number.isFinite(look.bottom) ? look.bottom : Math.floor(legacyOutfit / 2) % BOTTOM_COLORS.length
+  };
+}
+
+function drawCharacter48(canvas, member, back) {
   if (!canvas || !member) return;
+  if (canvas.width !== 48) canvas.width = 48;
+  if (canvas.height !== 48) canvas.height = 48;
   const context = pixelContext(canvas);
-  const look = member.appearance;
-  const skin = COLORS.skin[look.skin];
+  const look = characterLook(member);
+  const skin = COLORS.skin[look.skin % COLORS.skin.length];
   const hair = COLORS.hair[Math.floor(look.hair / 3) % COLORS.hair.length];
-  const shirt = COLORS.outfit[look.outfit];
-  const department = DEPARTMENTS[member.department].color;
+  drawCharacterBody48(context, look, skin, back);
+  if (back) drawHeadBack48(context, look, skin, hair);
+  else drawHeadFront48(context, look, skin, hair);
+}
 
-  rect(context, COLORS.ink, 2, 0, 20, 6);
-  rect(context, shirt, 3, 0, 18, 5);
-  rect(context, skin, 10, 4, 4, 3);
-  if (look.outfit % 3 === 0) rect(context, department, 11, 1, 2, 4);
-  else if (look.outfit % 3 === 1) rect(context, department, 9, 2, 6, 2);
+function drawCharacterBody48(context, look, skin, back) {
+  const top = COLORS.outfit[look.top % COLORS.outfit.length];
+  const topDark = shadeColor(top, -28);
+  const topLight = shadeColor(top, 28);
+  const bottom = BOTTOM_COLORS[look.bottom % BOTTOM_COLORS.length];
+  const bottomDark = shadeColor(bottom, -24);
+  const shoe = ["#47372f", "#273746", "#75513a", "#40515c"][look.bottom % 4];
 
-  drawFaceShape(context, skin, look.face);
+  rect(context, COLORS.ink, 8, 0, 14, 5); rect(context, COLORS.ink, 26, 0, 14, 5);
+  rect(context, shoe, 10, 1, 11, 3); rect(context, shoe, 27, 1, 11, 3);
+  rect(context, shadeColor(shoe, 24), 11, 3, 8, 1); rect(context, shadeColor(shoe, 24), 28, 3, 7, 1);
+  rect(context, COLORS.ink, 11, 4, 11, 14); rect(context, COLORS.ink, 26, 4, 11, 14);
+  rect(context, bottom, 13, 5, 8, 12); rect(context, bottom, 27, 5, 8, 12);
+  rect(context, bottomDark, 13, 5, 2, 11); rect(context, shadeColor(bottom, 18), 33, 6, 2, 10);
+  rect(context, COLORS.ink, 10, 15, 28, 6); rect(context, bottom, 12, 16, 24, 4);
 
-  if (look.hair !== 15) {
-    rect(context, COLORS.ink, 4, 17, 16, 4);
-    rect(context, hair, 5, 18, 14, 4);
+  rect(context, COLORS.ink, 5, 16, 8, 13); rect(context, COLORS.ink, 35, 16, 8, 13);
+  rect(context, top, 7, 17, 5, 11); rect(context, top, 36, 17, 5, 11);
+  rect(context, topLight, 7, 25, 4, 2); rect(context, topDark, 39, 18, 2, 9);
+  rect(context, COLORS.ink, 6, 13, 7, 6); rect(context, COLORS.ink, 35, 13, 7, 6);
+  rect(context, skin, 7, 14, 5, 4); rect(context, skin, 36, 14, 5, 4);
+  rect(context, shadeColor(skin, -18), 7, 14, 2, 3); rect(context, shadeColor(skin, -18), 39, 14, 2, 3);
+
+  rect(context, COLORS.ink, 8, 16, 32, 15); rect(context, top, 10, 17, 28, 13);
+  rect(context, topLight, 11, 27, 25, 2); rect(context, topDark, 35, 18, 3, 9);
+  rect(context, COLORS.ink, 19, 28, 10, 5); rect(context, skin, 21, 29, 6, 4);
+
+  const style = look.top % 12;
+  if (style === 0) {
+    rect(context, "#fffaf0", 20, 18, 8, 11);
+    rect(context, topDark, 11, 19, 8, 9); rect(context, topDark, 29, 19, 7, 9);
+    if (!back) { rect(context, "#d6a12c", 23, 20, 2, 7); rect(context, "#d6a12c", 22, 26, 4, 3); }
+  } else if (style === 1) {
+    rect(context, "#fffaf0", 19, 18, 10, 10); rect(context, topDark, 23, 18, 2, 10);
+    if (!back) { rect(context, COLORS.paper, 23, 20, 2, 2); rect(context, COLORS.paper, 23, 24, 2, 2); }
+  } else if (style === 2) {
+    rect(context, topDark, 13, 25, 22, 5); rect(context, topLight, 16, 26, 16, 2);
+    if (!back) { rect(context, COLORS.paper, 19, 20, 1, 6); rect(context, COLORS.paper, 28, 20, 1, 6); }
+  } else if (style === 3) {
+    rect(context, "#fffaf0", 19, 25, 10, 4); rect(context, topDark, 23, 17, 2, 10);
+    rect(context, topDark, 7, 20, 5, 2); rect(context, topDark, 36, 20, 5, 2);
+  } else if (style === 4) {
+    rect(context, topDark, 10, 18, 28, 3); rect(context, topLight, 12, 23, 24, 2);
+  } else if (style === 5 || style === 11) {
+    rect(context, topDark, 23, 17, 2, 12); rect(context, topDark, 13, 20, 6, 3); rect(context, topDark, 29, 20, 6, 3);
+    if (!back) { rect(context, COLORS.paper, 16, 21, 2, 1); rect(context, COLORS.paper, 30, 21, 2, 1); }
+  } else if (style === 6) {
+    rect(context, "#fffaf0", 18, 18, 12, 11); rect(context, topDark, 11, 19, 7, 10); rect(context, topDark, 30, 19, 6, 10);
+  } else if (style === 7) {
+    rect(context, topDark, 18, 25, 12, 4); rect(context, topLight, 21, 26, 6, 2);
+  } else if (style === 8) {
+    rect(context, topDark, 23, 17, 2, 12); rect(context, COLORS.paper, 16, 22, 3, 2); rect(context, COLORS.paper, 29, 22, 3, 2);
+  } else if (style === 9) {
+    rect(context, topDark, 10, 17, 28, 3); rect(context, topDark, 8, 17, 5, 3); rect(context, topDark, 35, 17, 5, 3);
+  } else if (style === 10) {
+    if (!back) { rect(context, topDark, 20, 25, 8, 4); rect(context, COLORS.paper, 22, 24, 4, 2); }
+    rect(context, topLight, 13, 20, 3, 7); rect(context, topLight, 32, 20, 3, 7);
+  }
+}
+
+function drawFaceBase48(context, look, skin) {
+  const shapes = [
+    [28, 30, 24, 18], [30, 30, 26, 20], [28, 28, 22, 16], [26, 30, 22, 18],
+    [30, 28, 20, 16], [28, 30, 24, 16], [32, 32, 28, 22], [30, 28, 24, 20]
+  ];
+  const [upper, middle, jaw, chin] = shapes[look.face % shapes.length];
+  rect(context, COLORS.ink, 8, 34, 5, 7); rect(context, COLORS.ink, 35, 34, 5, 7);
+  rect(context, skin, 9, 35, 4, 5); rect(context, skin, 35, 35, 4, 5);
+  centeredRect48(context, COLORS.ink, upper + 2, 39, 6);
+  centeredRect48(context, COLORS.ink, middle + 2, 34, 7);
+  centeredRect48(context, COLORS.ink, jaw + 2, 30, 5);
+  centeredRect48(context, COLORS.ink, chin + 2, 28, 3);
+  centeredRect48(context, skin, upper, 40, 4);
+  centeredRect48(context, skin, middle, 35, 6);
+  centeredRect48(context, skin, jaw, 31, 4);
+  centeredRect48(context, skin, chin, 29, 2);
+  rect(context, shadeColor(skin, 16), 13, 39, 4, 3);
+  rect(context, shadeColor(skin, -15), 33, 32, 3, 5);
+}
+
+function drawHair48(context, look, hair, back) {
+  const style = look.hair % 8;
+  const light = shadeColor(hair, 24);
+  const dark = shadeColor(hair, -22);
+  if (style === 5) { rect(context, COLORS.ink, 19, 45, 10, 3); rect(context, hair, 20, 46, 8, 2); }
+  centeredRect48(context, COLORS.ink, 32, 40, 8);
+  centeredRect48(context, hair, 30, 41, 7);
+  rect(context, light, 14, 44, 9, 2); rect(context, dark, 32, 41, 6, 5);
+  if (back) {
+    centeredRect48(context, hair, 27, 37, 6);
+    rect(context, dark, 30, 38, 7, 4);
   } else {
-    rect(context, COLORS.ink, 6, 17, 12, 2);
-    rect(context, hair, 7, 18, 10, 1);
+    if (style === 0) { rect(context, hair, 11, 38, 13, 5); rect(context, dark, 24, 40, 13, 3); }
+    if (style === 1) { rect(context, hair, 11, 38, 27, 4); rect(context, dark, 21, 37, 6, 3); }
+    if (style === 2 || style === 3) { rect(context, hair, 9, 31, 5, 11); rect(context, hair, 34, 31, 5, 11); }
+    if (style === 4) { rect(context, hair, 12, 39, 24, 4); rect(context, light, 16, 42, 12, 2); }
+    if (style === 6) { rect(context, hair, 9, 36, 6, 6); rect(context, hair, 33, 36, 6, 6); rect(context, light, 12, 43, 4, 3); rect(context, light, 21, 44, 4, 3); }
+    if (style === 7) { rect(context, hair, 29, 35, 9, 8); rect(context, dark, 34, 33, 5, 8); }
   }
-  const hairStyle = look.hair % 8;
-  if (hairStyle === 1) rect(context, hair, 5, 14, 4, 5);
-  if (hairStyle === 2) { rect(context, hair, 3, 10, 3, 9); rect(context, hair, 18, 10, 3, 9); }
-  if (hairStyle === 3) { rect(context, hair, 3, 6, 3, 13); rect(context, hair, 18, 6, 3, 13); }
-  if (hairStyle === 4) { rect(context, hair, 5, 15, 14, 4); }
-  if (hairStyle === 5) { rect(context, COLORS.ink, 9, 21, 6, 3); rect(context, hair, 10, 22, 4, 2); }
-  if (hairStyle === 6) { rect(context, hair, 2, 11, 3, 6); rect(context, hair, 19, 11, 3, 6); }
-  if (hairStyle === 7) rect(context, hair, 17, 10, 4, 9);
+  if (style === 2) { rect(context, COLORS.ink, 8, 28, 6, 12); rect(context, COLORS.ink, 34, 28, 6, 12); rect(context, hair, 9, 29, 4, 11); rect(context, hair, 35, 29, 4, 11); }
+  if (style === 3) { rect(context, COLORS.ink, 7, 23, 7, 17); rect(context, COLORS.ink, 34, 23, 7, 17); rect(context, hair, 8, 24, 5, 16); rect(context, hair, 35, 24, 5, 16); }
+}
 
-  const eyebrowColor = hair === COLORS.ink ? "#573b32" : COLORS.ink;
-  drawEyebrows(context, eyebrowColor, look.eyebrows);
-  drawEyes(context, look.eyes);
-  drawNose(context, look.nose);
-  drawMouth(context, look.mouth);
-
-  if (look.accessory === 1 || look.accessory === 2) {
-    const frame = look.accessory === 1 ? "#4a70a8" : COLORS.ink;
-    rect(context, frame, 5, 12, 6, 3); rect(context, frame, 13, 12, 6, 3);
-    rect(context, skin, 6, 13, 4, 1); rect(context, skin, 14, 13, 4, 1); rect(context, frame, 11, 13, 2, 1);
+function drawFaceDetails48(context, look, hair) {
+  const brow = hair === COLORS.ink ? "#573b32" : shadeColor(hair, -22);
+  const browY = 38 + (look.eyebrows % 3 === 1 ? 1 : 0);
+  if (look.eyebrows % 4 === 2) {
+    rect(context, brow, 14, browY, 4, 1); rect(context, brow, 30, browY + 1, 4, 1);
+  } else if (look.eyebrows % 4 === 3) {
+    rect(context, brow, 14, browY + 1, 4, 1); rect(context, brow, 30, browY, 4, 1);
+  } else {
+    rect(context, brow, 14, browY, 5, look.eyebrows % 2 + 1); rect(context, brow, 29, browY, 5, look.eyebrows % 2 + 1);
   }
-  if (look.accessory === 3) { rect(context, "#d6a12c", 3, 10, 1, 1); rect(context, "#d6a12c", 20, 10, 1, 1); }
-  if (look.accessory === 4) rect(context, "#c84b3c", 16, 20, 3, 1);
-  if (look.accessory === 5) { rect(context, COLORS.ink, 2, 11, 2, 7); rect(context, COLORS.ink, 20, 11, 2, 7); rect(context, "#4a70a8", 18, 9, 3, 1); }
-  if (look.accessory === 6) { rect(context, COLORS.ink, 8, 9, 3, 1); rect(context, COLORS.ink, 13, 9, 3, 1); rect(context, COLORS.ink, 10, 8, 4, 1); }
-  if (look.accessory === 7) { rect(context, "#b97862", 6, 10, 1, 1); rect(context, "#b97862", 8, 9, 1, 1); rect(context, "#b97862", 15, 9, 1, 1); rect(context, "#b97862", 17, 10, 1, 1); }
-  if (look.accessory === 8) { rect(context, COLORS.ink, 4, 20, 16, 2); rect(context, "#d6a12c", 5, 21, 14, 2); }
+
+  const eye = look.eyes % 10;
+  if (eye === 3 || eye === 6) {
+    rect(context, COLORS.ink, 15, 35, 4, 1); rect(context, COLORS.ink, 29, 35, 4, 1);
+  } else if (eye === 7 || eye === 8) {
+    rect(context, COLORS.ink, 15, 35, 3, 2); rect(context, COLORS.ink, 30, 35, 3, 2);
+  } else {
+    const eyeHeight = eye === 2 || eye === 5 || eye === 9 ? 3 : 2;
+    rect(context, COLORS.ink, 15, 34, 4, eyeHeight); rect(context, COLORS.ink, 29, 34, 4, eyeHeight);
+    if (eye === 5 || eye === 9) { rect(context, COLORS.paper, 16, 35, 1, 1); rect(context, COLORS.paper, 30, 35, 1, 1); }
+  }
+
+  const noseColor = "rgba(92,48,38,.62)";
+  if (look.nose % 4 === 0) rect(context, noseColor, 23, 32, 2, 1);
+  if (look.nose % 4 === 1) rect(context, noseColor, 24, 32, 1, 2);
+  if (look.nose % 4 === 2) { rect(context, noseColor, 23, 32, 2, 1); rect(context, noseColor, 24, 33, 1, 2); }
+  if (look.nose % 4 === 3) { rect(context, noseColor, 22, 32, 4, 1); rect(context, noseColor, 24, 33, 1, 1); }
+
+  const mouth = look.mouth % 10;
+  const mouthWidth = [4, 6, 8, 8, 8, 6, 8, 5, 7, 5][mouth];
+  const mouthY = mouth === 4 ? 29 : 30;
+  centeredRect48(context, mouth >= 7 ? "#a94d5e" : COLORS.ink, mouthWidth, mouthY, 1);
+  if (mouth === 3 || mouth === 5) { rect(context, COLORS.ink, 20, 31, 1, 1); rect(context, COLORS.ink, 27, 31, 1, 1); }
+  if (mouth === 6 || mouth === 8) centeredRect48(context, COLORS.paper, Math.max(2, mouthWidth - 3), mouthY, 1);
+}
+
+function drawAccessory48(context, look, skin, back) {
+  const accessory = look.accessory % 9;
+  if ((accessory === 1 || accessory === 2) && !back) {
+    const frame = accessory === 1 ? "#4a70a8" : COLORS.ink;
+    rect(context, frame, 12, 33, 9, 5); rect(context, frame, 27, 33, 9, 5); rect(context, skin, 14, 34, 5, 2); rect(context, skin, 29, 34, 5, 2); rect(context, frame, 21, 35, 6, 1);
+  }
+  if (accessory === 3 && !back) { rect(context, "#d6a12c", 9, 32, 2, 2); rect(context, "#d6a12c", 37, 32, 2, 2); }
+  if (accessory === 4 && !back) { rect(context, "#c84b3c", 33, 41, 4, 2); rect(context, "#fffaf0", 34, 41, 1, 1); }
+  if (accessory === 5) {
+    rect(context, COLORS.ink, 7, 34, 4, 10); rect(context, COLORS.ink, 37, 34, 4, 10);
+    rect(context, "#4a70a8", 8, 35, 2, 7); rect(context, "#4a70a8", 38, 35, 2, 7);
+    if (!back) { rect(context, COLORS.ink, 36, 31, 5, 2); rect(context, "#4a70a8", 35, 31, 3, 1); }
+  }
+  if (accessory === 6 && !back) { rect(context, COLORS.ink, 13, 34, 9, 4); rect(context, COLORS.ink, 26, 34, 9, 4); rect(context, "#4a70a8", 15, 35, 5, 2); rect(context, "#4a70a8", 28, 35, 5, 2); rect(context, COLORS.ink, 22, 36, 4, 1); }
+  if (accessory === 7 && !back) { rect(context, "#b97862", 14, 32, 2, 1); rect(context, "#b97862", 32, 32, 2, 1); rect(context, "#b97862", 17, 31, 1, 1); rect(context, "#b97862", 30, 31, 1, 1); }
+  if (accessory === 8) { rect(context, COLORS.ink, 10, 42, 28, 3); rect(context, "#d6a12c", 11, 43, 26, 2); }
+}
+
+function drawHeadFront48(context, look, skin, hair) {
+  drawFaceBase48(context, look, skin);
+  drawHair48(context, look, hair, false);
+  drawFaceDetails48(context, look, hair);
+  drawAccessory48(context, look, skin, false);
+}
+
+function drawHeadBack48(context, look, skin, hair) {
+  rect(context, COLORS.ink, 9, 31, 30, 13);
+  rect(context, skin, 11, 32, 26, 11);
+  drawHair48(context, look, hair, true);
+  drawAccessory48(context, look, skin, true);
 }
 
 function drawRevisionProject(context) {

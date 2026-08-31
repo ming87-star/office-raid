@@ -545,7 +545,7 @@ function pickOfficeDialogue() {
 
 function runOfficeDialogue() {
   if (currentView !== "office") return;
-  const members = currentTeam();
+  const members = state.employees;
   if (members.length < 2) return;
   const speakerIndex = randomInt(members.length);
   const listenerIndex = (speakerIndex + 1 + randomInt(members.length - 1)) % members.length;
@@ -598,7 +598,11 @@ function officeEquipmentMarkup(member) {
   const details = equipped.length
     ? equipped.map(item => `<span><b style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${escapeHtml(item.name)}</b><small>${officeEquipmentUsage(item)}</small></span>`).join("")
     : `<span class="office-no-equipment">사용 중인 장비가 없습니다.</span>`;
-  return `<div class="office-character" aria-hidden="true"><canvas class="office-portrait" width="24" height="24" data-portrait="${member.id}"></canvas>${props}</div><div class="office-loadout-popover" aria-hidden="true"><em>현재 사용 장비</em>${details}</div>`;
+  return `<div class="office-workspace" aria-hidden="true">
+    <div class="office-character"><canvas class="office-portrait" width="24" height="24" data-portrait="${member.id}"></canvas>${props}</div>
+    <img class="office-desk-base" src="assets/office-desk-base.webp?v=20260831" alt="">
+    <img class="office-monitor-back" src="assets/office-monitor-back.webp?v=20260831" alt="">
+  </div><div class="office-loadout-popover" aria-hidden="true"><em>현재 사용 장비</em>${details}</div>`;
 }
 
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.") {
@@ -608,10 +612,11 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const specialRecruitment = state.specialRecruitmentTickets > 0
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
-  const desks = currentTeam().map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
+  const officeMembers = state.employees.slice(0, state.capacity);
+  const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
   app.innerHTML = `${header("작은 사무실", notice)}
     <section class="screen">
-      <div class="office-room panel" aria-label="세 명의 직원이 근무하는 작은 사무실">${desks}</div>
+      <div class="office-room panel staff-${officeMembers.length}" aria-label="직원 ${officeMembers.length}명이 근무하는 작은 사무실">${desks}</div>
       <div class="company-card panel">
         <div class="company-card-head"><div><small>COMPANY FILE</small><h2>${escapeHtml(state.companyName)}</h2></div><b>운영 중</b></div>
         <div class="company-stats" aria-label="회사 현황">

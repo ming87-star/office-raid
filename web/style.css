@@ -847,14 +847,14 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .execute-directive small { margin-top: 2px; color: inherit; font-size: 8px; font-weight: 900; }
 .execute-directive:not(:disabled) { animation: plan-ready-pulse 1.3s steps(3) infinite; }
 @keyframes plan-ready-pulse { 50% { filter: brightness(1.12); box-shadow: 4px 4px 0 var(--ink), inset 0 -6px 0 rgba(23,54,74,.14), 0 0 18px rgba(214,161,44,.6); } }
-.skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,20,30,.66); color: white; text-align: center; animation: cinematic-pop 1.25s steps(5); isolation: isolate; }
+.skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,20,30,.66); color: white; text-align: center; animation: cinematic-pop 1.2s ease-out both; isolation: isolate; }
 .skill-cinematic::before { content: ""; position: absolute; z-index: 0; inset: -2%; background: url("assets/perfect-workflow-vfx.webp?v=20260901-battle-art-v1") center / cover no-repeat; mix-blend-mode: screen; animation: workflow-vfx-in .7s ease-out both; }
 .skill-cinematic::after { display: none; }
 .skill-cinematic i { display: none; }
 .skill-cinematic strong, .skill-cinematic span { position: relative; z-index: 2; }
 .skill-cinematic strong { padding: 4px 9px; border: 2px solid rgba(255,250,240,.8); background: rgba(23,54,74,.82); color: var(--mustard); font-size: 22px; text-shadow: 3px 3px 0 var(--ink); box-shadow: 3px 3px 0 rgba(5,20,30,.8); }
 .skill-cinematic span { max-width: 84%; margin-top: 8px; padding: 3px 6px; background: rgba(5,20,30,.72); font-size: 11px; font-weight: 900; }
-@keyframes cinematic-pop { 0% { opacity: 0; transform: scale(.7); } 25%, 85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.08); } }
+@keyframes cinematic-pop { 0% { opacity: 0; transform: scale(.82); } 12%, 84% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.04); } }
 @keyframes workflow-vfx-in { from { opacity: 0; transform: scale(.72); filter: brightness(1.8); } to { opacity: 1; transform: scale(1); filter: brightness(1); } }
 @keyframes preview-pulse { 50% { filter: brightness(1.25); } }
 

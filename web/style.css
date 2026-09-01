@@ -794,9 +794,18 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .arena-theme-campaign, .arena-theme-launch { background: linear-gradient(rgba(200,75,60,.12), transparent 46%), #ead9c8; }
 .arena-theme-audit { background: linear-gradient(rgba(74,112,168,.16), transparent 48%), #d7d9d5; }
 .arena-theme-integration { background: linear-gradient(rgba(155,109,157,.14), transparent 48%), #ded5d4; }
-.boss-arena { background: linear-gradient(#aa8f76, #ddcbb1 48%, #bca187); }
-.boss-arena::before { content: ""; position: absolute; z-index: 0; top: 18px; left: 50%; width: 190px; height: 190px; border: 3px solid rgba(200,75,60,.3); box-shadow: 0 0 0 12px rgba(214,161,44,.14), 0 0 0 25px rgba(23,54,74,.08); transform: translateX(-50%) rotate(45deg); }
-.battle-lanes { position: absolute; z-index: 0; inset: 30px 8% 55px; display: grid; grid-template-columns: repeat(3, 1fr); pointer-events: none; }
+.arena:not(.boss-arena) {
+  background:
+    linear-gradient(rgba(255,250,240,.03), rgba(23,54,74,.08)),
+    url("assets/battle-background-normal.webp?v=20260901-battle-art-v1") center / cover no-repeat;
+}
+.boss-arena {
+  background:
+    linear-gradient(rgba(23,54,74,.02), rgba(23,54,74,.13)),
+    url("assets/battle-background-boss.webp?v=20260901-battle-art-v1") center / cover no-repeat;
+}
+.boss-arena::before { display: none; }
+.battle-lanes { position: absolute; z-index: 0; inset: 30px 8% 55px; display: none; grid-template-columns: repeat(3, 1fr); pointer-events: none; }
 .battle-lanes i { position: relative; width: 1px; height: 100%; justify-self: center; border-left: 2px dashed rgba(23,54,74,.14); }
 
 .directive-active .arena { min-height: 190px; flex-grow: .65; }
@@ -838,18 +847,15 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .execute-directive small { margin-top: 2px; color: inherit; font-size: 8px; font-weight: 900; }
 .execute-directive:not(:disabled) { animation: plan-ready-pulse 1.3s steps(3) infinite; }
 @keyframes plan-ready-pulse { 50% { filter: brightness(1.12); box-shadow: 4px 4px 0 var(--ink), inset 0 -6px 0 rgba(23,54,74,.14), 0 0 18px rgba(214,161,44,.6); } }
-.skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(23,54,74,.88); color: white; text-align: center; animation: cinematic-pop 1.25s steps(5); }
-.skill-cinematic::before, .skill-cinematic::after { content: ""; position: absolute; width: 190%; height: 18px; background: var(--mustard); transform: rotate(25deg); box-shadow: 0 42px 0 var(--teal), 0 -42px 0 var(--red); opacity: .6; }
-.skill-cinematic::after { transform: rotate(-25deg); }
-.skill-cinematic i { position: absolute; width: 22px; height: 16px; border: 2px solid white; background: var(--panel); animation: cinematic-paper .65s steps(4) infinite alternate; }
-.skill-cinematic i:nth-child(1) { top: 18%; left: 18%; transform: rotate(-15deg); }
-.skill-cinematic i:nth-child(2) { top: 28%; right: 15%; transform: rotate(18deg); animation-delay: -.2s; }
-.skill-cinematic i:nth-child(3) { right: 28%; bottom: 16%; transform: rotate(-8deg); animation-delay: -.4s; }
+.skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,20,30,.66); color: white; text-align: center; animation: cinematic-pop 1.25s steps(5); isolation: isolate; }
+.skill-cinematic::before { content: ""; position: absolute; z-index: 0; inset: -2%; background: url("assets/perfect-workflow-vfx.webp?v=20260901-battle-art-v1") center / cover no-repeat; mix-blend-mode: screen; animation: workflow-vfx-in .7s ease-out both; }
+.skill-cinematic::after { display: none; }
+.skill-cinematic i { display: none; }
 .skill-cinematic strong, .skill-cinematic span { position: relative; z-index: 2; }
-.skill-cinematic strong { color: var(--mustard); font-size: 22px; text-shadow: 3px 3px 0 var(--ink); }
-.skill-cinematic span { margin-top: 8px; font-size: 11px; font-weight: 900; }
+.skill-cinematic strong { padding: 4px 9px; border: 2px solid rgba(255,250,240,.8); background: rgba(23,54,74,.82); color: var(--mustard); font-size: 22px; text-shadow: 3px 3px 0 var(--ink); box-shadow: 3px 3px 0 rgba(5,20,30,.8); }
+.skill-cinematic span { max-width: 84%; margin-top: 8px; padding: 3px 6px; background: rgba(5,20,30,.72); font-size: 11px; font-weight: 900; }
 @keyframes cinematic-pop { 0% { opacity: 0; transform: scale(.7); } 25%, 85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.08); } }
-@keyframes cinematic-paper { from { margin-top: -4px; } to { margin-top: 5px; } }
+@keyframes workflow-vfx-in { from { opacity: 0; transform: scale(.72); filter: brightness(1.8); } to { opacity: 1; transform: scale(1); filter: brightness(1); } }
 @keyframes preview-pulse { 50% { filter: brightness(1.25); } }
 
 #boss-canvas { position: absolute; z-index: 2; top: 10px; left: 50%; width: 150px; height: 150px; transform: translateX(-50%); image-rendering: pixelated; }

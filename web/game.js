@@ -356,7 +356,13 @@ const state = {
   specialRecruitmentTickets: 0,
   payrollPayments: 0,
   turnoverEvents: 0,
-  pendingTurnover: null
+  pendingTurnover: null,
+  pendingFinancialReport: null,
+  financialHistory: [],
+  financialPeriod: {
+    number: 1, startCash: 1200, revenue: 0, payroll: 0,
+    recruitment: 0, posting: 0, retention: 0, termination: 0
+  }
 };
 
 function randomInt(max) { return Math.floor(Math.random() * max); }
@@ -807,6 +813,37 @@ function totalPayroll() {
   return state.employees.reduce((total, member) => total + (member.salary || 0), 0);
 }
 
+function recordFinancialAmount(category, amount) {
+  if (!state.financialPeriod || !Object.prototype.hasOwnProperty.call(state.financialPeriod, category)) return;
+  state.financialPeriod[category] += Math.max(0, amount || 0);
+}
+
+function financialExpenseTotal(period) {
+  return period.payroll + period.recruitment + period.posting + period.retention + period.termination;
+}
+
+function closeFinancialPeriodIfDue() {
+  if (state.projectClears <= 0 || state.projectClears % PAYROLL_PROJECT_INTERVAL !== 0) return null;
+  const period = state.financialPeriod;
+  const expenses = financialExpenseTotal(period);
+  const report = {
+    ...period,
+    expenses,
+    operatingProfit: period.revenue - expenses,
+    endingCash: state.cash,
+    headcount: state.employees.length,
+    reputation: state.reputation,
+    projectClears: state.projectClears
+  };
+  state.financialHistory = [...state.financialHistory.slice(-7), report];
+  state.pendingFinancialReport = report;
+  state.financialPeriod = {
+    number: period.number + 1, startCash: state.cash, revenue: 0, payroll: 0,
+    recruitment: 0, posting: 0, retention: 0, termination: 0
+  };
+  return report;
+}
+
 function projectsUntilPayroll() {
   const remainder = state.projectClears % PAYROLL_PROJECT_INTERVAL;
   return remainder === 0 ? PAYROLL_PROJECT_INTERVAL : PAYROLL_PROJECT_INTERVAL - remainder;
@@ -991,6 +1028,7 @@ function confirmContractTermination() {
   const settlement = contractSettlement(member);
   if (state.cash < settlement) return renderHumanResources("계약 종료 정산금이 부족합니다.");
   state.cash -= settlement;
+  recordFinancialAmount("termination", settlement);
   state.reputation = Math.max(0, state.reputation - 2);
   const returnedEquipment = removeEmployee(member);
   hrTerminationTargetId = null;
@@ -1025,6 +1063,7 @@ function processPayrollIfDue() {
   if (state.projectClears <= 0 || state.projectClears % PAYROLL_PROJECT_INTERVAL !== 0) return 0;
   const payroll = totalPayroll();
   state.cash -= payroll;
+  recordFinancialAmount("payroll", payroll);
   state.payrollPayments += 1;
   return payroll;
 }
@@ -1067,6 +1106,7 @@ function retainEmployeeWithPay() {
   if (!event || !member) return renderOffice("면담 대상을 찾을 수 없습니다.");
   if (state.cash < event.retentionCost) return renderTurnoverEvent("처우 개선에 필요한 자금이 부족합니다.");
   state.cash -= event.retentionCost;
+  recordFinancialAmount("retention", event.retentionCost);
   member.salary = Math.ceil(member.salary * 1.1 / 10) * 10;
   member.retentionCount = (member.retentionCount || 0) + 1;
   member.turnoverShieldUntil = state.projectClears + 10;
@@ -1101,6 +1141,53 @@ function acceptEmployeeTurnover() {
   state.turnoverEvents += 1;
   state.pendingTurnover = null;
   renderOffice(`${member.name}의 새로운 도전을 응원하며 퇴사를 수락했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
+}
+
+function financialGrade(report) {
+  if (report.operatingProfit < 0 || report.endingCash < 0) return { label: "적자 경고", tone: "danger", description: "비용이 매출을 넘었습니다. 채용과 급여 규모를 다시 점검하세요." };
+  if (report.operatingProfit >= report.revenue * .45) return { label: "고속 성장", tone: "growth", description: "높은 수익성을 유지하고 있습니다. 다음 확장에 투자할 여력이 있습니다." };
+  return { label: "안정 운영", tone: "stable", description: "흑자를 유지하고 있습니다. 인건비 증가 속도만 주의하세요." };
+}
+
+function renderFinancialReport() {
+  currentView = "financial-report";
+  clearBattleTimer();
+  const report = state.pendingFinancialReport;
+  if (!report) return state.pendingTurnover ? renderTurnoverEvent() : renderOffice("확인할 결산 보고서가 없습니다.");
+  const grade = financialGrade(report);
+  const maxValue = Math.max(1, report.revenue, report.expenses);
+  const revenueWidth = Math.max(4, Math.round(report.revenue / maxValue * 100));
+  const expenseWidth = Math.max(4, Math.round(report.expenses / maxValue * 100));
+  const profitSign = report.operatingProfit >= 0 ? "+" : "";
+  app.innerHTML = `${header("분기 결산", `${state.companyName} · 제${report.number}분기 재무 보고서`)}<section class="screen financial-screen">
+    <article class="financial-report panel ${grade.tone}">
+      <div class="financial-title"><div><small>QUARTERLY REPORT</small><h2>제${report.number}분기 손익 요약</h2></div><span>${grade.label}</span></div>
+      <div class="financial-chart" aria-label="매출과 비용 비교">
+        <div><b>프로젝트 매출</b><i><em style="width:${revenueWidth}%"></em></i><strong>+${report.revenue}</strong></div>
+        <div class="expense"><b>총비용</b><i><em style="width:${expenseWidth}%"></em></i><strong>-${report.expenses}</strong></div>
+      </div>
+      <div class="financial-statement">
+        <p><span>프로젝트 매출</span><b class="positive">+${report.revenue}만원</b></p>
+        <p><span>급여</span><b>-${report.payroll}만원</b></p>
+        <p><span>채용 계약금</span><b>-${report.recruitment}만원</b></p>
+        <p><span>채용 공고</span><b>-${report.posting}만원</b></p>
+        <p><span>직원 유지 비용</span><b>-${report.retention}만원</b></p>
+        <p><span>계약 종료 정산금</span><b>-${report.termination}만원</b></p>
+        <p class="profit"><span>영업이익</span><b class="${report.operatingProfit >= 0 ? "positive" : "negative"}">${profitSign}${report.operatingProfit}만원</b></p>
+      </div>
+      <div class="financial-balance"><span><small>기초 현금</small><strong>${report.startCash}만원</strong></span><i>→</i><span><small>기말 현금</small><strong>${report.endingCash}만원</strong></span></div>
+      <div class="financial-company"><span>직원 <b>${report.headcount}명</b></span><span>평판 <b>${report.reputation}점</b></span><span>누적 성과 <b>${report.projectClears}건</b></span></div>
+      <p class="financial-advice">${grade.description}</p>
+    </article>
+    <button class="mustard" id="close-financial-report">${state.pendingTurnover ? "확인 · 이직 면담으로" : "확인 · 사무실로"}</button>
+  </section>`;
+  document.querySelector("#close-financial-report").addEventListener("click", closeFinancialReport);
+}
+
+function closeFinancialReport() {
+  state.pendingFinancialReport = null;
+  if (state.pendingTurnover) return renderTurnoverEvent();
+  renderOffice("분기 결산을 완료했습니다. 다음 분기 운영을 시작합니다.");
 }
 
 function generateEquipmentReward(minimumRarity = 0) {
@@ -1346,6 +1433,7 @@ function hireCandidate(id) {
   if (state.employees.length >= state.capacity) return renderInterview("직원 정원이 가득 찼습니다. 사무실 확장이 필요합니다.");
   if (state.cash < candidate.signingCost) return renderInterview("계약금이 부족합니다. 프로젝트를 먼저 완료하세요.");
   state.cash -= candidate.signingCost;
+  recordFinancialAmount("recruitment", candidate.signingCost);
   candidate.joinedAt = state.projectClears;
   state.employees.push(candidate);
   if (recruitmentMode === "special") {
@@ -1362,6 +1450,7 @@ function refreshJobPosting() {
   const cost = state.postingRefreshes === POSTING_REFRESH_MAX ? 0 : PAID_POSTING_REFRESH_COST;
   if (state.cash < cost) return renderInterview(`공고 갱신에 필요한 자금 ${cost}이 부족합니다.`);
   state.cash -= cost;
+  recordFinancialAmount("posting", cost);
   state.postingRefreshes -= 1;
   regularCandidates = generateCandidates(3, "regular");
   regularPostingInitialized = true;
@@ -1509,6 +1598,7 @@ function finishBattleSuccess(scheduleRender = true) {
   if (!battle.rewardClaimed) {
     battle.rewardClaimed = true;
     state.cash += battle.project.cash;
+    recordFinancialAmount("revenue", battle.project.cash);
     state.reputation += battle.project.reputation;
     state.projectClears += 1;
     if (battle.project.boss) state.bossClears += 1;
@@ -1526,6 +1616,8 @@ function finishBattleSuccess(scheduleRender = true) {
       : [generateEquipmentReward()];
     battle.reward = battle.rewards[0];
     state.equipment.push(...battle.rewards);
+    const financialReport = closeFinancialPeriodIfDue();
+    battle.financialNotice = financialReport ? `${financialReport.number}분기 결산이 준비됐습니다.` : "";
     const turnoverMember = maybeQueueTurnoverEvent();
     battle.turnoverNotice = turnoverMember ? `${turnoverMember.name}이(가) 이직 면담을 요청했습니다.` : "";
   }
@@ -1870,6 +1962,7 @@ function normalDamagePreview(member) {
 
 function requestBattleLeave() {
   if (battle.result) {
+    if (battle.result === "success" && state.pendingFinancialReport) return renderFinancialReport();
     if (battle.result === "success" && state.pendingTurnover) return renderTurnoverEvent();
     return renderOffice(battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다.");
   }
@@ -1895,7 +1988,7 @@ function renderBattle() {
   const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
   const bestRewardRarity = rewards.length ? Math.max(...rewards.map(reward => reward.rarity)) : 0;
   const rewardShowcase = rewards.length ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div></div>` : "";
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.financialNotice ? `<p class="reward-notice financial-notice">${escapeHtml(battle.financialNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const actingMemberId = battle.awaitingDirective ? battle.directiveFocusId : team[battle.action % Math.max(1, team.length)]?.id;
   const fighters = team.map(member => {
     const damage = normalDamagePreview(member);
@@ -1928,7 +2021,7 @@ function renderBattle() {
       <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
-      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle">${battle.result ? state.pendingTurnover ? "이직 면담으로" : "사무실로" : "프로젝트 중단"}</button>
+      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle">${battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : "사무실로" : "프로젝트 중단"}</button>
       ${abortConfirm}
     </section>`;
   drawBoss(document.querySelector("#boss-canvas"), battle.project.art || battle.project.id, battle.phase);

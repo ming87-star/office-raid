@@ -1652,27 +1652,30 @@ function openDirective() {
 
 function directivePanel(team) {
   if (!battle.awaitingDirective) return "";
+  const calculating = battle.skillFx?.phase === "calculating";
   const focus = team.find(member => member.id === battle.directiveFocusId) || team[0];
   const selectedCount = Object.keys(battle.directiveSelections).length;
   const plan = directivePlanEstimate(team);
   const tabs = team.map(member => {
     const selected = battle.directiveSelections[member.id];
-    return `<button class="directive-tab ${member.id === focus.id ? "active" : ""} ${selected ? "done" : ""}" data-directive-member="${member.id}">${selected ? "✓ " : ""}${escapeHtml(member.name)}</button>`;
+    return `<button class="directive-tab ${member.id === focus.id ? "active" : ""} ${selected ? "done" : ""}" data-directive-member="${member.id}" ${calculating ? "disabled" : ""}>${selected ? "✓ " : ""}${escapeHtml(member.name)}</button>`;
   }).join("");
   const options = directiveSkillsFor(focus.department).map(skill => {
     const preview = directiveSkillPreview(focus, skill.id);
     const selected = battle.directiveSelections[focus.id] === skill.id;
     const cooldown = directiveCooldownFor(focus.id, skill.id);
     const cooldownText = cooldown ? `대기 ${cooldown}회` : `재사용 ${skill.cooldown}회`;
-    return `<button class="skill-option effect-${preview.tone} ${selected ? "selected" : ""} ${cooldown ? "cooling" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}" aria-pressed="${selected}" ${cooldown ? "disabled" : ""}><span class="skill-effect"><i>${preview.icon}</i><b>${escapeHtml(preview.primary)}</b></span><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(preview.secondary)}</span><small class="skill-cooldown ${cooldown ? "waiting" : ""}">${cooldownText}</small><em>${escapeHtml(skill.visual)}</em></button>`;
+    return `<button class="skill-option effect-${preview.tone} ${selected ? "selected" : ""} ${cooldown ? "cooling" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}" aria-pressed="${selected}" ${cooldown || calculating ? "disabled" : ""}><span class="skill-effect"><i>${preview.icon}</i><b>${escapeHtml(preview.primary)}</b></span><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(preview.secondary)}</span><small class="skill-cooldown ${cooldown ? "waiting" : ""}">${cooldownText}</small><em>${escapeHtml(skill.visual)}</em></button>`;
   }).join("");
   const summary = team.map(member => {
     const skill = directiveSkillsFor(member.department).find(option => option.id === battle.directiveSelections[member.id]);
     return skill ? skill.name : "미선택";
   }).join(" → ");
-  const ready = selectedCount === team.length;
-  const actionText = ready ? "계획 실행" : `${team.length - selectedCount}명 스킬 선택`;
-  const actionDetail = ready
+  const ready = selectedCount === team.length && !calculating;
+  const actionText = calculating ? "계획 분석 중…" : ready ? "계획 실행" : `${team.length - selectedCount}명 스킬 선택`;
+  const actionDetail = calculating
+    ? "처리량 · 연계 · 변수 확인 중"
+    : ready
     ? `예상 업무량 ${plan.min}~${plan.max} 처리${plan.combo ? ` · ${plan.combo} 연계` : ""}`
     : "모든 직원의 스킬을 선택하면 실행할 수 있습니다.";
   return `<div class="directive-panel"><div class="directive-head"><div><strong>긴급 지시</strong><small>직원별 스킬을 고른 뒤 계획을 실행하세요.</small></div><b>${selectedCount}/${team.length}</b></div><div class="directive-tabs">${tabs}</div><div class="skill-options">${options}</div><div class="directive-footer"><div class="directive-plan-summary"><small>선택 계획</small><span>${escapeHtml(summary)}</span></div><button id="execute-directive" class="mustard execute-directive" ${ready ? "" : "disabled"}><strong>${actionText}</strong><small>${escapeHtml(actionDetail)}</small></button></div></div>`;
@@ -1836,8 +1839,37 @@ function clearNegativeBattleStatus() {
 
 function executeDirective() {
   const team = currentTeam();
+  if (battle.skillFx) return;
   if (team.some(member => !battle.directiveSelections[member.id])) return;
   if (team.some(member => directiveCooldownFor(member.id, battle.directiveSelections[member.id]) > 0)) return;
+  const plan = directivePlanEstimate(team);
+  battle.log = "계획 실행 중 · 처리량을 계산하고 있습니다.";
+  battle.skillFx = {
+    phase: "calculating",
+    title: "계획 분석 중",
+    detail: "처리량 · 연계 · 변수 확인",
+    outcome: "normal",
+    range: plan
+  };
+  renderBattle();
+  let calculationTick = 0;
+  const calculationSpan = Math.max(1, plan.max - plan.min + 1);
+  const calculationTicker = window.setInterval(() => {
+    const readout = document.querySelector("#calculation-value");
+    if (!readout) return;
+    const offset = (calculationTick * 7 + calculationTick * calculationTick * 3) % calculationSpan;
+    readout.textContent = String(plan.min + offset);
+    calculationTick += 1;
+  }, 95);
+  window.setTimeout(() => {
+    window.clearInterval(calculationTicker);
+    if (currentView !== "battle" || battle.skillFx?.phase !== "calculating") return;
+    resolveDirective();
+  }, 1300);
+}
+
+function resolveDirective() {
+  const team = currentTeam();
   const skills = Object.values(battle.directiveSelections);
   let total = 0;
   let cleared = false;
@@ -1879,7 +1911,7 @@ function executeDirective() {
   const varianceResult = outcome === "great" ? " · GREAT!" : outcome === "low" ? " · 변동 최소" : "";
   const detail = `업무량 ${actualTotal} 처리 · 예상 ${expected.min}~${expected.max}${varianceResult}${combo ? ` · ${combo} 연계` : ""}${cleared ? " · 상태 제거" : ""}`;
   battle.log = `PERFECT WORKFLOW! ${detail}`;
-  battle.skillFx = { title: combo || "PERFECT WORKFLOW", detail, outcome };
+  battle.skillFx = { phase: "result", title: combo || "PERFECT WORKFLOW", detail, outcome };
   if (battle.workload <= 0) finishBattleSuccess(false);
   else if (Math.floor(battle.action / team.length) >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
@@ -1946,6 +1978,7 @@ function normalDamagePreview(member) {
 }
 
 function requestBattleLeave() {
+  if (battle.skillFx?.phase === "calculating") return;
   if (battle.result) {
     if (battle.result === "success" && state.pendingFinancialReport) return renderFinancialReport();
     if (battle.result === "success" && state.pendingTurnover) return renderTurnoverEvent();
@@ -1984,8 +2017,11 @@ function renderBattle() {
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
   const statusTone = battle.status ? battle.status.tone : "good";
   const directive = directivePanel(team);
+  const skillFxPhase = battle.skillFx?.phase === "calculating" ? "calculating" : "result";
   const skillFxOutcome = ["low", "normal", "great"].includes(battle.skillFx?.outcome) ? battle.skillFx.outcome : "normal";
-  const skillFx = battle.skillFx ? `<div class="skill-cinematic outcome-${skillFxOutcome}"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
+  const calculationValue = battle.skillFx?.range ? Math.round((battle.skillFx.range.min + battle.skillFx.range.max) / 2) : 0;
+  const calculationReadout = skillFxPhase === "calculating" ? `<b class="calculation-readout" aria-hidden="true"><small>예상 처리량</small><em id="calculation-value">${calculationValue}</em><small>분석 중</small></b>` : "";
+  const skillFx = battle.skillFx ? `<div class="skill-cinematic phase-${skillFxPhase} outcome-${skillFxOutcome}" role="status" aria-live="polite"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong>${calculationReadout}<span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
   const phaseText = battle.project.boss ? `PHASE ${battle.phase}/3 · ${battle.project.phaseNames[battle.phase - 1]}` : battle.project.difficulty;
   const workloadPercent = Math.min(100, battle.workload / battle.max * 100);
   const previewMin = preview?.damageMin || 0;
@@ -2007,7 +2043,7 @@ function renderBattle() {
       <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
-      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle">${battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : "사무실로" : "프로젝트 중단"}</button>
+      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : "사무실로" : "프로젝트 중단"}</button>
       ${abortConfirm}
     </section>`;
   drawBoss(document.querySelector("#boss-canvas"), battle.project.art || battle.project.id, battle.phase);

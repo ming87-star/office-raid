@@ -84,6 +84,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   width: min(100vw, calc(100dvh * .5625));
   height: 100dvh;
   min-height: 560px;
+  container-type: inline-size;
   overflow: hidden;
   background: var(--paper);
   box-shadow: 0 0 48px rgba(0, 0, 0, .45);
@@ -391,7 +392,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .launch-member:nth-child(2) { animation-delay: .43s; }
 .launch-member:nth-child(3) { animation-delay: .58s; }
 .launch-member > span { display: block; margin-bottom: -4px; color: var(--mustard); font-size: 7px; font-weight: 1000; letter-spacing: .5px; }
-.launch-member :is(canvas, .character-svg) { display: block; width: min(118px, 100%); margin: 0 auto; image-rendering: pixelated; filter: drop-shadow(3px 4px 0 rgba(23,54,74,.28)); }
+.launch-member :is(canvas, .character-svg) { display: block; width: min(100%, clamp(108px, 30cqw, 146px)); height: auto; aspect-ratio: 1 / 1; margin: 0 auto; image-rendering: pixelated; filter: drop-shadow(3px 4px 0 rgba(23,54,74,.28)); }
 .launch-member strong, .launch-member small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .launch-member strong { margin-top: -10px; font-size: 13px; }
 .launch-member small { margin-top: 3px; color: var(--muted); font-size: 8px; font-weight: 900; }
@@ -449,11 +450,11 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .desk > strong { position: relative; z-index: 7; display: inline-block; max-width: 94%; overflow: hidden; margin-top: -5px; padding: 2px 6px; border: 2px solid var(--ink); background: rgba(255,250,240,.96); box-shadow: 2px 2px 0 var(--ink); font-size: 10px; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; rotate: -1deg; }
 .desk:nth-child(2) > strong { rotate: 1deg; }
 .desk > small { position: relative; z-index: 7; display: block; width: max-content; max-width: 94%; overflow: hidden; margin: 3px auto 0; padding: 2px 5px; background: rgba(23,54,74,.9); color: var(--paper); font-size: 8px; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
-.office-workspace { position: relative; width: 88%; aspect-ratio: 1; margin: 0 auto; }
+.office-workspace { position: relative; width: min(94%, 122px); aspect-ratio: 1; margin: 0 auto; }
 .office-character { position: absolute; z-index: auto; inset: 0; }
 .office-character::before { content: ""; position: absolute; z-index: 0; top: 31%; left: 50%; width: 42%; height: 39%; border: 2px solid var(--ink); border-radius: 42% 42% 28% 28%; background: #35566a; box-shadow: inset 0 0 0 3px rgba(255,255,255,.12), 2px 3px 0 rgba(10,35,49,.28); translate: -50% 0; }
 .character-svg { display: block; overflow: visible; }
-.office-portrait { position: absolute; z-index: 1; top: 8%; left: 50%; width: min(68%, 78px); image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
+.office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(92%, 98px); height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
 .office-desk-base { position: absolute; z-index: 2; top: 44%; left: 2%; width: 96%; height: auto; pointer-events: none; }
 .office-monitor-back { position: absolute; z-index: 5; top: 60%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
 .office-equipment-prop { position: absolute; z-index: 4; width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(0 0 2px var(--rarity-color)); pointer-events: none; }
@@ -532,10 +533,10 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-room.staff-6 { gap: 5px 4px; padding: 50px 8px 14px; }
 .office-room.staff-4 .office-workspace,
 .office-room.staff-5 .office-workspace,
-.office-room.staff-6 .office-workspace { width: 72%; }
+.office-room.staff-6 .office-workspace { width: min(84%, 106px); }
 .office-room.staff-4 .office-portrait,
 .office-room.staff-5 .office-portrait,
-.office-room.staff-6 .office-portrait { width: min(58%, 58px); }
+.office-room.staff-6 .office-portrait { width: min(90%, 88px); }
 .office-room.staff-4 .desk > strong,
 .office-room.staff-5 .desk > strong,
 .office-room.staff-6 .desk > strong { margin-top: -3px; padding: 1px 4px; font-size: 8px; }
@@ -1016,7 +1017,6 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .launch-card { padding: 14px 10px 10px; }
   .launch-message { margin: 5px 0 7px; font-size: 9px; }
   .launch-team { min-height: 145px; }
-  .launch-member :is(canvas, .character-svg) { width: min(98px, 100%); }
   .launch-member strong { margin-top: -9px; font-size: 11px; }
   .launch-member small { font-size: 7px; }
   .launch-mission { padding: 5px 7px; }

@@ -107,24 +107,24 @@ const EQUIPMENT_CATALOG = [
 
 const DIRECTIVE_SKILLS = {
   sales: [
-    { id: "requirement-brief", name: "요구사항 정리", description: "약점 노출 · 연계 피해 증가", visual: "승인 도장", cooldown: 1 },
-    { id: "client-persuasion", name: "고객 설득", description: "불리한 상태 제거 · 안정 처리", visual: "프레젠테이션", cooldown: 1 },
-    { id: "contract-close", name: "계약 확정", description: "약점 노출 시 강력한 마무리", visual: "계약서 폭발", cooldown: 2 }
+    { id: "requirement-brief", name: "요구사항 정리", description: "약점 노출 · 연계 피해 증가", visual: "승인 도장", fx: "stamp", cooldown: 1 },
+    { id: "client-persuasion", name: "고객 설득", description: "불리한 상태 제거 · 안정 처리", visual: "프레젠테이션", fx: "presentation", cooldown: 1 },
+    { id: "contract-close", name: "계약 확정", description: "약점 노출 시 강력한 마무리", visual: "계약서 폭발", fx: "contract", cooldown: 2 }
   ],
   pm: [
-    { id: "schedule-shift", name: "일정 재배치", description: "마감 +1턴 · 최대 2회", visual: "거대 캘린더", cooldown: 1 },
-    { id: "work-allocation", name: "업무 분담", description: "팀 모멘텀과 연계 피해 증가", visual: "업무 연결선", cooldown: 1 },
-    { id: "emergency-command", name: "전사 긴급 지시", description: "이번 지시 효과 20% 증가", visual: "지휘 방송", cooldown: 2 }
+    { id: "schedule-shift", name: "일정 재배치", description: "마감 +1턴 · 최대 2회", visual: "거대 캘린더", fx: "calendar", cooldown: 1 },
+    { id: "work-allocation", name: "업무 분담", description: "팀 모멘텀과 연계 피해 증가", visual: "업무 연결선", fx: "network", cooldown: 1 },
+    { id: "emergency-command", name: "전사 긴급 지시", description: "이번 지시 효과 20% 증가", visual: "지휘 방송", fx: "broadcast", cooldown: 2 }
   ],
   dev: [
-    { id: "focus-development", name: "집중 처리", description: "핵심에 강한 즉시 업무 처리", visual: "업무 폭발", cooldown: 1 },
-    { id: "automation-deploy", name: "자동화 투입", description: "즉시 처리 + 2턴 지속 처리", visual: "자동화 흐름", cooldown: 2 },
-    { id: "night-shift", name: "밤샘 해결", description: "가장 강력한 단일 업무 처리", visual: "마감 파쇄", cooldown: 3 }
+    { id: "focus-development", name: "집중 처리", description: "핵심에 강한 즉시 업무 처리", visual: "업무 폭발", fx: "focus", cooldown: 1 },
+    { id: "automation-deploy", name: "자동화 투입", description: "즉시 처리 + 2턴 지속 처리", visual: "자동화 흐름", fx: "automation", cooldown: 2 },
+    { id: "night-shift", name: "밤샘 해결", description: "가장 강력한 단일 업무 처리", visual: "마감 파쇄", fx: "shred", cooldown: 3 }
   ],
   finance: [
-    { id: "budget-approval", name: "자원 집중", description: "이번 지시 효과 20% 증가", visual: "자원 집결", cooldown: 2 },
-    { id: "cost-defense", name: "리스크 차단", description: "불리한 상태 제거 · 손실 차단", visual: "안전 장벽", cooldown: 1 },
-    { id: "emergency-approval", name: "긴급 지원", description: "마감 +1턴과 즉시 업무 처리", visual: "긴급 승인", cooldown: 2 }
+    { id: "budget-approval", name: "자원 집중", description: "이번 지시 효과 20% 증가", visual: "자원 집결", fx: "resource", cooldown: 2 },
+    { id: "cost-defense", name: "리스크 차단", description: "불리한 상태 제거 · 손실 차단", visual: "안전 장벽", fx: "shield", cooldown: 1 },
+    { id: "emergency-approval", name: "긴급 지원", description: "마감 +1턴과 즉시 업무 처리", visual: "긴급 승인", fx: "approval", cooldown: 2 }
   ]
 };
 
@@ -328,6 +328,11 @@ const NORMAL_DAMAGE_VARIANCE = .12;
 const DIRECTIVE_DAMAGE_VARIANCE = .15;
 const SAVE_KEY = "office-raid-save";
 const SAVE_VERSION = 1;
+const COMPANY_LEVELS = [
+  { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
+  { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
+  { id: "large", name: "대형 오피스", grade: "ENTERPRISE", capacity: 12, teamLimit: 6, requiredClears: 15, cost: 7000 }
+];
 
 const app = document.querySelector("#app");
 let currentView = "setup";
@@ -343,6 +348,7 @@ let representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESEN
 let representativeMode = "basic";
 let openingPage = 0;
 let equipmentTargetId = null;
+let officePage = 0;
 let officeDialogueTimer = null;
 let recentOfficeDialogueIds = [];
 let companyLaunchTimer = null;
@@ -354,7 +360,8 @@ function createInitialState() {
     companyName: "",
     cash: 1200,
     reputation: 0,
-    capacity: 6,
+    companyLevel: 0,
+    capacity: COMPANY_LEVELS[0].capacity,
     equipment: [],
     employees: [],
     teamIds: [],
@@ -370,7 +377,7 @@ function createInitialState() {
     financialHistory: [],
     financialPeriod: {
       number: 1, startCash: 1200, revenue: 0, payroll: 0,
-      recruitment: 0, posting: 0, retention: 0, termination: 0
+      recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0
     }
   };
 }
@@ -412,8 +419,12 @@ function normalizeSavedState(savedState) {
   const initial = createInitialState();
   const employees = Array.isArray(savedState.employees) ? savedState.employees.map(normalizeSavedMember).filter(Boolean) : [];
   if (!INDUSTRIES[savedState.industry] || !savedState.companyName || employees.length < 3) return null;
+  const inferredLevel = Number(savedState.capacity || 0) >= COMPANY_LEVELS[2].capacity
+    ? 2 : Number(savedState.capacity || 0) >= COMPANY_LEVELS[1].capacity ? 1 : 0;
+  const companyLevel = Math.min(COMPANY_LEVELS.length - 1, Math.max(0, Number.isInteger(savedState.companyLevel) ? savedState.companyLevel : inferredLevel));
+  const company = COMPANY_LEVELS[companyLevel];
   const employeeIds = new Set(employees.map(member => member.id));
-  const teamIds = Array.isArray(savedState.teamIds) ? savedState.teamIds.filter(id => employeeIds.has(id)).slice(0, 3) : [];
+  const teamIds = Array.isArray(savedState.teamIds) ? savedState.teamIds.filter(id => employeeIds.has(id)).slice(0, company.teamLimit) : [];
   employees.forEach(member => {
     if (teamIds.length < 3 && !teamIds.includes(member.id)) teamIds.push(member.id);
   });
@@ -422,6 +433,8 @@ function normalizeSavedState(savedState) {
     ...savedState,
     employees,
     teamIds,
+    companyLevel,
+    capacity: company.capacity,
     equipment: Array.isArray(savedState.equipment) ? savedState.equipment : [],
     tutorialBattleCompleted: typeof savedState.tutorialBattleCompleted === "boolean"
       ? savedState.tutorialBattleCompleted
@@ -488,6 +501,7 @@ function applySavedGame(payload) {
   representativeMode = "basic";
   openingPage = 0;
   equipmentTargetId = state.employees[0]?.id || null;
+  officePage = 0;
   recentOfficeDialogueIds = [];
   hrTerminationTargetId = null;
 }
@@ -508,6 +522,7 @@ function resetGameState() {
   representativeMode = "basic";
   openingPage = 0;
   equipmentTargetId = null;
+  officePage = 0;
   recentOfficeDialogueIds = [];
   hrTerminationTargetId = null;
   window.localStorage.removeItem(SAVE_KEY);
@@ -907,6 +922,18 @@ function enterOfficeFromLaunch() {
 
 function currentTeam() { return state.teamIds.map(id => state.employees.find(member => member.id === id)).filter(Boolean); }
 
+function currentCompanyLevel() {
+  return COMPANY_LEVELS[Math.min(COMPANY_LEVELS.length - 1, Math.max(0, state.companyLevel || 0))];
+}
+
+function nextCompanyLevel() {
+  return COMPANY_LEVELS[(state.companyLevel || 0) + 1] || null;
+}
+
+function projectTeamLimit() {
+  return currentCompanyLevel().teamLimit;
+}
+
 function orderedBattleTeam(members = currentTeam(), formationIds = state.teamIds) {
   const formationOrder = new Map(formationIds.map((id, index) => [id, index]));
   return [...members].sort((left, right) => right.speed - left.speed || (formationOrder.get(left.id) ?? 99) - (formationOrder.get(right.id) ?? 99));
@@ -1057,7 +1084,7 @@ function recordFinancialAmount(category, amount) {
 }
 
 function financialExpenseTotal(period) {
-  return period.payroll + period.recruitment + period.posting + period.retention + period.termination;
+  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0);
 }
 
 function closeFinancialPeriodIfDue() {
@@ -1077,7 +1104,7 @@ function closeFinancialPeriodIfDue() {
   state.pendingFinancialReport = report;
   state.financialPeriod = {
     number: period.number + 1, startCash: state.cash, revenue: 0, payroll: 0,
-    recruitment: 0, posting: 0, retention: 0, termination: 0
+    recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0
   };
   return report;
 }
@@ -1097,7 +1124,7 @@ function returnMemberEquipment(member) {
 
 function repairProjectTeam() {
   const validIds = new Set(state.employees.map(member => member.id));
-  state.teamIds = state.teamIds.filter(id => validIds.has(id));
+  state.teamIds = state.teamIds.filter(id => validIds.has(id)).slice(0, projectTeamLimit());
   state.employees.forEach(member => {
     if (state.teamIds.length < 3 && !state.teamIds.includes(member.id)) state.teamIds.push(member.id);
   });
@@ -1146,15 +1173,22 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const specialRecruitment = state.specialRecruitmentTickets > 0
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
-  const officeMembers = state.employees.slice(0, state.capacity);
+  const officePageSize = 6;
+  const officePageCount = Math.max(1, Math.ceil(state.employees.length / officePageSize));
+  officePage = Math.min(officePage, officePageCount - 1);
+  const officeMembers = state.employees.slice(officePage * officePageSize, (officePage + 1) * officePageSize);
   const equippedCount = equippedEquipmentCount();
   const industry = currentIndustry();
+  const company = currentCompanyLevel();
+  const nextCompany = nextCompanyLevel();
+  const expansionReady = nextCompany && state.projectClears >= nextCompany.requiredClears && state.cash >= nextCompany.cost;
+  const officeZone = `<div class="office-zone"><span>${company.grade} · 근무 구역 ${officePage + 1}/${officePageCount}</span>${officePageCount > 1 ? `<button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button>` : ""}</div>`;
   const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
-  app.innerHTML = `${header("작은 사무실", officeNotice)}
+  app.innerHTML = `${header(company.name, officeNotice)}
     <section class="screen">
-      <div class="office-room panel staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="직원 ${officeMembers.length}명이 근무하는 작은 사무실">${desks}</div>
+      <div class="office-room panel company-level-${company.id} staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 직원 ${officeMembers.length}명">${officeZone}${desks}</div>
       <div class="company-card panel">
-        <div class="company-card-head"><div><small>COMPANY FILE</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")}</b></div>
+        <div class="company-card-head"><div><small>COMPANY FILE · ${company.grade}</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</b></div>
         <div class="company-stats" aria-label="회사 현황">
           <span><small>직원</small><strong>${state.employees.length}<i>/ ${state.capacity}</i></strong></span>
           <span><small>현금</small><strong>${state.cash}<i>만원</i></strong></span>
@@ -1171,6 +1205,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
         <button class="teal" id="team">팀 편성</button>
         <button class="mustard" id="equipment" aria-label="장착 장비 ${equippedCount}개, 보관 장비 ${state.equipment.length}개">장착 ${equippedCount} · 보관 ${state.equipment.length}</button>
         <button class="ink" id="hr">인사 관리</button>
+        <button class="blue ${expansionReady ? "expansion-ready" : ""}" id="expand" ${tutorialPending ? "disabled" : ""}>${tutorialPending ? "확장 잠김" : nextCompany ? expansionReady ? "확장 가능" : "회사 확장" : "확장 완료"}</button>
         <button class="red ${tutorialPending ? "tutorial-next" : ""}" id="project">${tutorialPending ? "첫 프로젝트 시작" : "프로젝트"}</button>
       </div>
     </section>`;
@@ -1180,7 +1215,10 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
   document.querySelector("#hr").addEventListener("click", () => openHumanResources());
+  document.querySelector("#expand").addEventListener("click", openCompanyExpansion);
   document.querySelector("#project").addEventListener("click", renderProjectBoard);
+  document.querySelector("#office-page-prev")?.addEventListener("click", () => { officePage -= 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
+  document.querySelector("#office-page-next")?.addEventListener("click", () => { officePage += 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
   document.querySelectorAll("[data-office-worker]").forEach(desk => {
     const toggleLoadout = () => {
       const willOpen = !desk.classList.contains("loadout-open");
@@ -1199,6 +1237,54 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
     });
   });
   scheduleOfficeDialogue();
+}
+
+function openCompanyExpansion() {
+  currentView = "expansion";
+  clearOfficeDialogue();
+  renderCompanyExpansion();
+}
+
+function renderCompanyExpansion(notice = "현금과 누적 프로젝트 성과를 모아 더 큰 사무실로 이전하세요.") {
+  const company = currentCompanyLevel();
+  const next = nextCompanyLevel();
+  const stages = COMPANY_LEVELS.map((level, index) => `<span class="${index < state.companyLevel ? "done" : index === state.companyLevel ? "current" : ""}"><i>${index + 1}</i><b>${level.name}</b><small>${level.grade}</small></span>`).join("");
+  const currentCard = `<article class="expansion-current panel"><small>CURRENT OFFICE</small><strong>${company.name}</strong><div><span>직원 정원 <b>${company.capacity}명</b></span><span>프로젝트 팀 <b>최대 ${company.teamLimit}명</b></span><span>회사 등급 <b>${company.grade}</b></span></div></article>`;
+  let nextCard = `<article class="expansion-complete panel"><small>MAXIMUM SCALE</small><strong>최대 규모 달성</strong><p>현재 회사가 가장 큰 단계까지 확장됐습니다.</p></article>`;
+  if (next) {
+    const clearsReady = state.projectClears >= next.requiredClears;
+    const cashReady = state.cash >= next.cost;
+    const ready = clearsReady && cashReady;
+    nextCard = `<article class="expansion-next panel ${ready ? "ready" : ""}">
+      <div class="expansion-next-title"><div><small>NEXT OFFICE</small><strong>${next.name}</strong></div><b>${next.grade}</b></div>
+      <p>더 많은 직원을 채용하고 프로젝트에 투입할 수 있습니다.</p>
+      <div class="expansion-benefits"><span><small>직원 정원</small><b>${company.capacity} → ${next.capacity}</b></span><span><small>팀 최대 인원</small><b>${company.teamLimit} → ${next.teamLimit}</b></span></div>
+      <div class="expansion-requirements"><span class="${clearsReady ? "met" : ""}"><i>${clearsReady ? "✓" : "◆"}</i><b>누적 성과 ${state.projectClears}/${next.requiredClears}</b></span><span class="${cashReady ? "met" : ""}"><i>${cashReady ? "✓" : "◆"}</i><b>현금 ${state.cash}/${next.cost}만원</b></span></div>
+      <button class="mustard" id="confirm-expansion" ${ready ? "" : "disabled"}><strong>${ready ? `${next.name}로 확장` : "확장 조건 미달"}</strong><small>${next.cost}만원 투자</small></button>
+    </article>`;
+  }
+  app.innerHTML = `${header("회사 확장", notice)}<section class="screen expansion-screen">
+    <div class="expansion-stages">${stages}</div>
+    ${currentCard}
+    ${nextCard}
+    <button class="ink" id="back-from-expansion">← 사무실</button>
+  </section>`;
+  document.querySelector("#confirm-expansion")?.addEventListener("click", expandCompany);
+  document.querySelector("#back-from-expansion").addEventListener("click", () => renderOffice());
+}
+
+function expandCompany() {
+  const next = nextCompanyLevel();
+  if (!next) return renderCompanyExpansion("이미 최대 규모의 회사입니다.");
+  if (state.projectClears < next.requiredClears) return renderCompanyExpansion(`누적 프로젝트 성과 ${next.requiredClears}회가 필요합니다.`);
+  if (state.cash < next.cost) return renderCompanyExpansion(`사무실 확장에 필요한 현금 ${next.cost}만원이 부족합니다.`);
+  state.cash -= next.cost;
+  recordFinancialAmount("expansion", next.cost);
+  state.companyLevel += 1;
+  state.capacity = next.capacity;
+  repairProjectTeam();
+  saveGame();
+  renderCompanyExpansion(`${next.name}로 확장했습니다. 직원 정원 ${next.capacity}명 · 프로젝트 팀 최대 ${next.teamLimit}명`);
 }
 
 function openHumanResources(notice = "직원 계약과 급여 현황을 관리하세요.") {
@@ -1417,6 +1503,7 @@ function renderFinancialReport() {
         <p><span>채용 공고</span><b>-${report.posting}만원</b></p>
         <p><span>직원 유지 비용</span><b>-${report.retention}만원</b></p>
         <p><span>계약 종료 정산금</span><b>-${report.termination}만원</b></p>
+        <p><span>사무실 확장 투자</span><b>-${report.expansion || 0}만원</b></p>
         <p class="profit"><span>영업이익</span><b class="${report.operatingProfit >= 0 ? "positive" : "negative"}">${profitSign}${report.operatingProfit}만원</b></p>
       </div>
       <div class="financial-balance"><span><small>기초 현금</small><strong>${report.startCash}만원</strong></span><i>→</i><span><small>기말 현금</small><strong>${report.endingCash}만원</strong></span></div>
@@ -1538,12 +1625,15 @@ function renderEquipment(notice) {
   if (!target) return renderOffice("장비를 사용할 직원이 없습니다.");
   saveGame();
   const stats = effectiveStats(target);
+  const projectOrderIds = orderedBattleTeam().map(member => member.id);
   const people = state.employees.map(member => {
     const selected = member.id === target.id;
     const department = DEPARTMENTS[member.department];
-    return `<button class="equipment-person ${selected ? "active" : ""}" data-equipment-target="${member.id}" aria-pressed="${selected}" style="--department-color:${department.color}">
+    const projectOrder = projectOrderIds.indexOf(member.id);
+    const projectMember = projectOrder >= 0;
+    return `<button class="equipment-person ${selected ? "active" : ""} ${projectMember ? "project-member" : ""}" data-equipment-target="${member.id}" aria-pressed="${selected}" style="--department-color:${department.color}">
       <span class="equipment-person-portrait"><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face" aria-label="${escapeHtml(member.name)} 얼굴"></canvas></span>
-      <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong></span>
+      <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong>${projectMember ? `<em class="equipment-team-badge"><b>프로젝트 팀</b> · 행동 ${projectOrder + 1}</em>` : `<em class="equipment-team-badge off-team">대기 직원</em>`}</span>
       ${selected ? `<i aria-hidden="true">✓</i>` : ""}
     </button>`;
   }).join("");
@@ -1721,10 +1811,11 @@ function refreshJobPosting() {
 function openTeam() {
   currentView = "team";
   teamDraft = [...state.teamIds];
-  renderTeam("참가할 직원 3명을 선택하세요. 속도가 높은 직원부터 행동합니다.");
+  renderTeam(`참가할 직원 3~${projectTeamLimit()}명을 선택하세요. 속도가 높은 직원부터 행동합니다.`);
 }
 
 function renderTeam(notice) {
+  const teamLimit = projectTeamLimit();
   const selectedMembers = teamDraft.map(id => state.employees.find(member => member.id === id)).filter(Boolean);
   const actionOrder = orderedBattleTeam(selectedMembers, teamDraft);
   const actionOrderIds = actionOrder.map(member => member.id);
@@ -1744,7 +1835,7 @@ function renderTeam(notice) {
       <button class="${selectedIndex >= 0 ? "red" : "teal"}" data-toggle="${member.id}">${selectedIndex >= 0 ? "제외" : "선택"}</button>
     </article>`;
   }).join("");
-  app.innerHTML = `${header("프로젝트 팀 편성", `선택 ${teamDraft.length}/3 · ${notice}`)}<section class="screen">
+  app.innerHTML = `${header("프로젝트 팀 편성", `선택 ${teamDraft.length}/${teamLimit} · ${notice}`)}<section class="screen">
     <div class="team-order-preview panel"><small>예상 행동 순서</small><div>${actionOrderSummary}</div></div>
     <div class="card-list">${cards}</div>
     <div class="footer-actions"><button class="ink" id="cancel-team">취소</button><button class="mustard" id="save-team">편성 저장</button></div>
@@ -1756,15 +1847,17 @@ function renderTeam(notice) {
 }
 
 function toggleTeam(id) {
+  const teamLimit = projectTeamLimit();
   const index = teamDraft.indexOf(id);
   if (index >= 0) teamDraft.splice(index, 1);
-  else if (teamDraft.length < 3) teamDraft.push(id);
-  else return renderTeam("프로젝트에는 3명만 참가할 수 있습니다.");
+  else if (teamDraft.length < teamLimit) teamDraft.push(id);
+  else return renderTeam(`현재 회사는 프로젝트에 최대 ${teamLimit}명까지 참가할 수 있습니다.`);
   renderTeam("속도가 같으면 선택 순서가 우선합니다.");
 }
 
 function saveTeam() {
-  if (teamDraft.length !== 3) return renderTeam("프로젝트 참가자는 정확히 3명이어야 합니다.");
+  const teamLimit = projectTeamLimit();
+  if (teamDraft.length < 3 || teamDraft.length > teamLimit) return renderTeam(`프로젝트 참가자는 3~${teamLimit}명이어야 합니다.`);
   state.teamIds = [...teamDraft];
   renderOffice("프로젝트 팀 편성을 저장했습니다.");
 }
@@ -1966,7 +2059,7 @@ function directivePanel(team) {
     const selected = battle.directiveSelections[focus.id] === skill.id;
     const cooldown = directiveCooldownFor(focus.id, skill.id);
     const cooldownText = cooldown ? `대기 ${cooldown}회` : `재사용 ${skill.cooldown}회`;
-    return `<button class="skill-option effect-${preview.tone} ${selected ? "selected" : ""} ${cooldown ? "cooling" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}" aria-pressed="${selected}" ${cooldown || calculating ? "disabled" : ""}><span class="skill-effect"><i>${preview.icon}</i><b>${escapeHtml(preview.primary)}</b></span><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(preview.secondary)}</span><small class="skill-cooldown ${cooldown ? "waiting" : ""}">${cooldownText}</small><em>${escapeHtml(skill.visual)}</em></button>`;
+    return `<button class="skill-option fx-${skill.fx} effect-${preview.tone} ${selected ? "selected" : ""} ${cooldown ? "cooling" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}" aria-pressed="${selected}" ${cooldown || calculating ? "disabled" : ""}><span class="skill-effect"><i>${preview.icon}</i><b>${escapeHtml(preview.primary)}</b></span><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(preview.secondary)}</span><small class="skill-cooldown ${cooldown ? "waiting" : ""}">${cooldownText}</small><em>${escapeHtml(skill.visual)}</em></button>`;
   }).join("");
   const summary = directiveExecutionTeam(team).map(member => {
     const skill = directiveSkillsFor(member.department).find(option => option.id === battle.directiveSelections[member.id]);
@@ -2100,6 +2193,32 @@ function activeDirectivePreview(team) {
   return { member: focus, skill, ...directiveSkillPreview(focus, skillId) };
 }
 
+function directiveFxSteps(team) {
+  return directiveExecutionTeam(team).map(member => {
+    const skillId = battle.directiveSelections[member.id];
+    const skill = directiveSkillsFor(member.department).find(option => option.id === skillId);
+    const preview = directiveSkillPreview(member, skillId);
+    return {
+      member: member.name,
+      skill: skill?.name || "긴급 지시",
+      visual: skill?.visual || "업무 처리",
+      fx: skill?.fx || "focus",
+      icon: preview.icon,
+      tone: preview.tone
+    };
+  });
+}
+
+function directiveCalculationStrip(steps) {
+  if (!steps?.length) return "";
+  return `<div class="calculation-skill-strip" aria-label="계획 실행 순서">${steps.map((step, index) => `<span class="fx-${step.fx} tone-${step.tone}"><i>${step.icon}</i><b>${index + 1}</b><small>${escapeHtml(step.skill)}</small></span>`).join("")}</div>`;
+}
+
+function directiveFxSequence(steps) {
+  if (!steps?.length) return "";
+  return `<div class="directive-fx-sequence" aria-hidden="true">${steps.map((step, index) => `<span class="directive-fx-step fx-${step.fx} tone-${step.tone}" style="--fx-index:${index};--fx-count:${steps.length}"><span class="directive-fx-stage"><i>${step.icon}</i><b>${escapeHtml(step.skill)}</b><small>${escapeHtml(step.member)} · ${escapeHtml(step.visual)}</small></span></span>`).join("")}</div>`;
+}
+
 function directivePreviewOverlay(preview) {
   if (!preview) return "";
   return `<div class="effect-preview effect-${preview.tone} target-${preview.target}"><i>${preview.icon}</i><div><small>${escapeHtml(preview.member.name)} · ${escapeHtml(preview.skill.name)}</small><strong>${escapeHtml(preview.primary)}</strong><span>${escapeHtml(preview.secondary)}</span></div></div>`;
@@ -2160,13 +2279,15 @@ function executeDirective() {
   if (team.some(member => !battle.directiveSelections[member.id])) return;
   if (team.some(member => directiveCooldownFor(member.id, battle.directiveSelections[member.id]) > 0)) return;
   const plan = directivePlanEstimate(team);
+  const steps = directiveFxSteps(team);
   battle.log = "계획 실행 중 · 처리량을 계산하고 있습니다.";
   battle.skillFx = {
     phase: "calculating",
     title: "계획 분석 중",
     detail: "처리량 · 연계 · 변수 확인",
     outcome: "normal",
-    range: plan
+    range: plan,
+    steps
   };
   renderBattle();
   let calculationTick = 0;
@@ -2187,6 +2308,7 @@ function executeDirective() {
 
 function resolveDirective() {
   const team = orderedBattleTeam();
+  const fxSteps = battle.skillFx?.steps || directiveFxSteps(team);
   const skills = Object.values(battle.directiveSelections);
   let total = 0;
   let cleared = false;
@@ -2230,7 +2352,7 @@ function resolveDirective() {
   const varianceResult = outcome === "great" ? " · GREAT!" : outcome === "low" ? " · 변동 최소" : "";
   const detail = `업무량 ${actualTotal} 처리 · 예상 ${expected.min}~${expected.max}${varianceResult}${combo ? ` · ${combo} 연계` : ""}${cleared ? " · 상태 제거" : ""}`;
   battle.log = `PERFECT WORKFLOW! ${detail}`;
-  battle.skillFx = { phase: "result", title: combo || "PERFECT WORKFLOW", detail, outcome };
+  battle.skillFx = { phase: "result", title: combo || "PERFECT WORKFLOW", detail, outcome, steps: fxSteps };
   if (battle.workload <= 0) finishBattleSuccess(false);
   else if (Math.floor(battle.action / team.length) >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
@@ -2419,7 +2541,9 @@ function renderBattle() {
   const skillFxOutcome = ["low", "normal", "great"].includes(battle.skillFx?.outcome) ? battle.skillFx.outcome : "normal";
   const calculationValue = battle.skillFx?.range ? Math.round((battle.skillFx.range.min + battle.skillFx.range.max) / 2) : 0;
   const calculationReadout = skillFxPhase === "calculating" ? `<b class="calculation-readout" aria-hidden="true"><small>예상 처리량</small><em id="calculation-value">${calculationValue}</em><small>분석 중</small></b>` : "";
-  const skillFx = battle.skillFx ? `<div class="skill-cinematic phase-${skillFxPhase} outcome-${skillFxOutcome}" role="status" aria-live="polite"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong>${calculationReadout}<span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
+  const calculationStrip = skillFxPhase === "calculating" ? directiveCalculationStrip(battle.skillFx?.steps) : "";
+  const fxSequence = skillFxPhase === "result" ? directiveFxSequence(battle.skillFx?.steps) : "";
+  const skillFx = battle.skillFx ? `<div class="skill-cinematic phase-${skillFxPhase} outcome-${skillFxOutcome}" role="status" aria-live="polite"><i></i><i></i><i></i>${fxSequence}<strong>${escapeHtml(battle.skillFx.title)}</strong>${calculationReadout}${calculationStrip}<span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
   const phaseText = battle.project.boss ? `PHASE ${battle.phase}/3 · ${battle.project.phaseNames[battle.phase - 1]}` : battle.project.difficulty;
   const workloadPercent = Math.min(100, battle.workload / battle.max * 100);
   const previewMin = preview?.damageMin || 0;
@@ -2439,7 +2563,7 @@ function renderBattle() {
   app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요." : "아군은 아래에서 위쪽의 프로젝트를 공략합니다.")}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
       <div class="boss-card panel ${battle.project.boss ? "boss-active" : ""}"><div class="boss-row"><div><span class="project-kicker">${battle.project.boss ? "BOSS PROJECT" : "PROJECT TARGET"}</span><strong>${escapeHtml(battle.project.name)}</strong><small>${escapeHtml(phaseText)}</small></div><span class="workload-count" id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar" aria-label="남은 프로젝트 업무량"><i id="workload-bar" style="width:${workloadPercent}%"></i>${workloadPreview}</div><div class="battle-condition-grid"><span class="status-chip ${statusTone} ${preview?.target === "status" ? "preview-target" : ""}" id="status-chip"><small>현재 상태</small><b>${escapeHtml(statusName)}</b></span><span class="deadline ${preview?.target === "deadline" ? "preview-target" : ""}" id="deadline"><small>마감 턴</small><b>${round}/${battle.deadline}${preview?.deadline ? ` → ${round}/${battle.deadline + preview.deadline}` : ""}</b></span><span class="affinity-chip ${affinityCount ? "matched" : ""}"><small>추천 ${escapeHtml(recommendedDepartments || "전체")}</small><b>상성 ${affinityCount}/${team.length}</b></span></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
-      <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team">${fighters}</div>${arenaPreview}${skillFx}</div>
+      <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${team.length > 3 ? "expanded-team" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team team-size-${team.length}">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
       <div class="battle-footer-actions ${battle.result ? "result-footer" : ""}">${battle.result || battle.skillFx ? "" : `<button class="battle-help-button teal" id="battle-help">? 전투 도움말</button>`}<button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : battle.tutorialUnlock ? "사무실 · 면접 확인" : "사무실로" : "프로젝트 중단"}</button></div>

@@ -863,7 +863,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .boss-arena #boss-canvas { top: 8px; width: clamp(180px, 44vw, 210px); height: clamp(180px, 44vw, 210px); filter: drop-shadow(7px 9px 0 rgba(23,54,74,.28)); }
 .battle-team { position: absolute; z-index: 3; right: 4px; bottom: 7px; left: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .fighter { position: relative; min-width: 0; padding-top: 12px; text-align: center; }
-.fighter :is(canvas, .character-svg) { width: min(100%, clamp(92px, 22cqw, 112px)); height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; }
+.fighter :is(canvas, .character-svg) { width: min(100%, 28cqw); height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; }
 .fighter strong { display: block; overflow: hidden; font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
 .fighter-role { position: absolute; z-index: 2; top: 5px; left: 50%; max-width: 92%; overflow: hidden; padding: 2px 4px; border: 1px solid var(--ink); background: var(--department-color); color: white; font-size: 6px; font-weight: 1000; white-space: nowrap; text-overflow: ellipsis; translate: -50% 0; }
 .fighter-range { display: block; margin-top: 1px; color: var(--muted); font-size: 7px; font-weight: 900; }
@@ -872,7 +872,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 @keyframes active-fighter-pulse { 50% { translate: 0 -2px; } }
 .fighter.preview-target :is(canvas, .character-svg) { outline: 3px solid var(--mustard); outline-offset: -2px; background: rgba(22,140,139,.24); filter: drop-shadow(0 0 5px white); animation: preview-pulse .75s steps(2) infinite; }
 .boss-arena .battle-team { right: 28px; bottom: 5px; left: 28px; }
-.boss-arena .fighter :is(canvas, .character-svg) { width: 50px; }
+.boss-arena .fighter :is(canvas, .character-svg) { width: min(100%, 18cqw); }
 .boss-arena .fighter strong { font-size: 8px; }
 .boss-arena .fighter-role { top: 7px; font-size: 5px; }
 .boss-arena .fighter-range { font-size: 6px; }
@@ -974,7 +974,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .boss-arena #boss-canvas { top: 7px; width: 138px; height: 138px; }
   .directive-active .arena:not(.boss-arena) #boss-canvas { width: 92px; height: 92px; }
   .boss-arena::before { top: 14px; width: 132px; height: 132px; }
-  .boss-arena .fighter :is(canvas, .character-svg) { width: 42px; }
+  .boss-arena .fighter :is(canvas, .character-svg) { width: min(100%, 17cqw); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -985,7 +985,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 
 .directive-active .boss-arena #boss-canvas { width: 142px; height: 142px; }
 .directive-active .boss-arena::before { width: 138px; height: 138px; }
-.directive-active .boss-arena .fighter :is(canvas, .character-svg) { width: 42px; }
+.directive-active .boss-arena .fighter :is(canvas, .character-svg) { width: min(100%, 15cqw); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
@@ -1005,7 +1005,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   #boss-canvas { width: 92px; height: 92px; }
   .directive-active .boss-arena #boss-canvas { width: 120px; height: 120px; }
   .directive-active .boss-arena::before { width: 116px; height: 116px; }
-  .directive-active .boss-arena .fighter :is(canvas, .character-svg) { width: 38px; }
+  .directive-active .boss-arena .fighter :is(canvas, .character-svg) { width: min(100%, 14cqw); }
   .representative > :is(canvas, .character-svg) { width: 82px; height: 82px; }
   .representative > :is(canvas, .character-svg).face-zoom { width: 102px; height: 102px; }
   .custom-row button { min-height: 29px; }

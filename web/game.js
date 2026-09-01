@@ -1350,7 +1350,15 @@ function renderEquipment(notice) {
   const target = state.employees.find(member => member.id === equipmentTargetId) || state.employees[0];
   if (!target) return renderOffice("장비를 사용할 직원이 없습니다.");
   const stats = effectiveStats(target);
-  const people = state.employees.map(member => `<button class="${member.id === target.id ? "active" : ""}" data-equipment-target="${member.id}">${escapeHtml(member.name)}</button>`).join("");
+  const people = state.employees.map(member => {
+    const selected = member.id === target.id;
+    const department = DEPARTMENTS[member.department];
+    return `<button class="equipment-person ${selected ? "active" : ""}" data-equipment-target="${member.id}" aria-pressed="${selected}" style="--department-color:${department.color}">
+      <span class="equipment-person-portrait"><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face" aria-label="${escapeHtml(member.name)} 얼굴"></canvas></span>
+      <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong></span>
+      ${selected ? `<i aria-hidden="true">✓</i>` : ""}
+    </button>`;
+  }).join("");
   const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
     const item = target.equipment[slot];
     return `<article class="equipment-slot ${item ? "filled" : ""}"><span style="${item ? `--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}` : ""}">${item ? equipmentIconMarkup(item) : info.icon}</span><div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}</article>`;
@@ -1363,6 +1371,7 @@ function renderEquipment(notice) {
     <div class="equipment-inventory">${inventory}</div>
     <button class="ink" id="back-from-equipment">← 사무실</button>
   </section>`;
+  mountPortraits();
   mountEquipmentIcons();
   document.querySelectorAll("[data-equipment-target]").forEach(button => button.addEventListener("click", () => { equipmentTargetId = button.dataset.equipmentTarget; renderEquipment("장착 대상을 변경했습니다."); }));
   document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
@@ -2174,6 +2183,7 @@ function mountPortraits() {
     const member = state.employees.find(item => item.id === canvas.dataset.portrait);
     if (member) {
       if (canvas.dataset.facing === "back") drawBackPortrait(canvas, member);
+      else if (canvas.dataset.portraitCrop === "face") drawFacePreview(canvas, member);
       else drawPortrait(canvas, member);
     }
   });

@@ -128,6 +128,11 @@ const DIRECTIVE_SKILLS = {
   ]
 };
 
+const DIRECTIVE_SUPPORT_SKILLS = new Set([
+  "requirement-brief", "client-persuasion", "schedule-shift", "work-allocation",
+  "emergency-command", "budget-approval", "cost-defense", "emergency-approval"
+]);
+
 const PROJECT_EPISODES = [
   { chapter: 1, name: "기반 다지기", description: "첫 고객과 첫 성과를 만들어 회사의 기초를 세웁니다." },
   { chapter: 2, name: "성장과 확장", description: "더 큰 계약과 복잡한 협업에 도전합니다." },
@@ -357,6 +362,7 @@ function createInitialState() {
     projectClears: 0,
     bossClears: 0,
     specialRecruitmentTickets: 0,
+    tutorialBattleCompleted: false,
     payrollPayments: 0,
     turnoverEvents: 0,
     pendingTurnover: null,
@@ -384,6 +390,7 @@ function rollDamage(value, variance = NORMAL_DAMAGE_VARIANCE) {
   return range.min + randomInt(range.max - range.min + 1);
 }
 function damageRangeText(value, variance = DIRECTIVE_DAMAGE_VARIANCE) {
+  if (battle?.tutorialMode) return `업무 -${Math.max(0, Math.round(value))}`;
   const range = damageRange(value, variance);
   return `업무 -${range.min}~${range.max}`;
 }
@@ -416,6 +423,9 @@ function normalizeSavedState(savedState) {
     employees,
     teamIds,
     equipment: Array.isArray(savedState.equipment) ? savedState.equipment : [],
+    tutorialBattleCompleted: typeof savedState.tutorialBattleCompleted === "boolean"
+      ? savedState.tutorialBattleCompleted
+      : Number(savedState.projectClears || 0) > 0 || employees.length > 3,
     financialHistory: Array.isArray(savedState.financialHistory) ? savedState.financialHistory.slice(-8) : [],
     financialPeriod: { ...initial.financialPeriod, ...(savedState.financialPeriod || {}) }
   };
@@ -897,6 +907,22 @@ function enterOfficeFromLaunch() {
 
 function currentTeam() { return state.teamIds.map(id => state.employees.find(member => member.id === id)).filter(Boolean); }
 
+function orderedBattleTeam(members = currentTeam(), formationIds = state.teamIds) {
+  const formationOrder = new Map(formationIds.map((id, index) => [id, index]));
+  return [...members].sort((left, right) => right.speed - left.speed || (formationOrder.get(left.id) ?? 99) - (formationOrder.get(right.id) ?? 99));
+}
+
+function directiveChargeFor(member) {
+  return Math.min(14, Math.max(10, 8 + Math.floor((member?.speed || 0) / 4)));
+}
+
+function tutorialProjectSource() {
+  const industry = currentIndustry();
+  return PROJECTS.find(project => project.industry === state.industry && project.name === industry?.firstGoal)
+    || PROJECTS.find(project => project.industry === state.industry && project.chapter === 1)
+    || PROJECTS[0];
+}
+
 function officePersonality(member) {
   const trait = member?.trait || "";
   if (trait.includes("완벽")) return "perfectionist";
@@ -1114,7 +1140,9 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   clearBattleTimer();
   repairProjectTeam();
   saveGame();
-  const teamNames = currentTeam().map(member => escapeHtml(member.name)).join(" · ");
+  const tutorialPending = !state.tutorialBattleCompleted;
+  const officeNotice = tutorialPending ? "창립팀으로 첫 프로젝트를 완료해 면접 기능을 해금하세요." : notice;
+  const teamNames = orderedBattleTeam().map(member => escapeHtml(member.name)).join(" → ");
   const specialRecruitment = state.specialRecruitmentTickets > 0
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
@@ -1122,7 +1150,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const equippedCount = equippedEquipmentCount();
   const industry = currentIndustry();
   const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
-  app.innerHTML = `${header("작은 사무실", notice)}
+  app.innerHTML = `${header("작은 사무실", officeNotice)}
     <section class="screen">
       <div class="office-room panel staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="직원 ${officeMembers.length}명이 근무하는 작은 사무실">${desks}</div>
       <div class="company-card panel">
@@ -1133,16 +1161,17 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
           <span><small>평판</small><strong>${state.reputation}<i>점</i></strong></span>
         </div>
         <div class="company-notes">
-          <p><b>PROJECT TEAM</b><span>${teamNames}</span></p>
+          <p><b>ACTION ORDER</b><span>${teamNames}</span></p>
           <p><b>성과 ${state.projectClears}회 · 급여 D-${projectsUntilPayroll()}</b><span>월급 ${totalPayroll()} · 특별채용 ${specialRecruitment}</span></p>
+          ${tutorialPending ? `<p class="onboarding-note"><b>FIRST MISSION</b><span>첫 프로젝트 성공 시 면접 기능 해금</span></p>` : ""}
         </div>
       </div>
       <div class="actions office-actions">
-        <button class="blue" id="interview">면접</button>
+        <button class="blue ${tutorialPending ? "tutorial-locked" : ""}" id="interview" ${tutorialPending ? "disabled" : ""}>${tutorialPending ? "면접 잠김" : "면접"}</button>
         <button class="teal" id="team">팀 편성</button>
         <button class="mustard" id="equipment" aria-label="장착 장비 ${equippedCount}개, 보관 장비 ${state.equipment.length}개">장착 ${equippedCount} · 보관 ${state.equipment.length}</button>
         <button class="ink" id="hr">인사 관리</button>
-        <button class="red" id="project">프로젝트</button>
+        <button class="red ${tutorialPending ? "tutorial-next" : ""}" id="project">${tutorialPending ? "첫 프로젝트 시작" : "프로젝트"}</button>
       </div>
     </section>`;
   mountPortraits();
@@ -1440,6 +1469,7 @@ function projectEpisode(project) {
 }
 
 function regularProjectOptions() {
+  if (!state.tutorialBattleCompleted) return [scaledProject(tutorialProjectSource())];
   const chapter = currentProjectChapter();
   const industryProjects = PROJECTS.filter(project => project.industry === state.industry && project.chapter <= chapter);
   const commonProjects = PROJECTS.filter(project => project.industry === "common" && project.chapter <= chapter);
@@ -1480,11 +1510,15 @@ function renderProjectBoard() {
   clearBattleTimer();
   clearOfficeDialogue();
   const regularCards = regularProjectOptions().map(project => projectCard(project)).join("");
-  const boss = nextBossProject();
-  const bossCard = projectCard(boss, !bossProjectReady());
+  const tutorialPending = !state.tutorialBattleCompleted;
+  const boss = tutorialPending ? null : nextBossProject();
+  const bossCard = boss ? projectCard(boss, !bossProjectReady()) : "";
   const industry = currentIndustry();
   const episode = PROJECT_EPISODES[currentProjectChapter() - 1];
-  app.innerHTML = `${header("프로젝트 선택", `${industry?.name || "회사"} · EP.${episode.chapter} ${episode.name} · ${episode.description}`)}
+  const boardNotice = tutorialPending
+    ? `${industry?.name || "회사"} 창립팀 첫 임무 · 전투 규칙을 배우고 면접을 해금하세요.`
+    : `${industry?.name || "회사"} · EP.${episode.chapter} ${episode.name} · ${episode.description}`;
+  app.innerHTML = `${header(tutorialPending ? "첫 프로젝트" : "프로젝트 선택", boardNotice)}
     <section class="screen project-board">
       <div class="project-list">${regularCards}${bossCard}</div>
       <button class="ink" id="back-from-projects">← 사무실</button>
@@ -1586,6 +1620,7 @@ function generateCandidate(mode = "regular") {
 }
 
 function openInterview(notice = "공고에 지원한 후보자의 능력과 조건을 비교하세요.") {
+  if (!state.tutorialBattleCompleted) return renderOffice("첫 프로젝트를 완료하면 면접 기능이 열립니다.");
   currentView = "interview";
   if (recruitmentMode === "regular" && !regularPostingInitialized) {
     regularCandidates = generateCandidates(3, "regular");
@@ -1686,22 +1721,31 @@ function refreshJobPosting() {
 function openTeam() {
   currentView = "team";
   teamDraft = [...state.teamIds];
-  renderTeam("참가할 직원 3명을 선택하세요. 선택 순서대로 배치됩니다.");
+  renderTeam("참가할 직원 3명을 선택하세요. 속도가 높은 직원부터 행동합니다.");
 }
 
 function renderTeam(notice) {
+  const selectedMembers = teamDraft.map(id => state.employees.find(member => member.id === id)).filter(Boolean);
+  const actionOrder = orderedBattleTeam(selectedMembers, teamDraft);
+  const actionOrderIds = actionOrder.map(member => member.id);
+  const actionOrderSummary = actionOrder.length
+    ? actionOrder.map((member, index) => `<span><i>${index + 1}</i><b>${escapeHtml(member.name)}</b><small>속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></span>`).join("")
+    : `<em>직원을 선택하면 예상 행동 순서가 표시됩니다.</em>`;
   const cards = state.employees.map(member => {
     const selectedIndex = teamDraft.indexOf(member.id);
+    const actionIndex = actionOrderIds.indexOf(member.id);
     const stats = effectiveStats(member);
     return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
-      <div><h3>${selectedIndex >= 0 ? `<span class="order">${selectedIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
+      <div><h3>${actionIndex >= 0 ? `<span class="order">${actionIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
       <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
-      <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${member.speed}</p></div>
+      <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${member.speed}</p>
+      <p class="team-speed-effect">${actionIndex >= 0 ? `행동 ${actionIndex + 1}순위 · 긴급 지시 +${directiveChargeFor(member)}` : `긴급 지시 +${directiveChargeFor(member)}`}</p></div>
       <button class="${selectedIndex >= 0 ? "red" : "teal"}" data-toggle="${member.id}">${selectedIndex >= 0 ? "제외" : "선택"}</button>
     </article>`;
   }).join("");
   app.innerHTML = `${header("프로젝트 팀 편성", `선택 ${teamDraft.length}/3 · ${notice}`)}<section class="screen">
+    <div class="team-order-preview panel"><small>예상 행동 순서</small><div>${actionOrderSummary}</div></div>
     <div class="card-list">${cards}</div>
     <div class="footer-actions"><button class="ink" id="cancel-team">취소</button><button class="mustard" id="save-team">편성 저장</button></div>
   </section>`;
@@ -1716,7 +1760,7 @@ function toggleTeam(id) {
   if (index >= 0) teamDraft.splice(index, 1);
   else if (teamDraft.length < 3) teamDraft.push(id);
   else return renderTeam("프로젝트에는 3명만 참가할 수 있습니다.");
-  renderTeam("참가할 직원 3명을 선택하세요.");
+  renderTeam("속도가 같으면 선택 순서가 우선합니다.");
 }
 
 function saveTeam() {
@@ -1727,20 +1771,23 @@ function saveTeam() {
 
 function startBattle(projectId) {
   currentView = "battle";
-  const source = [...PROJECTS, ...BOSS_PROJECTS].find(project => project.id === projectId) || PROJECTS[0];
+  const tutorialMode = !state.tutorialBattleCompleted;
+  const selectedSource = [...PROJECTS, ...BOSS_PROJECTS].find(project => project.id === projectId) || PROJECTS[0];
+  const source = tutorialMode ? tutorialProjectSource() : selectedSource;
   if (source.boss && !bossProjectReady()) return renderProjectBoard();
   const project = scaledProject(source);
   battle = {
     project,
     max: project.max, workload: project.max, action: 0, deadline: project.deadline, momentum: 0, requirements: false,
     result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
-    eventText: "", nextEventRound: project.eventEvery, eventCursor: randomInt(4), preparedRound: 0,
+    eventText: "", nextEventRound: tutorialMode ? Number.POSITIVE_INFINITY : project.eventEvery, eventCursor: randomInt(4), preparedRound: 0,
     directiveGauge: 50, awaitingDirective: false, directiveReason: "", directiveSelections: {}, directiveFocusId: null, directiveCooldowns: {},
     thresholdSeventy: false, thresholdForty: false, phase: 1, phaseAnnouncement: "",
-    deadlineBonus: 0, automationDamage: 0, automationTurns: 0, skillFx: null, confirmingLeave: false
+    deadlineBonus: 0, automationDamage: 0, automationTurns: 0, skillFx: null, confirmingLeave: false,
+    tutorialMode, tutorialPage: tutorialMode ? 0 : null, tutorialSkipped: false, tutorialDirectiveExplained: false, tutorialReplay: false, tutorialUnlock: false
   };
   renderBattle();
-  battleTimer = window.setTimeout(battleStep, 900);
+  if (!tutorialMode) battleTimer = window.setTimeout(battleStep, 900);
 }
 
 function clearBattleTimer() {
@@ -1749,8 +1796,8 @@ function clearBattleTimer() {
 }
 
 function battleStep() {
-  if (currentView !== "battle" || battle.result || battle.awaitingDirective || battle.skillFx) return;
-  const team = currentTeam();
+  if (currentView !== "battle" || battle.result || battle.awaitingDirective || battle.skillFx || battle.tutorialPage !== null) return;
+  const team = orderedBattleTeam();
   const member = team[battle.action % team.length];
   const round = Math.floor(battle.action / team.length) + 1;
   if (battle.action % team.length === 0 && battle.preparedRound !== round) {
@@ -1758,7 +1805,7 @@ function battleStep() {
     advanceBattleStatus();
     battle.eventText = "";
     if (battle.automationTurns > 0) {
-      const automationResult = rollDamage(battle.automationDamage);
+      const automationResult = battle.tutorialMode ? battle.automationDamage : rollDamage(battle.automationDamage);
       battle.workload = Math.max(0, battle.workload - automationResult);
       battle.automationTurns -= 1;
       battle.eventText = `✓ 자동화 배포! 업무량 ${automationResult} 처리`;
@@ -1796,13 +1843,14 @@ function battleStep() {
   if (battle.status) {
     damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
   }
-  damage = rollDamage(Math.max(1, damage));
+  damage = battle.tutorialMode ? Math.max(1, damage) : rollDamage(Math.max(1, damage));
   battle.workload = Math.max(0, battle.workload - damage);
   const eventLine = battle.eventText ? `${battle.eventText}\n` : "";
-  battle.log = `${eventLine}${member.name}의 ${skill}! 업무량 ${damage} 처리${affinity ? " · 부서 상성!" : ""}`;
+  const directiveCharge = directiveChargeFor(member);
+  battle.log = `${eventLine}${member.name}의 ${skill}! 업무량 ${damage} 처리${affinity ? " · 부서 상성!" : ""} · 속도 지시 +${directiveCharge}`;
   battle.eventText = "";
   battle.action += 1;
-  addDirectiveGauge(10, "팀의 업무 흐름이 모였습니다.");
+  addDirectiveGauge(directiveCharge, `${member.name}의 빠른 대응으로 긴급 지시가 충전됐습니다.`);
   checkWorkloadThresholds();
   animatePacket(member.department, battle.action % 3);
   updateBattleNumbers(round);
@@ -1828,6 +1876,10 @@ function finishBattleSuccess(scheduleRender = true) {
     state.reputation += battle.project.reputation;
     state.projectClears += 1;
     if (battle.project.boss) state.bossClears += 1;
+    if (battle.tutorialMode && !state.tutorialBattleCompleted) {
+      state.tutorialBattleCompleted = true;
+      battle.tutorialUnlock = true;
+    }
     const payroll = processPayrollIfDue();
     state.postingRefreshes = POSTING_REFRESH_MAX;
     const specialUnlocked = state.projectClears === 5 || (state.projectClears > 5 && (state.projectClears - 5) % 10 === 0);
@@ -1835,7 +1887,9 @@ function finishBattleSuccess(scheduleRender = true) {
       state.specialRecruitmentTickets += 1;
       specialCandidates = [];
     }
-    battle.recruitmentNotice = specialUnlocked ? "헤드헌팅권 1장 획득!" : `공고 갱신 ${POSTING_REFRESH_MAX}/${POSTING_REFRESH_MAX} 회복`;
+    battle.recruitmentNotice = battle.tutorialUnlock
+      ? "면접 기능 해금! 이제 새로운 직원을 채용할 수 있습니다."
+      : specialUnlocked ? "헤드헌팅권 1장 획득!" : `공고 갱신 ${POSTING_REFRESH_MAX}/${POSTING_REFRESH_MAX} 회복`;
     battle.payrollNotice = payroll ? `급여 정산 -${payroll}만원 · 현재 현금 ${state.cash}만원` : "";
     battle.rewards = battle.project.boss
       ? [generateEquipmentReward(2), generateEquipmentReward(2)]
@@ -1884,12 +1938,16 @@ function checkWorkloadThresholds() {
 
 function openDirective() {
   clearBattleTimer();
-  const team = currentTeam();
+  const team = orderedBattleTeam();
   ensureDirectiveAvailability(team);
   battle.awaitingDirective = true;
   battle.directiveSelections = {};
   battle.directiveFocusId = team[0]?.id || null;
   battle.log = `긴급 지시 · ${battle.directiveReason || "스킬을 선택하세요."}`;
+  if (battle.tutorialMode && !battle.tutorialSkipped && !battle.tutorialDirectiveExplained) {
+    battle.tutorialDirectiveExplained = true;
+    battle.tutorialPage = 3;
+  }
   renderBattle();
 }
 
@@ -1910,7 +1968,7 @@ function directivePanel(team) {
     const cooldownText = cooldown ? `대기 ${cooldown}회` : `재사용 ${skill.cooldown}회`;
     return `<button class="skill-option effect-${preview.tone} ${selected ? "selected" : ""} ${cooldown ? "cooling" : ""}" data-directive-skill="${skill.id}" data-member-id="${focus.id}" aria-pressed="${selected}" ${cooldown || calculating ? "disabled" : ""}><span class="skill-effect"><i>${preview.icon}</i><b>${escapeHtml(preview.primary)}</b></span><strong>${escapeHtml(skill.name)}</strong><span>${escapeHtml(preview.secondary)}</span><small class="skill-cooldown ${cooldown ? "waiting" : ""}">${cooldownText}</small><em>${escapeHtml(skill.visual)}</em></button>`;
   }).join("");
-  const summary = team.map(member => {
+  const summary = directiveExecutionTeam(team).map(member => {
     const skill = directiveSkillsFor(member.department).find(option => option.id === battle.directiveSelections[member.id]);
     return skill ? skill.name : "미선택";
   }).join(" → ");
@@ -1924,12 +1982,20 @@ function directivePanel(team) {
   return `<div class="directive-panel"><div class="directive-head"><div><strong>긴급 지시</strong><small>직원별 스킬을 고른 뒤 계획을 실행하세요.</small></div><b>${selectedCount}/${team.length}</b></div><div class="directive-tabs">${tabs}</div><div class="skill-options">${options}</div><div class="directive-footer"><div class="directive-plan-summary"><small>선택 계획</small><span>${escapeHtml(summary)}</span></div><button id="execute-directive" class="mustard execute-directive" ${ready ? "" : "disabled"}><strong>${actionText}</strong><small>${escapeHtml(actionDetail)}</small></button></div></div>`;
 }
 
+function directiveExecutionTeam(team) {
+  return [...team].sort((left, right) => {
+    const leftSupport = DIRECTIVE_SUPPORT_SKILLS.has(battle.directiveSelections[left.id]);
+    const rightSupport = DIRECTIVE_SUPPORT_SKILLS.has(battle.directiveSelections[right.id]);
+    return Number(rightSupport) - Number(leftSupport);
+  });
+}
+
 function directivePlanEstimate(team) {
   let total = 0;
   let requirements = battle.requirements;
   let deadlineBonus = battle.deadlineBonus;
   const skills = team.map(member => battle.directiveSelections[member.id]).filter(Boolean);
-  team.forEach(member => {
+  directiveExecutionTeam(team).forEach(member => {
     const stats = effectiveStats(member);
     const skill = battle.directiveSelections[member.id];
     if (skill === "requirement-brief") { requirements = true; total += 8 + Math.floor(stats.collaboration / 2); }
@@ -1949,13 +2015,19 @@ function directivePlanEstimate(team) {
   if (skills.includes("requirement-brief") && skills.includes("focus-development")) { total += 18; combo = "명확한 목표"; }
   else if (skills.includes("work-allocation") && skills.includes("automation-deploy")) { total += 14; combo = "완벽한 업무 흐름"; }
   if (skills.includes("emergency-command") || skills.includes("budget-approval")) total = Math.round(total * 1.2);
-  const range = damageRange(total, DIRECTIVE_DAMAGE_VARIANCE);
+  const range = battle.tutorialMode
+    ? { min: total, max: total }
+    : damageRange(total, DIRECTIVE_DAMAGE_VARIANCE);
   return { total, min: range.min, max: range.max, combo };
 }
 
 function withDirectiveRange(preview) {
-  const range = damageRange(preview.damage || 0, DIRECTIVE_DAMAGE_VARIANCE);
-  const repeatRange = damageRange(preview.repeat || 0, NORMAL_DAMAGE_VARIANCE);
+  const range = battle.tutorialMode
+    ? { min: preview.damage || 0, max: preview.damage || 0 }
+    : damageRange(preview.damage || 0, DIRECTIVE_DAMAGE_VARIANCE);
+  const repeatRange = battle.tutorialMode
+    ? { min: preview.repeat || 0, max: preview.repeat || 0 }
+    : damageRange(preview.repeat || 0, NORMAL_DAMAGE_VARIANCE);
   return { ...preview, damageMin: range.min, damageMax: range.max, repeatMin: repeatRange.min, repeatMax: repeatRange.max };
 }
 
@@ -1993,9 +2065,11 @@ function directiveSkillPreview(member, skillId) {
   }
   if (skillId === "automation-deploy") {
     const repeat = 8 + Math.floor(stats.work / 2);
-    const immediate = damageRange(8, DIRECTIVE_DAMAGE_VARIANCE);
-    const lasting = damageRange(repeat, NORMAL_DAMAGE_VARIANCE);
-    return withDirectiveRange({ icon: "↻", tone: "lasting", target: "project", primary: `즉시 -${immediate.min}~${immediate.max}`, secondary: `이후 2턴 × -${lasting.min}~${lasting.max}`, damage: 8, repeat });
+    const immediate = battle.tutorialMode ? { min: 8, max: 8 } : damageRange(8, DIRECTIVE_DAMAGE_VARIANCE);
+    const lasting = battle.tutorialMode ? { min: repeat, max: repeat } : damageRange(repeat, NORMAL_DAMAGE_VARIANCE);
+    const immediateText = immediate.min === immediate.max ? String(immediate.min) : `${immediate.min}~${immediate.max}`;
+    const lastingText = lasting.min === lasting.max ? String(lasting.min) : `${lasting.min}~${lasting.max}`;
+    return withDirectiveRange({ icon: "↻", tone: "lasting", target: "project", primary: `즉시 -${immediateText}`, secondary: `이후 2턴 × -${lastingText}`, damage: 8, repeat });
   }
   if (skillId === "night-shift") {
     const damage = 24 + stats.work;
@@ -2081,7 +2155,7 @@ function clearNegativeBattleStatus() {
 }
 
 function executeDirective() {
-  const team = currentTeam();
+  const team = orderedBattleTeam();
   if (battle.skillFx) return;
   if (team.some(member => !battle.directiveSelections[member.id])) return;
   if (team.some(member => directiveCooldownFor(member.id, battle.directiveSelections[member.id]) > 0)) return;
@@ -2112,12 +2186,12 @@ function executeDirective() {
 }
 
 function resolveDirective() {
-  const team = currentTeam();
+  const team = orderedBattleTeam();
   const skills = Object.values(battle.directiveSelections);
   let total = 0;
   let cleared = false;
   const boosted = skills.includes("emergency-command") || skills.includes("budget-approval");
-  team.forEach(member => {
+  directiveExecutionTeam(team).forEach(member => {
     const stats = effectiveStats(member);
     const skill = battle.directiveSelections[member.id];
     if (skill === "requirement-brief") { battle.requirements = true; total += 8 + Math.floor(stats.collaboration / 2); }
@@ -2137,8 +2211,10 @@ function resolveDirective() {
   if (skills.includes("requirement-brief") && skills.includes("focus-development")) { total += 18; combo = "명확한 목표"; }
   else if (skills.includes("work-allocation") && skills.includes("automation-deploy")) { total += 14; battle.automationTurns += 1; combo = "완벽한 업무 흐름"; }
   if (boosted) total = Math.round(total * 1.2);
-  const expected = damageRange(total, DIRECTIVE_DAMAGE_VARIANCE);
-  const actualTotal = rollDamage(total, DIRECTIVE_DAMAGE_VARIANCE);
+  const expected = battle.tutorialMode
+    ? { min: total, max: total }
+    : damageRange(total, DIRECTIVE_DAMAGE_VARIANCE);
+  const actualTotal = battle.tutorialMode ? total : rollDamage(total, DIRECTIVE_DAMAGE_VARIANCE);
   battle.workload = Math.max(0, battle.workload - actualTotal);
   tickDirectiveCooldowns(team);
   team.forEach(member => {
@@ -2217,7 +2293,82 @@ function normalDamagePreview(member) {
   else if (archetype === "finance") damage += 4;
   if (hasProjectAffinity(member, battle.project)) damage = Math.round(damage * 1.18);
   if (battle.status) damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
+  if (battle.tutorialMode) return { min: Math.max(1, damage), max: Math.max(1, damage) };
   return damageRange(Math.max(1, damage), NORMAL_DAMAGE_VARIANCE);
+}
+
+function battleTutorialPages(team) {
+  const actionOrder = team.map((member, index) => `<span><i>${index + 1}</i><b>${escapeHtml(member.name)}</b><small>${DEPARTMENTS[member.department].short} · 속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></span>`).join("");
+  return [
+    {
+      kicker: "BATTLE GUIDE 1",
+      title: "업무량을 마감 전에 끝내세요",
+      body: `프로젝트 업무량 <b>${battle.max}</b>을 0으로 만들면 성공합니다. <b>${battle.deadline}턴</b>이 끝나기 전에 창립팀의 업무를 연결하세요.`,
+      detail: `<div class="tutorial-rule-grid"><span><small>승리 조건</small><strong>업무량 0</strong></span><span><small>제한 조건</small><strong>마감 ${battle.deadline}턴</strong></span></div>`
+    },
+    {
+      kicker: "BATTLE GUIDE 2",
+      title: "세 능력치는 역할이 다릅니다",
+      body: "직원의 장점을 조합하면 같은 세 명으로도 전투 흐름이 달라집니다.",
+      detail: `<div class="tutorial-stat-list"><span><b>실무</b><small>평상시 직접 업무 처리량</small></span><span><b>협업</b><small>지원·연계 스킬 효과</small></span><span><b>속도</b><small>행동 순서와 긴급 지시 충전량</small></span></div>`
+    },
+    {
+      kicker: "BATTLE GUIDE 3",
+      title: "빠른 직원부터 행동합니다",
+      body: "먼저 사용된 지원 효과만 뒤의 공격에 적용됩니다. 속도가 같은 직원은 팀 편성에서 먼저 선택한 순서로 행동합니다.",
+      detail: `<div class="tutorial-action-order">${actionOrder}</div>`
+    },
+    {
+      kicker: "DIRECTIVE GUIDE",
+      title: "긴급 지시는 하나의 계획입니다",
+      body: "직원 세 명의 스킬을 모두 고르면 지원 효과를 먼저 계산하고 공격 효과와 연계 보너스를 적용합니다. 이때는 속도 순서 때문에 연계가 끊기지 않습니다.",
+      detail: `<div class="tutorial-directive-flow"><span><i>1</i><b>지원 효과</b></span><span><i>2</i><b>공격 효과</b></span><span><i>3</i><b>연계 보너스</b></span></div>`
+    }
+  ];
+}
+
+function battleTutorialOverlay(team) {
+  if (battle.tutorialPage === null || battle.tutorialPage === undefined) return "";
+  const pages = battleTutorialPages(team);
+  const page = pages[battle.tutorialPage] || pages[0];
+  const replay = battle.tutorialReplay;
+  const contextualDirective = battle.awaitingDirective && battle.tutorialPage === 3;
+  const maxPage = replay ? pages.length - 1 : contextualDirective ? 3 : 2;
+  const lastPage = battle.tutorialPage >= maxPage;
+  const actionLabel = lastPage ? contextualDirective ? "스킬 선택하기" : replay ? "전투로 돌아가기" : "전투 시작" : "다음";
+  const skip = battle.tutorialMode && !replay && !contextualDirective
+    ? `<button class="ink" id="skip-battle-tutorial">설명 건너뛰기</button>` : "";
+  return `<div class="battle-tutorial-backdrop" role="dialog" aria-modal="true" aria-labelledby="battle-tutorial-title"><article class="battle-tutorial panel"><small>${page.kicker}</small><strong id="battle-tutorial-title">${page.title}</strong><p>${page.body}</p>${page.detail}<div class="battle-tutorial-actions">${skip}<button class="mustard" id="next-battle-tutorial">${actionLabel}</button></div></article></div>`;
+}
+
+function closeBattleTutorial(skipped = false) {
+  if (skipped) battle.tutorialSkipped = true;
+  battle.tutorialPage = null;
+  battle.tutorialReplay = false;
+  renderBattle();
+  if (!battle.awaitingDirective && !battle.result && !battle.skillFx) battleTimer = window.setTimeout(battleStep, 650);
+}
+
+function advanceBattleTutorial() {
+  const contextualDirective = battle.awaitingDirective && battle.tutorialPage === 3;
+  const maxPage = battle.tutorialReplay ? 3 : contextualDirective ? 3 : 2;
+  if (battle.tutorialPage < maxPage) {
+    battle.tutorialPage += 1;
+    return renderBattle();
+  }
+  closeBattleTutorial(false);
+}
+
+function skipBattleTutorial() {
+  closeBattleTutorial(true);
+}
+
+function openBattleHelp() {
+  clearBattleTimer();
+  battle.confirmingLeave = false;
+  battle.tutorialReplay = true;
+  battle.tutorialPage = 0;
+  renderBattle();
 }
 
 function requestBattleLeave() {
@@ -2225,7 +2376,9 @@ function requestBattleLeave() {
   if (battle.result) {
     if (battle.result === "success" && state.pendingFinancialReport) return renderFinancialReport();
     if (battle.result === "success" && state.pendingTurnover) return renderTurnoverEvent();
-    return renderOffice(battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다.");
+    return renderOffice(battle.tutorialUnlock
+      ? "첫 프로젝트를 완료했습니다. 면접 기능이 열렸습니다!"
+      : battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다.");
   }
   clearBattleTimer();
   battle.confirmingLeave = true;
@@ -2235,7 +2388,7 @@ function requestBattleLeave() {
 function cancelBattleLeave() {
   battle.confirmingLeave = false;
   renderBattle();
-  if (!battle.awaitingDirective && !battle.result && !battle.skillFx) battleTimer = window.setTimeout(battleStep, 650);
+  if (!battle.awaitingDirective && !battle.result && !battle.skillFx && battle.tutorialPage === null) battleTimer = window.setTimeout(battleStep, 650);
 }
 
 function confirmBattleLeave() {
@@ -2244,17 +2397,19 @@ function confirmBattleLeave() {
 }
 
 function renderBattle() {
-  const team = currentTeam();
+  const team = orderedBattleTeam();
   const preview = activeDirectivePreview(team);
   const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
   const bestRewardRarity = rewards.length ? Math.max(...rewards.map(reward => reward.rarity)) : 0;
   const rewardShowcase = rewards.length ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div></div>` : "";
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.financialNotice ? `<p class="reward-notice financial-notice">${escapeHtml(battle.financialNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
+  const interviewUnlock = battle.tutorialUnlock ? `<div class="tutorial-unlock"><small>NEW FEATURE</small><strong>면접 기능 해금</strong><span>새로운 직원을 채용해 다음 팀을 구성할 수 있습니다.</span></div>` : "";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${interviewUnlock}${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.financialNotice ? `<p class="reward-notice financial-notice">${escapeHtml(battle.financialNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>${battle.tutorialMode ? "능력치와 행동 순서를 확인한 뒤 첫 프로젝트에 다시 도전하세요." : "팀 편성과 부서 연계를 바꿔 다시 도전하세요."}</p></div>` : "";
   const actingMemberId = battle.awaitingDirective ? battle.directiveFocusId : team[battle.action % Math.max(1, team.length)]?.id;
-  const fighters = team.map(member => {
+  const fighters = team.map((member, index) => {
     const damage = normalDamagePreview(member);
     const affinity = hasProjectAffinity(member, battle.project);
-    return `<div class="fighter ${preview?.target === "team" ? "preview-target" : ""} ${member.id === actingMemberId ? "active-fighter" : ""}"><span class="fighter-role" style="--department-color:${DEPARTMENTS[member.department].color}">${DEPARTMENTS[member.department].short}${affinity ? " · 상성" : ""}</span><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong><small class="fighter-range">예상 ${damage.min}~${damage.max}</small></div>`;
+    const damageText = damage.min === damage.max ? String(damage.min) : `${damage.min}~${damage.max}`;
+    return `<div class="fighter ${preview?.target === "team" ? "preview-target" : ""} ${member.id === actingMemberId ? "active-fighter" : ""}" data-fighter-id="${member.id}"><span class="fighter-role" style="--department-color:${DEPARTMENTS[member.department].color}">행동 ${index + 1} · ${DEPARTMENTS[member.department].short}${affinity ? " · 상성" : ""}</span><canvas width="24" height="24" data-portrait="${member.id}" data-facing="back"></canvas><strong>${escapeHtml(member.name)}</strong><small class="fighter-range">예상 ${damageText} · 지시 +${directiveChargeFor(member)}</small></div>`;
   }).join("");
   const round = Math.min(battle.deadline, Math.floor(battle.action / Math.max(1, team.length)) + 1);
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
@@ -2280,14 +2435,16 @@ function renderBattle() {
   const affinityCount = team.filter(member => hasProjectAffinity(member, battle.project)).length;
   const arenaTheme = `arena-theme-${String(battle.project.art || battle.project.id).replace(/[^a-z0-9-]/gi, "")}`;
   const abortConfirm = battle.confirmingLeave ? `<div class="battle-abort-backdrop" role="dialog" aria-modal="true" aria-labelledby="abort-title"><div class="battle-abort-confirm panel"><small>PROJECT PAUSE</small><strong id="abort-title">프로젝트를 중단할까요?</strong><p>현재 전투 진행도는 저장되지 않으며 보상도 받을 수 없습니다.</p><div><button class="teal" id="cancel-battle-leave">계속 진행</button><button class="red" id="confirm-battle-leave">중단하기</button></div></div></div>` : "";
+  const tutorialOverlay = battleTutorialOverlay(team);
   app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요." : "아군은 아래에서 위쪽의 프로젝트를 공략합니다.")}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
       <div class="boss-card panel ${battle.project.boss ? "boss-active" : ""}"><div class="boss-row"><div><span class="project-kicker">${battle.project.boss ? "BOSS PROJECT" : "PROJECT TARGET"}</span><strong>${escapeHtml(battle.project.name)}</strong><small>${escapeHtml(phaseText)}</small></div><span class="workload-count" id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar" aria-label="남은 프로젝트 업무량"><i id="workload-bar" style="width:${workloadPercent}%"></i>${workloadPreview}</div><div class="battle-condition-grid"><span class="status-chip ${statusTone} ${preview?.target === "status" ? "preview-target" : ""}" id="status-chip"><small>현재 상태</small><b>${escapeHtml(statusName)}</b></span><span class="deadline ${preview?.target === "deadline" ? "preview-target" : ""}" id="deadline"><small>마감 턴</small><b>${round}/${battle.deadline}${preview?.deadline ? ` → ${round}/${battle.deadline + preview.deadline}` : ""}</b></span><span class="affinity-chip ${affinityCount ? "matched" : ""}"><small>추천 ${escapeHtml(recommendedDepartments || "전체")}</small><b>상성 ${affinityCount}/${team.length}</b></span></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
       <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
-      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : "사무실로" : "프로젝트 중단"}</button>
+      <div class="battle-footer-actions ${battle.result ? "result-footer" : ""}">${battle.result || battle.skillFx ? "" : `<button class="battle-help-button teal" id="battle-help">? 전투 도움말</button>`}<button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : battle.tutorialUnlock ? "사무실 · 면접 확인" : "사무실로" : "프로젝트 중단"}</button></div>
       ${abortConfirm}
+      ${tutorialOverlay}
     </section>`;
   drawBoss(document.querySelector("#boss-canvas"), battle.project.art || battle.project.id, battle.phase);
   mountPortraits();
@@ -2295,9 +2452,12 @@ function renderBattle() {
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
   document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
   document.querySelector("#execute-directive")?.addEventListener("click", executeDirective);
+  document.querySelector("#battle-help")?.addEventListener("click", openBattleHelp);
   document.querySelector("#leave-battle").addEventListener("click", requestBattleLeave);
   document.querySelector("#cancel-battle-leave")?.addEventListener("click", cancelBattleLeave);
   document.querySelector("#confirm-battle-leave")?.addEventListener("click", confirmBattleLeave);
+  document.querySelector("#next-battle-tutorial")?.addEventListener("click", advanceBattleTutorial);
+  document.querySelector("#skip-battle-tutorial")?.addEventListener("click", skipBattleTutorial);
 }
 
 function updateBattleNumbers(round) {
@@ -2318,6 +2478,9 @@ function updateBattleNumbers(round) {
   status.className = `status-chip ${battle.status ? battle.status.tone : "good"}`;
   directiveGauge.style.width = `${battle.directiveGauge}%`;
   directiveText.textContent = battle.directiveGauge >= 100 ? "READY" : `${battle.directiveGauge}%`;
+  const team = orderedBattleTeam();
+  const nextMemberId = team[battle.action % Math.max(1, team.length)]?.id;
+  document.querySelectorAll("[data-fighter-id]").forEach(fighter => fighter.classList.toggle("active-fighter", fighter.dataset.fighterId === nextMemberId));
   boss.classList.remove("hit");
   void boss.offsetWidth;
   boss.classList.add("hit");

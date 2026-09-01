@@ -545,6 +545,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .company-notes { display: grid; grid-template-columns: 1.05fr .95fr; gap: 5px; margin-top: 5px; }
 .company-notes p { min-width: 0; margin: 0; padding: 4px 5px; border-left: 3px solid var(--mustard); background: rgba(214,161,44,.1); line-height: 1.25; }
 .company-notes p:last-child { border-left-color: var(--red); background: rgba(200,75,60,.08); }
+.company-notes p.onboarding-note { grid-column: 1 / -1; border-left-color: var(--teal); background: rgba(22,140,139,.11); }
+.company-notes p.onboarding-note span { color: var(--teal); }
 .company-notes b, .company-notes span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .company-notes b { color: var(--muted); font-size: 6px; letter-spacing: .4px; }
 .company-notes span { margin-top: 1px; font-size: 8px; font-weight: 900; }
@@ -561,6 +563,10 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-actions #project::before { content: "⚡"; }
 .office-actions #project { grid-column: span 2; min-height: 49px; text-align: center; padding-left: 4px; font-size: 12px; }
 .office-actions #project::before { position: static; margin-right: 7px; }
+.office-actions #interview.tutorial-locked { background: var(--muted); color: rgba(255,255,255,.85); }
+.office-actions #interview.tutorial-locked::before { content: "▣"; }
+.office-actions #project.tutorial-next { box-shadow: 3px 3px 0 var(--ink), 0 0 13px rgba(200,75,60,.45); animation: tutorial-next-pulse 1.4s steps(3) infinite; }
+@keyframes tutorial-next-pulse { 50% { filter: brightness(1.15); box-shadow: 3px 3px 0 var(--ink), 0 0 20px rgba(200,75,60,.72); } }
 .blue { background: var(--blue); color: white; }
 .teal { background: var(--teal); color: white; }
 .red { background: var(--red); color: white; }
@@ -595,6 +601,16 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .rank { display: inline-block; margin-left: 3px; padding: 2px 4px; color: white; font-size: 9px; vertical-align: 2px; }
 .selected { background: #e0f1e9; outline: 3px solid var(--teal); outline-offset: -5px; }
 .order { display: inline-grid; width: 20px; height: 20px; margin-right: 3px; place-items: center; background: var(--mustard); border: 1px solid var(--ink); font-size: 10px; }
+.team-speed-effect { color: var(--red); font-weight: 900; }
+.team-order-preview { flex: 0 0 auto; padding: 7px 8px; }
+.team-order-preview > small { display: block; margin-bottom: 5px; color: var(--teal); font-size: 7px; font-weight: 1000; letter-spacing: 1px; }
+.team-order-preview > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.team-order-preview span { position: relative; min-width: 0; padding: 5px 4px 5px 24px; border: 2px solid var(--ink); background: rgba(255,255,255,.65); }
+.team-order-preview i { position: absolute; top: 50%; left: 4px; display: grid; width: 16px; height: 16px; place-items: center; background: var(--mustard); border: 1px solid var(--ink); font-size: 8px; font-style: normal; transform: translateY(-50%); }
+.team-order-preview b, .team-order-preview span small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.team-order-preview b { font-size: 8px; }
+.team-order-preview span small { margin-top: 1px; color: var(--muted); font-size: 6px; font-weight: 800; }
+.team-order-preview em { grid-column: 1 / -1; color: var(--muted); font-size: 8px; font-style: normal; font-weight: 800; }
 
 .footer-actions { display: grid; grid-template-columns: .8fr 1.2fr; gap: 8px; }
 
@@ -928,7 +944,10 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 
 .battle-log { min-height: 43px; padding: 7px 9px; font-size: 10px; font-weight: 800; line-height: 1.35; }
 .directive-active .battle-log { display: none; }
-.battle-exit-button { align-self: center; width: 44%; min-height: 34px; padding: 0 8px; font-size: 9px; opacity: .86; }
+.battle-footer-actions { align-self: center; width: 74%; display: grid; grid-template-columns: .9fr 1.1fr; gap: 6px; }
+.battle-footer-actions.result-footer { width: 100%; grid-template-columns: 1fr; }
+.battle-help-button { min-height: 34px; padding: 0 6px; color: white; font-size: 8px; }
+.battle-exit-button { width: 100%; min-height: 34px; padding: 0 8px; font-size: 9px; opacity: .86; }
 .battle-exit-button.result-exit { width: 100%; min-height: 46px; font-size: 12px; opacity: 1; }
 .battle-abort-backdrop { position: absolute; z-index: 40; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(14,39,56,.68); backdrop-filter: blur(2px); }
 .battle-abort-confirm { width: 100%; padding: 15px 14px; text-align: center; animation: abort-confirm-in .2s ease-out; }
@@ -941,6 +960,39 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .battle-result { text-align: center; }
 .battle-result h2 { margin: 4px 0; color: var(--green); }
 .battle-result > p { margin: 3px 0 6px; }
+.tutorial-unlock { margin: 7px 0; padding: 8px; border: 2px solid var(--teal); background: #dff1e9; box-shadow: 3px 3px 0 var(--ink); }
+.tutorial-unlock small, .tutorial-unlock strong, .tutorial-unlock span { display: block; }
+.tutorial-unlock small { color: var(--teal); font-size: 7px; font-weight: 1000; letter-spacing: 1.1px; }
+.tutorial-unlock strong { margin-top: 2px; color: var(--teal); font-size: 14px; }
+.tutorial-unlock span { margin-top: 2px; font-size: 8px; font-weight: 800; }
+.battle-tutorial-backdrop { position: absolute; z-index: 50; inset: 0; display: grid; place-items: center; padding: 12px; background: rgba(5,20,30,.78); backdrop-filter: blur(2px); }
+.battle-tutorial { width: 100%; max-height: 100%; overflow-y: auto; padding: 14px 12px; }
+.battle-tutorial > small { display: block; color: var(--red); font-size: 7px; font-weight: 1000; letter-spacing: 1.2px; }
+.battle-tutorial > strong { display: block; margin-top: 4px; font-size: 18px; line-height: 1.25; }
+.battle-tutorial > p { margin: 7px 0 10px; color: var(--muted); font-size: 9px; font-weight: 800; line-height: 1.5; }
+.tutorial-rule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tutorial-rule-grid span, .tutorial-stat-list span { padding: 7px; border: 2px solid var(--ink); background: rgba(255,255,255,.65); }
+.tutorial-rule-grid small, .tutorial-rule-grid strong { display: block; }
+.tutorial-rule-grid small { color: var(--muted); font-size: 7px; font-weight: 900; }
+.tutorial-rule-grid strong { margin-top: 2px; color: var(--red); font-size: 12px; }
+.tutorial-stat-list { display: grid; gap: 5px; }
+.tutorial-stat-list span { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 6px; padding: 6px 7px; }
+.tutorial-stat-list b { color: var(--teal); font-size: 11px; }
+.tutorial-stat-list small { color: var(--muted); font-size: 8px; font-weight: 800; }
+.tutorial-action-order { display: grid; gap: 5px; }
+.tutorial-action-order span { position: relative; min-height: 41px; padding: 6px 7px 6px 35px; border: 2px solid var(--ink); background: rgba(255,255,255,.65); }
+.tutorial-action-order i { position: absolute; top: 50%; left: 7px; display: grid; width: 20px; height: 20px; place-items: center; border: 1px solid var(--ink); background: var(--mustard); font-size: 10px; font-style: normal; transform: translateY(-50%); }
+.tutorial-action-order b, .tutorial-action-order small { display: block; }
+.tutorial-action-order b { font-size: 10px; }
+.tutorial-action-order small { margin-top: 2px; color: var(--muted); font-size: 7px; font-weight: 800; }
+.tutorial-directive-flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.tutorial-directive-flow span { position: relative; padding: 27px 3px 6px; border: 2px solid var(--ink); background: rgba(255,255,255,.65); text-align: center; }
+.tutorial-directive-flow span:not(:last-child)::after { content: "›"; position: absolute; top: 50%; right: -8px; z-index: 2; color: var(--red); font-size: 16px; transform: translateY(-50%); }
+.tutorial-directive-flow i { position: absolute; top: 5px; left: 50%; display: grid; width: 17px; height: 17px; place-items: center; border-radius: 50%; background: var(--teal); color: white; font-size: 8px; font-style: normal; transform: translateX(-50%); }
+.tutorial-directive-flow b { font-size: 8px; }
+.battle-tutorial-actions { display: grid; grid-template-columns: .8fr 1.2fr; gap: 7px; margin-top: 11px; }
+.battle-tutorial-actions button:only-child { grid-column: 1 / -1; }
+.battle-tutorial-actions button { min-height: 45px; }
 .reward-showcase { position: relative; overflow: hidden; margin: 7px 0 5px; padding: 7px; border: 2px solid var(--ink); background: var(--paper-dark); text-align: left; }
 .reward-label { position: relative; z-index: 2; display: block; margin-bottom: 5px; color: var(--teal); font-size: 7px; font-weight: 900; letter-spacing: 1.2px; }
 .reward-items { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 5px; }
@@ -1002,7 +1054,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title-art, .title-actions button, .launch-grid, .launch-logo, .launch-card, .launch-member, .office-room.office-entry, .office-room.office-entry .desk, .office-equipment-prop, .execute-directive, .fighter.active-fighter :is(canvas, .character-svg), .skill-cinematic, .skill-cinematic::before, .skill-cinematic::after, .skill-cinematic i, .skill-cinematic strong { animation: none; }
+  .title-art, .title-actions button, .launch-grid, .launch-logo, .launch-card, .launch-member, .office-room.office-entry, .office-room.office-entry .desk, .office-equipment-prop, .office-actions #project.tutorial-next, .execute-directive, .fighter.active-fighter :is(canvas, .character-svg), .skill-cinematic, .skill-cinematic::before, .skill-cinematic::after, .skill-cinematic i, .skill-cinematic strong { animation: none; }
   .asset-loader-track i { transition: none; }
   .title-screen, .company-launch-screen { transition: none; }
   .launch-member, .office-room.office-entry .desk { opacity: 1; transform: none; }
@@ -1024,6 +1076,15 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .company-card { padding-top: 6px; padding-bottom: 7px; }
   .company-stats { margin-top: 4px; }
   .company-notes { margin-top: 4px; }
+  .team-order-preview { padding: 5px 6px; }
+  .team-order-preview > small { margin-bottom: 3px; }
+  .battle-tutorial { padding: 10px; }
+  .battle-tutorial > strong { font-size: 16px; }
+  .battle-tutorial > p { margin: 5px 0 7px; line-height: 1.35; }
+  .tutorial-action-order { gap: 3px; }
+  .tutorial-action-order span { min-height: 35px; padding-top: 4px; padding-bottom: 4px; }
+  .battle-tutorial-actions { margin-top: 7px; }
+  .battle-tutorial-actions button { min-height: 40px; }
   .office-actions button { min-height: 39px; }
   .candidate, .team-card { min-height: 104px; }
   .arena { min-height: 230px; }

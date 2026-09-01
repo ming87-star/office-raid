@@ -87,6 +87,10 @@ Runtime과 웹은 같은 간결한 입력 흐름을 사용합니다. 전투 중�
 
 `Equipment`는 `EquipmentSlot`과 등급, 실무·협업 보너스를 가집니다. 미장착 장비는 `CompanyState.Inventory`, 장착 장비는 `Employee.Equipment`에 저장합니다. `TryEquip`은 같은 슬롯의 기존 장비를 보관함으로 되돌린 뒤 새 장비를 장착하고, `BattleSimulator`는 `EffectiveWorkPower`와 `EffectiveCollaboration`을 사용합니다.
 
+### 웹 자동 저장
+
+브라우저 프로토타입은 버전이 포함된 JSON을 `localStorage`에 자동 저장합니다. 회사·직원·팀·장비·채용 후보·프로젝트와 재무 기록을 복원하며, 진행 중인 전투는 저장하지 않습니다. 전투 도중 새로고침하면 마지막으로 확정된 회사 상태로 돌아가므로 보상이 중복 지급되지 않습니다. 저장 데이터가 있으면 첫 화면에서 회사 요약과 `이어하기`, 확인 창을 거치는 `새 게임`을 표시합니다.
+
 ## 테스트
 
 Unity Test Runner의 EditMode에서 다음 항목을 검증합니다.
@@ -103,5 +107,4 @@ Unity Test Runner의 EditMode에서 다음 항목을 검증합니다.
 ## 다음 구현 순서
 
 1. 긴급 지시 스킬별 고유 도트 이펙트 확장
-2. 저장 및 불러오기
-3. Android 테스트 빌드와 기기별 레이아웃 검증
+2. Android 테스트 빌드와 기기별 레이아웃 검증

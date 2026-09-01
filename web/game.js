@@ -321,6 +321,8 @@ const POSTING_REFRESH_MAX = 2;
 const PAID_POSTING_REFRESH_COST = 200;
 const NORMAL_DAMAGE_VARIANCE = .12;
 const DIRECTIVE_DAMAGE_VARIANCE = .15;
+const SAVE_KEY = "office-raid-save";
+const SAVE_VERSION = 1;
 
 const app = document.querySelector("#app");
 let currentView = "setup";
@@ -341,29 +343,33 @@ let recentOfficeDialogueIds = [];
 let companyLaunchTimer = null;
 let hrTerminationTargetId = null;
 
-const state = {
-  industry: "",
-  companyName: "",
-  cash: 1200,
-  reputation: 0,
-  capacity: 6,
-  equipment: [],
-  employees: [],
-  teamIds: [],
-  postingRefreshes: POSTING_REFRESH_MAX,
-  projectClears: 0,
-  bossClears: 0,
-  specialRecruitmentTickets: 0,
-  payrollPayments: 0,
-  turnoverEvents: 0,
-  pendingTurnover: null,
-  pendingFinancialReport: null,
-  financialHistory: [],
-  financialPeriod: {
-    number: 1, startCash: 1200, revenue: 0, payroll: 0,
-    recruitment: 0, posting: 0, retention: 0, termination: 0
-  }
-};
+function createInitialState() {
+  return {
+    industry: "",
+    companyName: "",
+    cash: 1200,
+    reputation: 0,
+    capacity: 6,
+    equipment: [],
+    employees: [],
+    teamIds: [],
+    postingRefreshes: POSTING_REFRESH_MAX,
+    projectClears: 0,
+    bossClears: 0,
+    specialRecruitmentTickets: 0,
+    payrollPayments: 0,
+    turnoverEvents: 0,
+    pendingTurnover: null,
+    pendingFinancialReport: null,
+    financialHistory: [],
+    financialPeriod: {
+      number: 1, startCash: 1200, revenue: 0, payroll: 0,
+      recruitment: 0, posting: 0, retention: 0, termination: 0
+    }
+  };
+}
+
+const state = createInitialState();
 
 function randomInt(max) { return Math.floor(Math.random() * max); }
 function damageRange(value, variance = NORMAL_DAMAGE_VARIANCE) {
@@ -383,6 +389,118 @@ function damageRangeText(value, variance = DIRECTIVE_DAMAGE_VARIANCE) {
 }
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+}
+
+function normalizeSavedMember(member) {
+  if (!member || typeof member !== "object" || typeof member.id !== "string") return null;
+  return {
+    ...member,
+    equipment: { work: null, support: null, personal: null, ...(member.equipment || {}) },
+    appearance: { ...appearance(0), ...(member.appearance || {}) }
+  };
+}
+
+function normalizeSavedState(savedState) {
+  if (!savedState || typeof savedState !== "object") return null;
+  const initial = createInitialState();
+  const employees = Array.isArray(savedState.employees) ? savedState.employees.map(normalizeSavedMember).filter(Boolean) : [];
+  if (!INDUSTRIES[savedState.industry] || !savedState.companyName || employees.length < 3) return null;
+  const employeeIds = new Set(employees.map(member => member.id));
+  const teamIds = Array.isArray(savedState.teamIds) ? savedState.teamIds.filter(id => employeeIds.has(id)).slice(0, 3) : [];
+  employees.forEach(member => {
+    if (teamIds.length < 3 && !teamIds.includes(member.id)) teamIds.push(member.id);
+  });
+  return {
+    ...initial,
+    ...savedState,
+    employees,
+    teamIds,
+    equipment: Array.isArray(savedState.equipment) ? savedState.equipment : [],
+    financialHistory: Array.isArray(savedState.financialHistory) ? savedState.financialHistory.slice(-8) : [],
+    financialPeriod: { ...initial.financialPeriod, ...(savedState.financialPeriod || {}) }
+  };
+}
+
+function readSavedGame() {
+  try {
+    const payload = JSON.parse(window.localStorage.getItem(SAVE_KEY) || "null");
+    if (!payload || payload.version !== SAVE_VERSION) return null;
+    const savedState = normalizeSavedState(payload.state);
+    if (!savedState) return null;
+    return { ...payload, state: savedState };
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveGame() {
+  if (!state.industry || !state.companyName || state.employees.length < 3) return false;
+  try {
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify({
+      version: SAVE_VERSION,
+      savedAt: new Date().toISOString(),
+      nextId,
+      state,
+      recruitment: {
+        regularCandidates,
+        specialCandidates,
+        mode: recruitmentMode,
+        regularPostingInitialized
+      }
+    }));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function savedIdCeiling(payload) {
+  const pools = [payload.state.employees, payload.state.equipment, payload.recruitment?.regularCandidates, payload.recruitment?.specialCandidates];
+  return pools.flatMap(pool => Array.isArray(pool) ? pool : []).reduce((highest, item) => {
+    const number = Number(String(item?.id || "").match(/(\d+)$/)?.[1] || 0);
+    return Math.max(highest, number + 1);
+  }, 10);
+}
+
+function applySavedGame(payload) {
+  clearBattleTimer();
+  clearCompanyLaunchTimer();
+  clearOfficeDialogue();
+  Object.assign(state, createInitialState(), payload.state);
+  regularCandidates = Array.isArray(payload.recruitment?.regularCandidates) ? payload.recruitment.regularCandidates.map(normalizeSavedMember).filter(Boolean) : [];
+  specialCandidates = Array.isArray(payload.recruitment?.specialCandidates) ? payload.recruitment.specialCandidates.map(normalizeSavedMember).filter(Boolean) : [];
+  recruitmentMode = payload.recruitment?.mode === "special" ? "special" : "regular";
+  regularPostingInitialized = Boolean(payload.recruitment?.regularPostingInitialized || regularCandidates.length);
+  nextId = Math.max(Number(payload.nextId) || 10, savedIdCeiling(payload));
+  teamDraft = [];
+  battle = null;
+  representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
+  representativeMode = "basic";
+  openingPage = 0;
+  equipmentTargetId = state.employees[0]?.id || null;
+  recentOfficeDialogueIds = [];
+  hrTerminationTargetId = null;
+}
+
+function resetGameState() {
+  clearBattleTimer();
+  clearCompanyLaunchTimer();
+  clearOfficeDialogue();
+  Object.assign(state, createInitialState());
+  regularCandidates = [];
+  specialCandidates = [];
+  recruitmentMode = "regular";
+  regularPostingInitialized = false;
+  teamDraft = [];
+  battle = null;
+  nextId = 10;
+  representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
+  representativeMode = "basic";
+  openingPage = 0;
+  equipmentTargetId = null;
+  recentOfficeDialogueIds = [];
+  hrTerminationTargetId = null;
+  window.localStorage.removeItem(SAVE_KEY);
 }
 
 function appearance(seed = randomInt(10000)) {
@@ -461,14 +579,17 @@ function updateAssetLoader(completed, total, failed = 0) {
   const status = document.querySelector("#asset-load-status");
   const detail = document.querySelector("#asset-load-detail");
   const button = document.querySelector("#start-game");
+  const newGameButton = document.querySelector("#new-game");
   if (bar) bar.style.width = `${percent}%`;
   if (percentLabel) percentLabel.textContent = `${percent}%`;
   if (status) status.textContent = failed ? "일부 이미지를 받지 못했습니다." : assetsReady ? "게임 준비 완료" : "게임 이미지 준비 중";
   if (detail) detail.textContent = failed ? `${failed}개 파일을 다시 받아야 합니다.` : assetsReady ? "모든 이미지가 준비됐습니다." : `${completed}/${total} 파일 확인`;
   if (!button) return;
   button.disabled = assetsLoading || (!assetsReady && failed === 0);
-  button.querySelector("strong").textContent = failed ? "다시 받기" : assetsReady ? "게임 시작" : "이미지 준비 중…";
-  button.querySelector("small").textContent = failed ? "연결을 확인한 뒤 눌러주세요." : assetsReady ? "프로젝트를 시작합니다." : `${percent}% 다운로드`;
+  const continueAvailable = button.dataset.continue === "true";
+  button.querySelector("strong").textContent = failed ? "다시 받기" : assetsReady ? continueAvailable ? "이어하기" : "게임 시작" : "이미지 준비 중…";
+  button.querySelector("small").textContent = failed ? "연결을 확인한 뒤 눌러주세요." : assetsReady ? continueAvailable ? "저장된 회사로 출근합니다." : "새 회사를 시작합니다." : `${percent}% 다운로드`;
+  if (newGameButton) newGameButton.disabled = !assetsReady;
 }
 
 function preloadGameAssets() {
@@ -506,17 +627,24 @@ function preloadGameAssets() {
 function renderTitle() {
   currentView = "title";
   app.classList.add("title-mode");
+  const savedGame = readSavedGame();
+  const saveSummary = savedGame ? `<div class="save-summary"><small>AUTO SAVE</small><strong>${escapeHtml(savedGame.state.companyName)}</strong><span>${escapeHtml(INDUSTRIES[savedGame.state.industry].name)} · 직원 ${savedGame.state.employees.length}명 · 프로젝트 ${savedGame.state.projectClears}회</span></div>` : "";
+  const newGameButton = savedGame ? `<button id="new-game" class="title-secondary" disabled><strong>새 게임</strong><small>현재 회사를 초기화하고 다시 시작합니다.</small></button>` : "";
+  const newGameConfirm = savedGame ? `<div id="new-game-confirm" class="title-confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-game-confirm-title" hidden><div class="title-confirm panel"><small>NEW COMPANY</small><strong id="new-game-confirm-title">현재 회사를 초기화할까요?</strong><p>${escapeHtml(savedGame.state.companyName)}의 직원·장비·프로젝트 기록이 삭제됩니다.</p><div><button class="ink" id="cancel-new-game">취소</button><button class="red" id="confirm-new-game">초기화</button></div></div></div>` : "";
   app.innerHTML = `<section class="title-screen">
     <img class="title-art" src="assets/office-raid-title.webp?v=20260831" alt="세 명의 회사원이 거대한 프로젝트 보스를 마주한 오피스 레이드 타이틀 이미지">
     <div class="title-actions">
       <p>프로젝트는 거대하고, 퇴근은 멀었다.</p>
+      ${saveSummary}
       <div class="asset-loader" role="status" aria-live="polite">
         <div class="asset-loader-head"><span id="asset-load-status">게임 이미지 준비 중</span><b id="asset-load-percent">0%</b></div>
         <div class="asset-loader-track"><i id="asset-load-bar"></i></div>
         <small id="asset-load-detail">0/${PRELOAD_ASSETS.length} 파일 확인</small>
       </div>
-      <button id="start-game" class="mustard" disabled><strong>이미지 준비 중…</strong><small>0% 다운로드</small></button>
+      <button id="start-game" class="mustard" data-continue="${Boolean(savedGame)}" disabled><strong>이미지 준비 중…</strong><small>0% 다운로드</small></button>
+      ${newGameButton}
     </div>
+    ${newGameConfirm}
   </section>`;
   document.querySelector("#start-game").addEventListener("click", () => {
     if (!assetsReady) {
@@ -524,10 +652,31 @@ function renderTitle() {
       return;
     }
     document.querySelector(".title-screen").classList.add("leaving");
+    window.setTimeout(() => savedGame ? continueSavedGame() : renderOpening(), 240);
+  });
+  document.querySelector("#new-game")?.addEventListener("click", () => {
+    document.querySelector("#new-game-confirm").hidden = false;
+  });
+  document.querySelector("#cancel-new-game")?.addEventListener("click", () => {
+    document.querySelector("#new-game-confirm").hidden = true;
+  });
+  document.querySelector("#confirm-new-game")?.addEventListener("click", () => {
+    resetGameState();
+    document.querySelector(".title-screen").classList.add("leaving");
     window.setTimeout(renderOpening, 240);
   });
   if (assetsReady) updateAssetLoader(PRELOAD_ASSETS.length, PRELOAD_ASSETS.length);
   else preloadGameAssets();
+}
+
+function continueSavedGame() {
+  const savedGame = readSavedGame();
+  if (!savedGame) return renderTitle();
+  applySavedGame(savedGame);
+  app.classList.remove("title-mode");
+  if (state.pendingFinancialReport) return renderFinancialReport();
+  if (state.pendingTurnover) return renderTurnoverEvent();
+  renderOffice("저장된 회사에서 업무를 이어갑니다.");
 }
 
 function renderOpening() {
@@ -697,6 +846,7 @@ function createCompany() {
     ...industry.starters.map(member => employee(member.name, member.department, member.trait, member.work, member.collaboration, member.speed, member.look))
   ];
   state.teamIds = state.employees.map(member => member.id);
+  saveGame();
   renderCompanyLaunch();
 }
 
@@ -963,6 +1113,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   clearCompanyLaunchTimer();
   clearBattleTimer();
   repairProjectTeam();
+  saveGame();
   const teamNames = currentTeam().map(member => escapeHtml(member.name)).join(" · ");
   const specialRecruitment = state.specialRecruitmentTickets > 0
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
@@ -1029,6 +1180,7 @@ function openHumanResources(notice = "직원 계약과 급여 현황을 관리�
 
 function renderHumanResources(notice = "직원 계약과 급여 현황을 관리하세요.") {
   currentView = "hr";
+  saveGame();
   const target = state.employees.find(member => member.id === hrTerminationTargetId && !member.isRepresentative);
   const cards = state.employees.map(member => {
     const stats = effectiveStats(member);
@@ -1139,6 +1291,7 @@ function renderTurnoverEvent(notice = "직원이 이직을 고민하고 있습�
     state.pendingTurnover = null;
     return renderOffice("인사 면담이 종료됐습니다.");
   }
+  saveGame();
   const rank = RANKS[member.rank];
   const improvedSalary = Math.ceil(member.salary * 1.1 / 10) * 10;
   app.innerHTML = `${header("이직 면담", notice)}<section class="screen turnover-screen">
@@ -1349,6 +1502,7 @@ function openEquipment(notice = "직원을 선택하고 장비를 장착하세�
 function renderEquipment(notice) {
   const target = state.employees.find(member => member.id === equipmentTargetId) || state.employees[0];
   if (!target) return renderOffice("장비를 사용할 직원이 없습니다.");
+  saveGame();
   const stats = effectiveStats(target);
   const people = state.employees.map(member => {
     const selected = member.id === target.id;
@@ -1468,6 +1622,7 @@ function switchRecruitmentMode(mode) {
 }
 
 function renderInterview(notice) {
+  saveGame();
   const candidates = activeRecruitmentCandidates();
   const cards = candidates.map(candidate => {
     const department = DEPARTMENTS[candidate.department];
@@ -1691,6 +1846,7 @@ function finishBattleSuccess(scheduleRender = true) {
     battle.financialNotice = financialReport ? `${financialReport.number}분기 결산이 준비됐습니다.` : "";
     const turnoverMember = maybeQueueTurnoverEvent();
     battle.turnoverNotice = turnoverMember ? `${turnoverMember.name}이(가) 이직 면담을 요청했습니다.` : "";
+    saveGame();
   }
   if (scheduleRender) battleTimer = window.setTimeout(renderBattle, 650);
 }

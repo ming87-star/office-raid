@@ -82,6 +82,9 @@ const RANKS = [
   { name: "업계 전설", bonus: 18, color: "#d6a12c" }
 ];
 const POSITIONS = ["사원", "대리", "과장", "부장", "임원"];
+const PAYROLL_PROJECT_INTERVAL = 3;
+const TURNOVER_PROJECT_INTERVAL = 5;
+const TURNOVER_REPUTATION_COST = 8;
 
 const EQUIPMENT_SLOTS = {
   work: { name: "업무 도구", icon: "▣" },
@@ -167,20 +170,20 @@ const PROJECTS = [
 ];
 
 const BOSS_PROJECTS = [
-  { id: "boss-recall", industry: "manufacturing", chapter: 1, art: "boss-transformation", name: "전국 제품 리콜", difficulty: "BOSS", workload: 820, deadline: 19, cash: 2800, reputation: 58, eventEvery: 1, boss: true, recommended: ["quality", "production", "product"], summary: "전국에 출고된 제품을 회수하고 원인을 고치는 초대형 장기 프로젝트입니다.", phaseNames: ["원인 추적", "전량 회수", "생산 재개"] },
-  { id: "boss-mfg-line-stop", industry: "manufacturing", chapter: 2, art: "boss-transformation", name: "전 공장 생산라인 정지", difficulty: "BOSS+", workload: 1030, deadline: 22, cash: 3650, reputation: 72, eventEvery: 1, boss: true, recommended: ["production", "quality", "procurement"], summary: "연쇄 고장으로 멈춘 모든 공장의 원인을 격리하고 생산을 되살립니다.", phaseNames: ["원인 격리", "설비 복구", "전면 재가동"] },
-  { id: "boss-mfg-overseas-defect", industry: "manufacturing", chapter: 3, art: "boss-transformation", name: "해외 공장 품질 붕괴", difficulty: "BOSS++", workload: 1210, deadline: 24, cash: 4300, reputation: 84, eventEvery: 1, boss: true, recommended: ["quality", "procurement", "product"], summary: "해외 생산 거점의 품질 체계를 처음부터 재건하고 거래처의 신뢰를 되찾습니다.", phaseNames: ["현지 원인 조사", "공정 재설계", "품질 승인"] },
-  { id: "boss-mfg-mega-contract", industry: "manufacturing", chapter: 4, art: "boss-global-launch", name: "국가 핵심 설비 수주", difficulty: "BOSS EX", workload: 1480, deadline: 27, cash: 5600, reputation: 108, eventEvery: 1, boss: true, recommended: ["product", "production", "finance"], summary: "회사의 미래를 건 초대형 설비 계약을 설계부터 전국 납품까지 완수합니다.", phaseNames: ["기술 제안", "초도 생산", "전국 납품"] },
+  { id: "boss-recall", industry: "manufacturing", chapter: 1, art: "boss-manufacturing-recall", name: "전국 제품 리콜", difficulty: "BOSS", workload: 820, deadline: 19, cash: 2800, reputation: 58, eventEvery: 1, boss: true, recommended: ["quality", "production", "product"], summary: "전국에 출고된 제품을 회수하고 원인을 고치는 초대형 장기 프로젝트입니다.", phaseNames: ["원인 추적", "전량 회수", "생산 재개"] },
+  { id: "boss-mfg-line-stop", industry: "manufacturing", chapter: 2, art: "boss-manufacturing-shutdown", name: "전 공장 생산라인 정지", difficulty: "BOSS+", workload: 1030, deadline: 22, cash: 3650, reputation: 72, eventEvery: 1, boss: true, recommended: ["production", "quality", "procurement"], summary: "연쇄 고장으로 멈춘 모든 공장의 원인을 격리하고 생산을 되살립니다.", phaseNames: ["원인 격리", "설비 복구", "전면 재가동"] },
+  { id: "boss-mfg-overseas-defect", industry: "manufacturing", chapter: 3, art: "boss-manufacturing-quality", name: "해외 공장 품질 붕괴", difficulty: "BOSS++", workload: 1210, deadline: 24, cash: 4300, reputation: 84, eventEvery: 1, boss: true, recommended: ["quality", "procurement", "product"], summary: "해외 생산 거점의 품질 체계를 처음부터 재건하고 거래처의 신뢰를 되찾습니다.", phaseNames: ["현지 원인 조사", "공정 재설계", "품질 승인"] },
+  { id: "boss-mfg-mega-contract", industry: "manufacturing", chapter: 4, art: "boss-manufacturing-contract", name: "국가 핵심 설비 수주", difficulty: "BOSS EX", workload: 1480, deadline: 27, cash: 5600, reputation: 108, eventEvery: 1, boss: true, recommended: ["product", "production", "finance"], summary: "회사의 미래를 건 초대형 설비 계약을 설계부터 전국 납품까지 완수합니다.", phaseNames: ["기술 제안", "초도 생산", "전국 납품"] },
 
-  { id: "boss-logistics", industry: "commerce", chapter: 1, art: "boss-global-launch", name: "전국 물류망 마비", difficulty: "BOSS", workload: 830, deadline: 19, cash: 2850, reputation: 58, eventEvery: 1, boss: true, recommended: ["logistics", "md", "sales"], summary: "멈춰버린 물류센터와 배송망을 순서대로 복구하는 장기 프로젝트입니다.", phaseNames: ["병목 확인", "거점 복구", "전국 정상화"] },
-  { id: "boss-com-black-friday", industry: "commerce", chapter: 2, art: "boss-global-launch", name: "블랙프라이데이 주문 폭주", difficulty: "BOSS+", workload: 1050, deadline: 22, cash: 3720, reputation: 73, eventEvery: 1, boss: true, recommended: ["logistics", "marketing", "md"], summary: "예측을 넘어선 주문과 문의를 견디며 모든 상품을 약속대로 배송합니다.", phaseNames: ["주문 폭발", "창고 사수", "배송 정상화"] },
-  { id: "boss-com-price-war", industry: "commerce", chapter: 3, art: "boss-transformation", name: "전국 공급망 가격 전쟁", difficulty: "BOSS++", workload: 1200, deadline: 24, cash: 4250, reputation: 83, eventEvery: 1, boss: true, recommended: ["md", "sales", "logistics"], summary: "경쟁사의 공세 속에서 공급처와 가격, 재고를 지켜 회사의 유통망을 사수합니다.", phaseNames: ["공급처 확보", "가격 방어", "시장 회복"] },
-  { id: "boss-com-national-chain", industry: "commerce", chapter: 4, art: "boss-global-launch", name: "전국 유통망 독점 입점", difficulty: "BOSS EX", workload: 1460, deadline: 27, cash: 5520, reputation: 106, eventEvery: 1, boss: true, recommended: ["sales", "md", "finance"], summary: "전국 매장에 독점 상품을 동시에 공급하는 회사 최대의 계약을 성사시킵니다.", phaseNames: ["조건 협상", "전국 발주", "매장 안착"] },
+  { id: "boss-logistics", industry: "commerce", chapter: 1, art: "boss-commerce-logistics", name: "전국 물류망 마비", difficulty: "BOSS", workload: 830, deadline: 19, cash: 2850, reputation: 58, eventEvery: 1, boss: true, recommended: ["logistics", "md", "sales"], summary: "멈춰버린 물류센터와 배송망을 순서대로 복구하는 장기 프로젝트입니다.", phaseNames: ["병목 확인", "거점 복구", "전국 정상화"] },
+  { id: "boss-com-black-friday", industry: "commerce", chapter: 2, art: "boss-commerce-orders", name: "블랙프라이데이 주문 폭주", difficulty: "BOSS+", workload: 1050, deadline: 22, cash: 3720, reputation: 73, eventEvery: 1, boss: true, recommended: ["logistics", "marketing", "md"], summary: "예측을 넘어선 주문과 문의를 견디며 모든 상품을 약속대로 배송합니다.", phaseNames: ["주문 폭발", "창고 사수", "배송 정상화"] },
+  { id: "boss-com-price-war", industry: "commerce", chapter: 3, art: "boss-commerce-price", name: "전국 공급망 가격 전쟁", difficulty: "BOSS++", workload: 1200, deadline: 24, cash: 4250, reputation: 83, eventEvery: 1, boss: true, recommended: ["md", "sales", "logistics"], summary: "경쟁사의 공세 속에서 공급처와 가격, 재고를 지켜 회사의 유통망을 사수합니다.", phaseNames: ["공급처 확보", "가격 방어", "시장 회복"] },
+  { id: "boss-com-national-chain", industry: "commerce", chapter: 4, art: "boss-commerce-chain", name: "전국 유통망 독점 입점", difficulty: "BOSS EX", workload: 1460, deadline: 27, cash: 5520, reputation: 106, eventEvery: 1, boss: true, recommended: ["sales", "md", "finance"], summary: "전국 매장에 독점 상품을 동시에 공급하는 회사 최대의 계약을 성사시킵니다.", phaseNames: ["조건 협상", "전국 발주", "매장 안착"] },
 
-  { id: "boss-launch-outage", industry: "it", chapter: 1, art: "boss-transformation", name: "출시 당일 서버 대폭주", difficulty: "BOSS", workload: 840, deadline: 19, cash: 2900, reputation: 60, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "예상을 뛰어넘은 접속자를 버티며 장애를 막아내는 장기 프로젝트입니다.", phaseNames: ["트래픽 분석", "긴급 증설", "서비스 안정화"] },
-  { id: "boss-it-data-center", industry: "it", chapter: 2, art: "boss-transformation", name: "데이터센터 연쇄 장애", difficulty: "BOSS+", workload: 1070, deadline: 22, cash: 3800, reputation: 75, eventEvery: 1, boss: true, recommended: ["operations", "dev", "finance"], summary: "여러 지역의 장애를 격리하고 데이터를 지키며 서비스를 되살립니다.", phaseNames: ["장애 격리", "데이터 복구", "서비스 재개"] },
-  { id: "boss-it-zero-day", industry: "it", chapter: 3, art: "boss-transformation", name: "제로데이 보안 침해", difficulty: "BOSS++", workload: 1230, deadline: 24, cash: 4380, reputation: 86, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "알려지지 않은 공격을 추적하고 고객 데이터를 지키며 서비스 전체를 정화합니다.", phaseNames: ["침입 추적", "취약점 봉쇄", "신뢰 복구"] },
-  { id: "boss-it-global-platform", industry: "it", chapter: 4, art: "boss-global-launch", name: "글로벌 플랫폼 통합", difficulty: "BOSS EX", workload: 1500, deadline: 27, cash: 5700, reputation: 110, eventEvery: 1, boss: true, recommended: ["planning", "dev", "operations"], summary: "각국의 시스템과 데이터를 하나의 플랫폼으로 전환하는 초대형 통합을 완수합니다.", phaseNames: ["지역 통합", "데이터 이관", "전 세계 전환"] }
+  { id: "boss-launch-outage", industry: "it", chapter: 1, art: "boss-it-traffic", name: "출시 당일 서버 대폭주", difficulty: "BOSS", workload: 840, deadline: 19, cash: 2900, reputation: 60, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "예상을 뛰어넘은 접속자를 버티며 장애를 막아내는 장기 프로젝트입니다.", phaseNames: ["트래픽 분석", "긴급 증설", "서비스 안정화"] },
+  { id: "boss-it-data-center", industry: "it", chapter: 2, art: "boss-it-datacenter", name: "데이터센터 연쇄 장애", difficulty: "BOSS+", workload: 1070, deadline: 22, cash: 3800, reputation: 75, eventEvery: 1, boss: true, recommended: ["operations", "dev", "finance"], summary: "여러 지역의 장애를 격리하고 데이터를 지키며 서비스를 되살립니다.", phaseNames: ["장애 격리", "데이터 복구", "서비스 재개"] },
+  { id: "boss-it-zero-day", industry: "it", chapter: 3, art: "boss-it-security", name: "제로데이 보안 침해", difficulty: "BOSS++", workload: 1230, deadline: 24, cash: 4380, reputation: 86, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "알려지지 않은 공격을 추적하고 고객 데이터를 지키며 서비스 전체를 정화합니다.", phaseNames: ["침입 추적", "취약점 봉쇄", "신뢰 복구"] },
+  { id: "boss-it-global-platform", industry: "it", chapter: 4, art: "boss-it-platform", name: "글로벌 플랫폼 통합", difficulty: "BOSS EX", workload: 1500, deadline: 27, cash: 5700, reputation: 110, eventEvery: 1, boss: true, recommended: ["planning", "dev", "operations"], summary: "각국의 시스템과 데이터를 하나의 플랫폼으로 전환하는 초대형 통합을 완수합니다.", phaseNames: ["지역 통합", "데이터 이관", "전 세계 전환"] }
 ];
 
 const DEFAULT_REPRESENTATIVE_APPEARANCE = {
@@ -336,6 +339,7 @@ let equipmentTargetId = null;
 let officeDialogueTimer = null;
 let recentOfficeDialogueIds = [];
 let companyLaunchTimer = null;
+let hrTerminationTargetId = null;
 
 const state = {
   industry: "",
@@ -349,7 +353,10 @@ const state = {
   postingRefreshes: POSTING_REFRESH_MAX,
   projectClears: 0,
   bossClears: 0,
-  specialRecruitmentTickets: 0
+  specialRecruitmentTickets: 0,
+  payrollPayments: 0,
+  turnoverEvents: 0,
+  pendingTurnover: null
 };
 
 function randomInt(max) { return Math.floor(Math.random() * max); }
@@ -394,7 +401,8 @@ function employee(name, department, trait, work, collaboration, speed, look, ran
     name, department, trait, work, collaboration, speed,
     focus: Math.round((work + collaboration) / 2),
     salary: 120 + rank * 72,
-    rank, isRepresentative: false, equipment: { work: null, support: null, personal: null },
+    rank, isRepresentative: false, joinedAt: 0, retentionCount: 0,
+    equipment: { work: null, support: null, personal: null },
     appearance: appearance(look)
   };
 }
@@ -795,6 +803,45 @@ function equippedEquipmentCount() {
   return state.employees.reduce((total, member) => total + Object.values(member.equipment || {}).filter(Boolean).length, 0);
 }
 
+function totalPayroll() {
+  return state.employees.reduce((total, member) => total + (member.salary || 0), 0);
+}
+
+function projectsUntilPayroll() {
+  const remainder = state.projectClears % PAYROLL_PROJECT_INTERVAL;
+  return remainder === 0 ? PAYROLL_PROJECT_INTERVAL : PAYROLL_PROJECT_INTERVAL - remainder;
+}
+
+function returnMemberEquipment(member) {
+  Object.keys(member.equipment || {}).forEach(slot => {
+    const item = member.equipment[slot];
+    if (item) state.equipment.push(item);
+    member.equipment[slot] = null;
+  });
+}
+
+function repairProjectTeam() {
+  const validIds = new Set(state.employees.map(member => member.id));
+  state.teamIds = state.teamIds.filter(id => validIds.has(id));
+  state.employees.forEach(member => {
+    if (state.teamIds.length < 3 && !state.teamIds.includes(member.id)) state.teamIds.push(member.id);
+  });
+}
+
+function removeEmployee(member) {
+  if (!member || member.isRepresentative) return [];
+  const returnedEquipment = Object.values(member.equipment || {}).filter(Boolean).map(item => item.name);
+  returnMemberEquipment(member);
+  state.employees = state.employees.filter(employeeItem => employeeItem.id !== member.id);
+  repairProjectTeam();
+  if (equipmentTargetId === member.id) equipmentTargetId = state.employees[0]?.id || null;
+  return returnedEquipment;
+}
+
+function contractSettlement(member) {
+  return Math.max(80, Math.ceil((member.salary || 120) * .75 / 10) * 10);
+}
+
 function officeEquipmentMarkup(member) {
   const equipped = Object.values(member.equipment || {}).filter(Boolean);
   const props = equipped.map(item => {
@@ -816,6 +863,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   currentView = "office";
   clearCompanyLaunchTimer();
   clearBattleTimer();
+  repairProjectTeam();
   const teamNames = currentTeam().map(member => escapeHtml(member.name)).join(" · ");
   const specialRecruitment = state.specialRecruitmentTickets > 0
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
@@ -836,13 +884,14 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
         </div>
         <div class="company-notes">
           <p><b>PROJECT TEAM</b><span>${teamNames}</span></p>
-          <p><b>성과 ${state.projectClears}회</b><span>특별채용 · ${specialRecruitment}</span></p>
+          <p><b>성과 ${state.projectClears}회 · 급여 D-${projectsUntilPayroll()}</b><span>월급 ${totalPayroll()} · 특별채용 ${specialRecruitment}</span></p>
         </div>
       </div>
       <div class="actions office-actions">
         <button class="blue" id="interview">면접</button>
         <button class="teal" id="team">팀 편성</button>
         <button class="mustard" id="equipment" aria-label="장착 장비 ${equippedCount}개, 보관 장비 ${state.equipment.length}개">장착 ${equippedCount} · 보관 ${state.equipment.length}</button>
+        <button class="ink" id="hr">인사 관리</button>
         <button class="red" id="project">프로젝트</button>
       </div>
     </section>`;
@@ -851,6 +900,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#interview").addEventListener("click", () => openInterview());
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
+  document.querySelector("#hr").addEventListener("click", () => openHumanResources());
   document.querySelector("#project").addEventListener("click", renderProjectBoard);
   document.querySelectorAll("[data-office-worker]").forEach(desk => {
     const toggleLoadout = () => {
@@ -870,6 +920,187 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
     });
   });
   scheduleOfficeDialogue();
+}
+
+function openHumanResources(notice = "직원 계약과 급여 현황을 관리하세요.") {
+  currentView = "hr";
+  hrTerminationTargetId = null;
+  renderHumanResources(notice);
+}
+
+function renderHumanResources(notice = "직원 계약과 급여 현황을 관리하세요.") {
+  currentView = "hr";
+  const target = state.employees.find(member => member.id === hrTerminationTargetId && !member.isRepresentative);
+  const cards = state.employees.map(member => {
+    const stats = effectiveStats(member);
+    const equipped = Object.values(member.equipment || {}).filter(Boolean).length;
+    const tenure = Math.max(0, state.projectClears - (member.joinedAt || 0));
+    const protectedMember = member.isRepresentative || state.employees.length <= 3;
+    return `<article class="team-card hr-card ${member.isRepresentative ? "representative-card" : ""}">
+      <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
+      <div><h3>${escapeHtml(member.name)} ${member.isRepresentative ? `<span class="rank representative-rank">대표</span>` : ""}</h3>
+      <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
+      <p>실무 ${stats.work}　협업 ${stats.collaboration}　장비 ${equipped}개</p>
+      <p>월급 ${member.salary}만원 · 근속 프로젝트 ${tenure}건</p></div>
+      <button class="${protectedMember ? "ink" : "red"}" data-end-contract="${member.id}" ${protectedMember ? "disabled" : ""}>${member.isRepresentative ? "대표" : state.employees.length <= 3 ? "최소 인원" : "계약 종료"}</button>
+    </article>`;
+  }).join("");
+  const confirm = target ? contractTerminationConfirm(target) : "";
+  app.innerHTML = `${header("인사 관리", `${notice} · 월 급여 ${totalPayroll()}만원`)}<section class="screen hr-screen">
+    <div class="hr-summary panel"><span><small>직원</small><strong>${state.employees.length}/${state.capacity}</strong></span><span><small>월 급여</small><strong>${totalPayroll()}만원</strong></span><span><small>다음 정산</small><strong>D-${projectsUntilPayroll()}</strong></span></div>
+    <div class="card-list">${cards}</div>
+    <button class="ink" id="back-from-hr">← 사무실</button>
+    ${confirm}
+  </section>`;
+  mountPortraits();
+  document.querySelectorAll("[data-end-contract]:not(:disabled)").forEach(button => button.addEventListener("click", () => requestContractTermination(button.dataset.endContract)));
+  document.querySelector("#back-from-hr").addEventListener("click", () => renderOffice());
+  document.querySelector("#cancel-contract-termination")?.addEventListener("click", cancelContractTermination);
+  document.querySelector("#confirm-contract-termination")?.addEventListener("click", confirmContractTermination);
+}
+
+function contractTerminationConfirm(member) {
+  const settlement = contractSettlement(member);
+  const equipmentNames = Object.values(member.equipment || {}).filter(Boolean).map(item => item.name);
+  const canAfford = state.cash >= settlement;
+  return `<div class="hr-confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="contract-end-title"><div class="hr-confirm panel">
+    <small>CONTRACT REVIEW</small><strong id="contract-end-title">${escapeHtml(member.name)}의 계약을 종료할까요?</strong>
+    <p>계약 종료 정산금 <b>${settlement}만원</b>이 지급되고 평판이 2 감소합니다.${equipmentNames.length ? `<br>장비 ${escapeHtml(equipmentNames.join(" · "))}은 보관함으로 회수됩니다.` : ""}</p>
+    ${canAfford ? "" : `<em>정산금이 부족합니다. 현재 현금 ${state.cash}만원</em>`}
+    <div><button class="teal" id="cancel-contract-termination">계속 근무</button><button class="red" id="confirm-contract-termination" ${canAfford ? "" : "disabled"}>계약 종료</button></div>
+  </div></div>`;
+}
+
+function requestContractTermination(memberId) {
+  const member = state.employees.find(employeeItem => employeeItem.id === memberId);
+  if (!member || member.isRepresentative) return renderHumanResources("대표의 계약은 종료할 수 없습니다.");
+  if (state.employees.length <= 3) return renderHumanResources("프로젝트 진행에 필요한 최소 직원 3명은 유지해야 합니다.");
+  hrTerminationTargetId = memberId;
+  renderHumanResources(`${member.name}의 계약 조건을 확인하세요.`);
+}
+
+function cancelContractTermination() {
+  hrTerminationTargetId = null;
+  renderHumanResources("계약을 유지했습니다.");
+}
+
+function confirmContractTermination() {
+  const member = state.employees.find(employeeItem => employeeItem.id === hrTerminationTargetId);
+  if (!member || member.isRepresentative) return renderHumanResources("계약 종료 대상을 찾을 수 없습니다.");
+  if (state.employees.length <= 3) return renderHumanResources("프로젝트 진행에 필요한 최소 직원 3명은 유지해야 합니다.");
+  const settlement = contractSettlement(member);
+  if (state.cash < settlement) return renderHumanResources("계약 종료 정산금이 부족합니다.");
+  state.cash -= settlement;
+  state.reputation = Math.max(0, state.reputation - 2);
+  const returnedEquipment = removeEmployee(member);
+  hrTerminationTargetId = null;
+  const equipmentNotice = returnedEquipment.length ? ` · 장비 ${returnedEquipment.length}개 회수` : "";
+  renderHumanResources(`${member.name}과의 계약을 종료했습니다. 정산금 ${settlement}만원${equipmentNotice}`);
+}
+
+function turnoverReason(member) {
+  if (!state.teamIds.includes(member.id)) return "최근 핵심 프로젝트에서 역할을 찾기 어렵다며 새로운 기회를 고민하고 있습니다.";
+  if (member.trait.includes("완벽")) return "더 높은 기준의 업무와 성장 기회를 원한다며 이직 제안을 검토하고 있습니다.";
+  if (member.trait.includes("위기")) return "반복되는 긴급 대응으로 지쳤다며 근무 조건에 대한 면담을 요청했습니다.";
+  if (["dev", "product", "design", "md"].includes(member.department)) return "자신이 주도할 수 있는 더 큰 역할을 제안받아 고민하고 있습니다.";
+  return "외부 회사에서 더 좋은 조건을 제안받아 대표와의 면담을 요청했습니다.";
+}
+
+function maybeQueueTurnoverEvent() {
+  if (state.pendingTurnover || state.employees.length <= 3 || state.projectClears < TURNOVER_PROJECT_INTERVAL || state.projectClears % TURNOVER_PROJECT_INTERVAL !== 0) return null;
+  const eligible = state.employees.filter(member => !member.isRepresentative && state.projectClears - (member.joinedAt || 0) >= 3 && (member.turnoverShieldUntil || 0) <= state.projectClears);
+  if (!eligible.length) return null;
+  const bench = eligible.filter(member => !state.teamIds.includes(member.id));
+  const pool = bench.length ? bench : eligible;
+  const member = pool[randomInt(pool.length)];
+  state.pendingTurnover = {
+    employeeId: member.id,
+    reason: turnoverReason(member),
+    retentionCost: member.salary + 100 + member.rank * 50
+  };
+  return member;
+}
+
+function processPayrollIfDue() {
+  if (state.projectClears <= 0 || state.projectClears % PAYROLL_PROJECT_INTERVAL !== 0) return 0;
+  const payroll = totalPayroll();
+  state.cash -= payroll;
+  state.payrollPayments += 1;
+  return payroll;
+}
+
+function renderTurnoverEvent(notice = "직원이 이직을 고민하고 있습니다. 대응 방법을 선택하세요.") {
+  currentView = "turnover";
+  clearBattleTimer();
+  const event = state.pendingTurnover;
+  const member = state.employees.find(employeeItem => employeeItem.id === event?.employeeId);
+  if (!event || !member) {
+    state.pendingTurnover = null;
+    return renderOffice("인사 면담이 종료됐습니다.");
+  }
+  const rank = RANKS[member.rank];
+  const improvedSalary = Math.ceil(member.salary * 1.1 / 10) * 10;
+  app.innerHTML = `${header("이직 면담", notice)}<section class="screen turnover-screen">
+    <article class="turnover-card panel">
+      <span class="turnover-stamp">RETENTION MEETING</span>
+      <canvas width="24" height="24" data-portrait="${member.id}" aria-label="${escapeHtml(member.name)}"></canvas>
+      <h2>${escapeHtml(member.name)} <i style="background:${rank.color}">${rank.name}</i></h2>
+      <p class="turnover-role">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
+      <blockquote>“${escapeHtml(event.reason)}”</blockquote>
+      <div class="turnover-current"><span>현재 월급 <b>${member.salary}만원</b></span><span>근속 <b>${Math.max(0, state.projectClears - (member.joinedAt || 0))}건</b></span></div>
+    </article>
+    <div class="turnover-options">
+      <button class="mustard" id="retain-with-pay" ${state.cash < event.retentionCost ? "disabled" : ""}><strong>처우 개선</strong><small>보너스 ${event.retentionCost}만원 · 월급 ${improvedSalary}만원</small></button>
+      <button class="teal" id="retain-with-talk" ${state.reputation < TURNOVER_REPUTATION_COST ? "disabled" : ""}><strong>면담으로 설득</strong><small>평판 ${TURNOVER_REPUTATION_COST} 사용 · 성공 확률 70%</small></button>
+      <button class="ink" id="accept-turnover"><strong>보내주기</strong><small>비용 없이 퇴사 · 장비 자동 회수</small></button>
+    </div>
+  </section>`;
+  mountPortraits();
+  document.querySelector("#retain-with-pay")?.addEventListener("click", retainEmployeeWithPay);
+  document.querySelector("#retain-with-talk")?.addEventListener("click", retainEmployeeWithTalk);
+  document.querySelector("#accept-turnover").addEventListener("click", acceptEmployeeTurnover);
+}
+
+function retainEmployeeWithPay() {
+  const event = state.pendingTurnover;
+  const member = state.employees.find(employeeItem => employeeItem.id === event?.employeeId);
+  if (!event || !member) return renderOffice("면담 대상을 찾을 수 없습니다.");
+  if (state.cash < event.retentionCost) return renderTurnoverEvent("처우 개선에 필요한 자금이 부족합니다.");
+  state.cash -= event.retentionCost;
+  member.salary = Math.ceil(member.salary * 1.1 / 10) * 10;
+  member.retentionCount = (member.retentionCount || 0) + 1;
+  member.turnoverShieldUntil = state.projectClears + 10;
+  state.turnoverEvents += 1;
+  state.pendingTurnover = null;
+  renderOffice(`${member.name}과 처우 개선에 합의했습니다. 당분간 이직을 고민하지 않습니다.`);
+}
+
+function retainEmployeeWithTalk() {
+  const event = state.pendingTurnover;
+  const member = state.employees.find(employeeItem => employeeItem.id === event?.employeeId);
+  if (!event || !member) return renderOffice("면담 대상을 찾을 수 없습니다.");
+  if (state.reputation < TURNOVER_REPUTATION_COST) return renderTurnoverEvent("면담을 설득력 있게 이끌 평판이 부족합니다.");
+  state.reputation -= TURNOVER_REPUTATION_COST;
+  state.turnoverEvents += 1;
+  if (randomInt(100) < 70) {
+    member.retentionCount = (member.retentionCount || 0) + 1;
+    member.turnoverShieldUntil = state.projectClears + 7;
+    state.pendingTurnover = null;
+    return renderOffice(`${member.name}을 설득했습니다. 역할과 성장 방향을 다시 약속했습니다.`);
+  }
+  const returnedEquipment = removeEmployee(member);
+  state.pendingTurnover = null;
+  renderOffice(`${member.name}을 설득하지 못해 퇴사했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
+}
+
+function acceptEmployeeTurnover() {
+  const event = state.pendingTurnover;
+  const member = state.employees.find(employeeItem => employeeItem.id === event?.employeeId);
+  if (!event || !member) return renderOffice("면담 대상을 찾을 수 없습니다.");
+  const returnedEquipment = removeEmployee(member);
+  state.turnoverEvents += 1;
+  state.pendingTurnover = null;
+  renderOffice(`${member.name}의 새로운 도전을 응원하며 퇴사를 수락했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
 }
 
 function generateEquipmentReward(minimumRarity = 0) {
@@ -1115,6 +1346,7 @@ function hireCandidate(id) {
   if (state.employees.length >= state.capacity) return renderInterview("직원 정원이 가득 찼습니다. 사무실 확장이 필요합니다.");
   if (state.cash < candidate.signingCost) return renderInterview("계약금이 부족합니다. 프로젝트를 먼저 완료하세요.");
   state.cash -= candidate.signingCost;
+  candidate.joinedAt = state.projectClears;
   state.employees.push(candidate);
   if (recruitmentMode === "special") {
     state.specialRecruitmentTickets = Math.max(0, state.specialRecruitmentTickets - 1);
@@ -1280,6 +1512,7 @@ function finishBattleSuccess(scheduleRender = true) {
     state.reputation += battle.project.reputation;
     state.projectClears += 1;
     if (battle.project.boss) state.bossClears += 1;
+    const payroll = processPayrollIfDue();
     state.postingRefreshes = POSTING_REFRESH_MAX;
     const specialUnlocked = state.projectClears === 5 || (state.projectClears > 5 && (state.projectClears - 5) % 10 === 0);
     if (specialUnlocked) {
@@ -1287,11 +1520,14 @@ function finishBattleSuccess(scheduleRender = true) {
       specialCandidates = [];
     }
     battle.recruitmentNotice = specialUnlocked ? "헤드헌팅권 1장 획득!" : `공고 갱신 ${POSTING_REFRESH_MAX}/${POSTING_REFRESH_MAX} 회복`;
+    battle.payrollNotice = payroll ? `급여 정산 -${payroll}만원 · 현재 현금 ${state.cash}만원` : "";
     battle.rewards = battle.project.boss
       ? [generateEquipmentReward(2), generateEquipmentReward(2)]
       : [generateEquipmentReward()];
     battle.reward = battle.rewards[0];
     state.equipment.push(...battle.rewards);
+    const turnoverMember = maybeQueueTurnoverEvent();
+    battle.turnoverNotice = turnoverMember ? `${turnoverMember.name}이(가) 이직 면담을 요청했습니다.` : "";
   }
   if (scheduleRender) battleTimer = window.setTimeout(renderBattle, 650);
 }
@@ -1633,7 +1869,10 @@ function normalDamagePreview(member) {
 }
 
 function requestBattleLeave() {
-  if (battle.result) return renderOffice(battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다.");
+  if (battle.result) {
+    if (battle.result === "success" && state.pendingTurnover) return renderTurnoverEvent();
+    return renderOffice(battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다.");
+  }
   clearBattleTimer();
   battle.confirmingLeave = true;
   renderBattle();
@@ -1656,7 +1895,7 @@ function renderBattle() {
   const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
   const bestRewardRarity = rewards.length ? Math.max(...rewards.map(reward => reward.rarity)) : 0;
   const rewardShowcase = rewards.length ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div></div>` : "";
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>팀 편성과 부서 연계를 바꿔 다시 도전하세요.</p></div>` : "";
   const actingMemberId = battle.awaitingDirective ? battle.directiveFocusId : team[battle.action % Math.max(1, team.length)]?.id;
   const fighters = team.map(member => {
     const damage = normalDamagePreview(member);
@@ -1689,7 +1928,7 @@ function renderBattle() {
       <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
-      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle">${battle.result ? "사무실로" : "프로젝트 중단"}</button>
+      <button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle">${battle.result ? state.pendingTurnover ? "이직 면담으로" : "사무실로" : "프로젝트 중단"}</button>
       ${abortConfirm}
     </section>`;
   drawBoss(document.querySelector("#boss-canvas"), battle.project.art || battle.project.id, battle.phase);
@@ -2308,6 +2547,122 @@ function drawGlobalLaunchBoss(context) {
   rect(context, COLORS.paper, 29, 7, 6, 4);
 }
 
+function drawManufacturingBoss(context, variant) {
+  rect(context, COLORS.ink, 4, 11, 56, 45);
+  rect(context, "#596a6f", 7, 14, 50, 39);
+  rect(context, "#9aa2a0", 11, 18, 19, 18);
+  rect(context, "#384f59", 34, 18, 19, 31);
+  rect(context, COLORS.ink, 14, 22, 13, 10);
+  rect(context, "#d6a12c", 17, 24, 7, 6);
+  rect(context, "#168c8b", 38, 23, 11, 5);
+  rect(context, COLORS.ink, 38, 32, 11, 4);
+  rect(context, COLORS.ink, 38, 41, 11, 4);
+  rect(context, COLORS.ink, 8, 52, 12, 8);
+  rect(context, COLORS.ink, 44, 52, 12, 8);
+  if (variant === "recall") {
+    rect(context, "#c84b3c", 22, 4, 25, 14);
+    rect(context, COLORS.paper, 26, 8, 17, 3);
+    rect(context, COLORS.paper, 32, 6, 4, 10);
+    rect(context, "#c84b3c", 2, 35, 17, 17);
+    rect(context, COLORS.paper, 6, 39, 9, 9);
+  } else if (variant === "shutdown") {
+    rect(context, "#c84b3c", 25, 1, 7, 14);
+    rect(context, "#d6a12c", 31, 5, 8, 5);
+    rect(context, "#c84b3c", 37, 1, 5, 13);
+    rect(context, COLORS.ink, 2, 39, 23, 5);
+    rect(context, "#c84b3c", 13, 36, 5, 11);
+  } else if (variant === "quality") {
+    rect(context, "#4a70a8", 20, 2, 24, 15);
+    rect(context, COLORS.paper, 24, 5, 16, 9);
+    rect(context, "#c84b3c", 29, 7, 6, 5);
+    rect(context, "#168c8b", 1, 31, 13, 20);
+    rect(context, COLORS.paper, 4, 35, 7, 12);
+  } else {
+    rect(context, "#d6a12c", 20, 2, 24, 15);
+    rect(context, COLORS.ink, 24, 5, 16, 9);
+    rect(context, COLORS.paper, 28, 7, 8, 5);
+    rect(context, "#d6a12c", 52, 4, 7, 24);
+    rect(context, COLORS.ink, 45, 5, 14, 4);
+  }
+}
+
+function drawCommerceBoss(context, variant) {
+  rect(context, COLORS.ink, 5, 17, 54, 39);
+  rect(context, "#d17655", 8, 20, 48, 33);
+  rect(context, COLORS.paper, 12, 24, 12, 10);
+  rect(context, COLORS.paper, 28, 24, 12, 10);
+  rect(context, COLORS.paper, 44, 24, 8, 10);
+  rect(context, COLORS.ink, 12, 39, 40, 4);
+  rect(context, "#d6a12c", 15, 45, 10, 8);
+  rect(context, "#168c8b", 29, 45, 10, 8);
+  rect(context, "#4a70a8", 43, 45, 7, 8);
+  if (variant === "logistics") {
+    rect(context, "#c84b3c", 3, 4, 13, 13);
+    rect(context, "#c84b3c", 48, 4, 13, 13);
+    rect(context, COLORS.ink, 14, 9, 36, 4);
+    rect(context, COLORS.paper, 7, 8, 5, 5);
+    rect(context, COLORS.paper, 52, 8, 5, 5);
+  } else if (variant === "orders") {
+    rect(context, COLORS.ink, 16, 2, 32, 18);
+    rect(context, "#c84b3c", 19, 5, 26, 12);
+    rect(context, COLORS.paper, 23, 8, 4, 6);
+    rect(context, COLORS.paper, 31, 6, 4, 8);
+    rect(context, COLORS.paper, 39, 9, 3, 5);
+  } else if (variant === "price") {
+    rect(context, "#9b6d9d", 19, 1, 26, 17);
+    rect(context, COLORS.paper, 23, 5, 18, 9);
+    rect(context, "#c84b3c", 29, 4, 6, 11);
+    rect(context, COLORS.ink, 1, 34, 11, 17);
+    rect(context, "#d6a12c", 4, 38, 5, 9);
+  } else {
+    rect(context, "#4a70a8", 8, 4, 14, 14);
+    rect(context, "#168c8b", 25, 1, 14, 17);
+    rect(context, "#d6a12c", 42, 4, 14, 14);
+    rect(context, COLORS.ink, 20, 9, 7, 4);
+    rect(context, COLORS.ink, 37, 9, 7, 4);
+    rect(context, COLORS.paper, 29, 5, 6, 8);
+  }
+}
+
+function drawItBoss(context, variant) {
+  rect(context, COLORS.ink, 6, 7, 52, 50);
+  rect(context, "#243e52", 9, 10, 46, 44);
+  rect(context, "#4a70a8", 13, 14, 13, 36);
+  rect(context, "#4a70a8", 38, 14, 13, 36);
+  rect(context, COLORS.ink, 16, 20, 7, 3);
+  rect(context, "#168c8b", 16, 28, 7, 3);
+  rect(context, "#d6a12c", 16, 36, 7, 3);
+  rect(context, "#c84b3c", 41, 20, 7, 3);
+  rect(context, "#168c8b", 41, 28, 7, 3);
+  rect(context, "#d6a12c", 41, 36, 7, 3);
+  rect(context, COLORS.ink, 25, 29, 14, 5);
+  if (variant === "traffic") {
+    rect(context, "#c84b3c", 1, 17, 9, 5);
+    rect(context, "#c84b3c", 54, 17, 9, 5);
+    rect(context, "#c84b3c", 1, 39, 9, 5);
+    rect(context, "#c84b3c", 54, 39, 9, 5);
+    rect(context, "#d6a12c", 28, 1, 8, 13);
+  } else if (variant === "datacenter") {
+    rect(context, "#6d7c8c", 22, 2, 20, 13);
+    rect(context, COLORS.paper, 26, 5, 12, 3);
+    rect(context, "#c84b3c", 29, 10, 6, 3);
+    rect(context, "#c84b3c", 27, 49, 10, 12);
+  } else if (variant === "security") {
+    rect(context, "#c84b3c", 21, 1, 22, 20);
+    rect(context, COLORS.ink, 25, 5, 14, 12);
+    rect(context, COLORS.paper, 28, 8, 3, 3);
+    rect(context, COLORS.paper, 34, 8, 3, 3);
+    rect(context, COLORS.paper, 30, 13, 5, 2);
+  } else {
+    rect(context, "#168c8b", 20, 1, 24, 20);
+    rect(context, COLORS.paper, 24, 5, 16, 12);
+    rect(context, "#4a70a8", 29, 5, 6, 12);
+    rect(context, "#4a70a8", 24, 9, 16, 4);
+    rect(context, "#d6a12c", 1, 28, 9, 9);
+    rect(context, "#d6a12c", 54, 28, 9, 9);
+  }
+}
+
 function drawBossPhase(context, phase) {
   if (phase >= 2) {
     rect(context, "#c84b3c", 1, 55, 10, 5);
@@ -2335,6 +2690,9 @@ function drawBoss(canvas, projectId = "revision", phase = 1) {
   else if (projectId === "integration") drawIntegrationProject(context);
   else if (projectId === "boss-transformation") drawTransformationBoss(context);
   else if (projectId === "boss-global-launch") drawGlobalLaunchBoss(context);
+  else if (projectId.startsWith("boss-manufacturing-")) drawManufacturingBoss(context, projectId.replace("boss-manufacturing-", ""));
+  else if (projectId.startsWith("boss-commerce-")) drawCommerceBoss(context, projectId.replace("boss-commerce-", ""));
+  else if (projectId.startsWith("boss-it-")) drawItBoss(context, projectId.replace("boss-it-", ""));
   else drawRevisionProject(context);
   if (projectId.startsWith("boss-")) drawBossPhase(context, phase);
 }

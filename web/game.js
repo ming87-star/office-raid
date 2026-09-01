@@ -1906,7 +1906,7 @@ function executeDirective() {
     battle.skillFx = null;
     renderBattle();
     if (!battle.result) battleTimer = window.setTimeout(battleStep, 650);
-  }, 1300);
+  }, 2100);
 }
 
 function advanceBattleStatus() {

@@ -847,7 +847,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .execute-directive small { margin-top: 2px; color: inherit; font-size: 8px; font-weight: 900; }
 .execute-directive:not(:disabled) { animation: plan-ready-pulse 1.3s steps(3) infinite; }
 @keyframes plan-ready-pulse { 50% { filter: brightness(1.12); box-shadow: 4px 4px 0 var(--ink), inset 0 -6px 0 rgba(23,54,74,.14), 0 0 18px rgba(214,161,44,.6); } }
-.skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,20,30,.66); color: white; text-align: center; animation: cinematic-pop 1.2s ease-out both; isolation: isolate; }
+.skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,20,30,.66); color: white; text-align: center; animation: cinematic-pop 1.8s ease-out both; isolation: isolate; }
 .skill-cinematic::before { content: ""; position: absolute; z-index: 0; inset: -2%; background: url("assets/perfect-workflow-vfx.webp?v=20260901-battle-art-v1") center / cover no-repeat; mix-blend-mode: screen; animation: workflow-vfx-in .7s ease-out both; }
 .skill-cinematic::after { display: none; }
 .skill-cinematic i { display: none; }

@@ -436,6 +436,73 @@ function header(title, notice) {
   return `<header class="header"><img class="header-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID"><p class="eyebrow">LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
 }
 
+const PRELOAD_ASSETS = [
+  "assets/office-raid-title.webp?v=20260831",
+  "assets/office-raid-logo-ui.webp?v=20260831",
+  "assets/opening-office-v2.webp?v=20260831",
+  "assets/opening-mail-v2.webp?v=20260831",
+  "assets/opening-raid-v2.webp?v=20260831",
+  "assets/company-setup-desk.webp?v=20260901-company-desk-v1",
+  "assets/office-background.webp?v=20260831-topview",
+  "assets/office-desk-base.webp?v=20260831",
+  "assets/office-monitor-back.webp?v=20260831",
+  "assets/battle-background-normal.webp?v=20260901-battle-art-v1",
+  "assets/battle-background-boss.webp?v=20260901-battle-art-v1",
+  "assets/perfect-workflow-vfx.webp?v=20260901-workflow-v2"
+];
+const preloadedImages = [];
+let assetsReady = false;
+let assetsLoading = false;
+
+function updateAssetLoader(completed, total, failed = 0) {
+  const percent = total ? Math.round(completed / total * 100) : 100;
+  const bar = document.querySelector("#asset-load-bar");
+  const percentLabel = document.querySelector("#asset-load-percent");
+  const status = document.querySelector("#asset-load-status");
+  const detail = document.querySelector("#asset-load-detail");
+  const button = document.querySelector("#start-game");
+  if (bar) bar.style.width = `${percent}%`;
+  if (percentLabel) percentLabel.textContent = `${percent}%`;
+  if (status) status.textContent = failed ? "일부 이미지를 받지 못했습니다." : assetsReady ? "게임 준비 완료" : "게임 이미지 준비 중";
+  if (detail) detail.textContent = failed ? `${failed}개 파일을 다시 받아야 합니다.` : assetsReady ? "모든 이미지가 준비됐습니다." : `${completed}/${total} 파일 확인`;
+  if (!button) return;
+  button.disabled = assetsLoading || (!assetsReady && failed === 0);
+  button.querySelector("strong").textContent = failed ? "다시 받기" : assetsReady ? "게임 시작" : "이미지 준비 중…";
+  button.querySelector("small").textContent = failed ? "연결을 확인한 뒤 눌러주세요." : assetsReady ? "프로젝트를 시작합니다." : `${percent}% 다운로드`;
+}
+
+function preloadGameAssets() {
+  if (assetsLoading || assetsReady) return;
+  assetsLoading = true;
+  let completed = 0;
+  let failed = 0;
+  updateAssetLoader(completed, PRELOAD_ASSETS.length);
+  const tasks = PRELOAD_ASSETS.map(source => new Promise(resolve => {
+    const image = new Image();
+    let settled = false;
+    const finish = success => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      completed += 1;
+      if (!success) failed += 1;
+      if (success) preloadedImages.push(image);
+      updateAssetLoader(completed, PRELOAD_ASSETS.length, failed);
+      resolve(success);
+    };
+    const timeout = window.setTimeout(() => finish(false), 20000);
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    image.decoding = "async";
+    image.src = source;
+  }));
+  Promise.all(tasks).then(() => {
+    assetsLoading = false;
+    assetsReady = failed === 0;
+    updateAssetLoader(completed, PRELOAD_ASSETS.length, failed);
+  });
+}
+
 function renderTitle() {
   currentView = "title";
   app.classList.add("title-mode");
@@ -443,13 +510,24 @@ function renderTitle() {
     <img class="title-art" src="assets/office-raid-title.webp?v=20260831" alt="세 명의 회사원이 거대한 프로젝트 보스를 마주한 오피스 레이드 타이틀 이미지">
     <div class="title-actions">
       <p>프로젝트는 거대하고, 퇴근은 멀었다.</p>
-      <button id="start-game" class="mustard">게임 시작</button>
+      <div class="asset-loader" role="status" aria-live="polite">
+        <div class="asset-loader-head"><span id="asset-load-status">게임 이미지 준비 중</span><b id="asset-load-percent">0%</b></div>
+        <div class="asset-loader-track"><i id="asset-load-bar"></i></div>
+        <small id="asset-load-detail">0/${PRELOAD_ASSETS.length} 파일 확인</small>
+      </div>
+      <button id="start-game" class="mustard" disabled><strong>이미지 준비 중…</strong><small>0% 다운로드</small></button>
     </div>
   </section>`;
   document.querySelector("#start-game").addEventListener("click", () => {
+    if (!assetsReady) {
+      preloadGameAssets();
+      return;
+    }
     document.querySelector(".title-screen").classList.add("leaving");
     window.setTimeout(renderOpening, 240);
   });
+  if (assetsReady) updateAssetLoader(PRELOAD_ASSETS.length, PRELOAD_ASSETS.length);
+  else preloadGameAssets();
 }
 
 function renderOpening() {

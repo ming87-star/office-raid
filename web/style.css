@@ -456,7 +456,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .character-svg { display: block; overflow: visible; }
 .office-portrait { position: absolute; z-index: 1; top: 0; left: 50%; width: min(92%, 98px); height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(10,35,49,.5)); translate: -50% 0; }
 .office-desk-base { position: absolute; z-index: 2; top: 44%; left: 2%; width: 96%; height: auto; pointer-events: none; }
-.office-monitor-back { position: absolute; z-index: 5; top: 60%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
+.office-monitor-back { position: absolute; z-index: 5; top: 48%; left: 50%; width: 54%; height: auto; filter: drop-shadow(1px 2px 0 rgba(10,35,49,.32)); translate: -50% 0; pointer-events: none; }
 .office-equipment-prop { position: absolute; z-index: 4; width: 30px; height: 30px; image-rendering: pixelated; filter: drop-shadow(0 0 2px var(--rarity-color)); pointer-events: none; }
 .office-equipment-prop.rarity-0, .office-equipment-prop.rarity-1 { filter: none; }
 .placement-wearable { z-index: 2; }

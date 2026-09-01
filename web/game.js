@@ -125,30 +125,62 @@ const DIRECTIVE_SKILLS = {
   ]
 };
 
+const PROJECT_EPISODES = [
+  { chapter: 1, name: "기반 다지기", description: "첫 고객과 첫 성과를 만들어 회사의 기초를 세웁니다." },
+  { chapter: 2, name: "성장과 확장", description: "더 큰 계약과 복잡한 협업에 도전합니다." },
+  { chapter: 3, name: "위기 대응", description: "회사의 신뢰를 흔드는 사고와 변수에 맞섭니다." },
+  { chapter: 4, name: "대형 도약", description: "업계를 뒤흔들 장기 프로젝트에 진입합니다." }
+];
+
 const PROJECTS = [
-  { id: "revision", industry: "common", art: "revision", name: "끝없는 수정 요청", difficulty: "초급", workload: 210, deadline: 8, cash: 700, reputation: 12, eventEvery: 2, recommended: ["planning", "quality", "sales"], summary: "쌓여가는 수정표와 최종 파일을 정리합니다." },
-  { id: "schedule", industry: "common", art: "schedule", name: "엉킨 납품 일정", difficulty: "초급+", workload: 240, deadline: 8, cash: 780, reputation: 14, eventEvery: 2, recommended: ["management", "production", "logistics", "planning"], summary: "겹쳐버린 일정과 마감 시계를 다시 맞춥니다." },
+  { id: "revision", industry: "common", chapter: 1, art: "revision", name: "끝없는 수정 요청", difficulty: "초급", workload: 210, deadline: 8, cash: 700, reputation: 12, eventEvery: 2, recommended: ["planning", "quality", "sales"], summary: "쌓여가는 수정표와 최종 파일을 정리합니다." },
+  { id: "schedule", industry: "common", chapter: 1, art: "schedule", name: "엉킨 납품 일정", difficulty: "초급+", workload: 240, deadline: 8, cash: 780, reputation: 14, eventEvery: 2, recommended: ["production", "logistics", "planning"], summary: "겹쳐버린 일정과 마감 시계를 다시 맞춥니다." },
+  { id: "budget-cut", industry: "common", chapter: 2, art: "audit", name: "갑작스러운 예산 삭감", difficulty: "중급", workload: 315, deadline: 9, cash: 980, reputation: 18, eventEvery: 2, recommended: ["finance", "planning", "product", "md"], summary: "줄어든 예산 안에서 핵심 범위를 지키고 계획을 다시 세웁니다." },
+  { id: "key-person-gap", industry: "common", chapter: 3, art: "schedule", name: "핵심 인력 공백 수습", difficulty: "중상급", workload: 390, deadline: 10, cash: 1240, reputation: 24, eventEvery: 1, recommended: ["production", "logistics", "operations", "finance"], summary: "갑작스러운 공백을 동료들의 협업으로 메우며 마감을 지켜냅니다." },
 
-  { id: "mfg-prototype", industry: "manufacturing", art: "revision", name: "첫 시제품 납품", difficulty: "초급", workload: 225, deadline: 8, cash: 760, reputation: 13, eventEvery: 2, recommended: ["product", "production", "quality"], summary: "설계안을 실제 제품으로 완성해 첫 고객에게 납품합니다." },
-  { id: "mfg-supplier", industry: "manufacturing", art: "migration", name: "핵심 부품 수급 위기", difficulty: "중급", workload: 290, deadline: 9, cash: 930, reputation: 17, eventEvery: 2, recommended: ["procurement", "production", "finance"], summary: "멈춰가는 생산라인에 필요한 부품을 제때 확보합니다." },
-  { id: "mfg-defect", industry: "manufacturing", art: "audit", name: "불량률 0.1% 작전", difficulty: "중상급", workload: 350, deadline: 10, cash: 1120, reputation: 22, eventEvery: 2, recommended: ["quality", "production", "product"], summary: "공정 곳곳에 숨은 불량 원인을 추적해 제거합니다." },
-  { id: "mfg-automation", industry: "manufacturing", art: "integration", name: "스마트 공장 전환", difficulty: "상급", workload: 425, deadline: 11, cash: 1430, reputation: 28, eventEvery: 1, recommended: ["production", "product", "procurement"], summary: "기존 생산라인을 멈추지 않고 자동화 설비로 전환합니다." },
+  { id: "mfg-prototype", industry: "manufacturing", chapter: 1, art: "revision", name: "첫 시제품 납품", difficulty: "초급", workload: 225, deadline: 8, cash: 760, reputation: 13, eventEvery: 2, recommended: ["product", "production", "quality"], summary: "설계안을 실제 제품으로 완성해 첫 고객에게 납품합니다." },
+  { id: "mfg-first-line", industry: "manufacturing", chapter: 1, art: "integration", name: "첫 생산라인 가동", difficulty: "초급+", workload: 255, deadline: 8, cash: 820, reputation: 15, eventEvery: 2, recommended: ["production", "quality", "procurement"], summary: "설비와 작업 순서를 맞춰 회사의 첫 생산라인을 가동합니다." },
+  { id: "mfg-supplier", industry: "manufacturing", chapter: 2, art: "migration", name: "핵심 부품 수급 위기", difficulty: "중급", workload: 290, deadline: 9, cash: 930, reputation: 17, eventEvery: 2, recommended: ["procurement", "production", "finance"], summary: "멈춰가는 생산라인에 필요한 부품을 제때 확보합니다." },
+  { id: "mfg-certification", industry: "manufacturing", chapter: 2, art: "audit", name: "품질 인증 심사", difficulty: "중급+", workload: 325, deadline: 9, cash: 1030, reputation: 20, eventEvery: 2, recommended: ["quality", "product", "production"], summary: "기록과 공정을 정비해 까다로운 품질 인증을 통과합니다." },
+  { id: "mfg-defect", industry: "manufacturing", chapter: 3, art: "audit", name: "불량률 0.1% 작전", difficulty: "중상급", workload: 350, deadline: 10, cash: 1120, reputation: 22, eventEvery: 2, recommended: ["quality", "production", "product"], summary: "공정 곳곳에 숨은 불량 원인을 추적해 제거합니다." },
+  { id: "mfg-equipment-failure", industry: "manufacturing", chapter: 3, art: "outage", name: "노후 설비 긴급 복구", difficulty: "상급", workload: 395, deadline: 10, cash: 1270, reputation: 25, eventEvery: 1, recommended: ["production", "product", "procurement"], summary: "멈춰버린 핵심 설비를 진단하고 납기 전에 생산을 재개합니다." },
+  { id: "mfg-automation", industry: "manufacturing", chapter: 4, art: "integration", name: "스마트 공장 전환", difficulty: "상급+", workload: 425, deadline: 11, cash: 1430, reputation: 28, eventEvery: 1, recommended: ["production", "product", "procurement"], summary: "기존 생산라인을 멈추지 않고 자동화 설비로 전환합니다." },
+  { id: "mfg-overseas-order", industry: "manufacturing", chapter: 4, art: "launch", name: "해외 대량 주문 대응", difficulty: "최상급", workload: 485, deadline: 12, cash: 1650, reputation: 33, eventEvery: 1, recommended: ["production", "procurement", "quality"], summary: "해외 규격과 촉박한 납기를 맞춰 역대 최대 주문을 생산합니다." },
 
-  { id: "com-entry", industry: "commerce", art: "campaign", name: "첫 거래처 입점", difficulty: "초급", workload: 220, deadline: 8, cash: 750, reputation: 13, eventEvery: 2, recommended: ["sales", "md", "logistics"], summary: "상품 구성과 조건을 맞춰 첫 대형 거래처에 입점합니다." },
-  { id: "com-season", industry: "commerce", art: "launch", name: "시즌 초대형 할인전", difficulty: "중급", workload: 300, deadline: 9, cash: 960, reputation: 18, eventEvery: 2, recommended: ["marketing", "md", "sales"], summary: "상품과 광고, 고객 요청이 몰리는 할인전을 성공시킵니다." },
-  { id: "com-inventory", industry: "commerce", art: "migration", name: "창고 재고 대이동", difficulty: "중상급", workload: 355, deadline: 10, cash: 1140, reputation: 22, eventEvery: 2, recommended: ["logistics", "md", "finance"], summary: "뒤섞인 재고를 새 물류센터로 정확하게 옮깁니다." },
-  { id: "com-returns", industry: "commerce", art: "audit", name: "반품 폭주 수습", difficulty: "상급", workload: 420, deadline: 11, cash: 1410, reputation: 27, eventEvery: 1, recommended: ["marketing", "logistics", "sales"], summary: "쏟아지는 반품과 고객 문의를 막아 신뢰를 회복합니다." },
+  { id: "com-entry", industry: "commerce", chapter: 1, art: "campaign", name: "첫 거래처 입점", difficulty: "초급", workload: 220, deadline: 8, cash: 750, reputation: 13, eventEvery: 2, recommended: ["sales", "md", "logistics"], summary: "상품 구성과 조건을 맞춰 첫 대형 거래처에 입점합니다." },
+  { id: "com-pop-up", industry: "commerce", chapter: 1, art: "launch", name: "첫 팝업스토어 오픈", difficulty: "초급+", workload: 250, deadline: 8, cash: 820, reputation: 15, eventEvery: 2, recommended: ["md", "marketing", "logistics"], summary: "한정된 공간과 기간 안에 고객이 몰리는 첫 매장을 엽니다." },
+  { id: "com-season", industry: "commerce", chapter: 2, art: "launch", name: "시즌 초대형 할인전", difficulty: "중급", workload: 300, deadline: 9, cash: 960, reputation: 18, eventEvery: 2, recommended: ["marketing", "md", "sales"], summary: "상품과 광고, 고객 요청이 몰리는 할인전을 성공시킵니다." },
+  { id: "com-live-commerce", industry: "commerce", chapter: 2, art: "campaign", name: "라이브 커머스 대박 예고", difficulty: "중급+", workload: 335, deadline: 9, cash: 1060, reputation: 20, eventEvery: 2, recommended: ["marketing", "sales", "md"], summary: "생방송 한 시간에 주문과 문의가 폭발하는 판매전을 준비합니다." },
+  { id: "com-inventory", industry: "commerce", chapter: 3, art: "migration", name: "창고 재고 대이동", difficulty: "중상급", workload: 355, deadline: 10, cash: 1140, reputation: 22, eventEvery: 2, recommended: ["logistics", "md", "finance"], summary: "뒤섞인 재고를 새 물류센터로 정확하게 옮깁니다." },
+  { id: "com-returns", industry: "commerce", chapter: 3, art: "audit", name: "반품 폭주 수습", difficulty: "상급", workload: 420, deadline: 11, cash: 1410, reputation: 27, eventEvery: 1, recommended: ["marketing", "logistics", "sales"], summary: "쏟아지는 반품과 고객 문의를 막아 신뢰를 회복합니다." },
+  { id: "com-exclusive-brand", industry: "commerce", chapter: 4, art: "revision", name: "인기 브랜드 독점 계약", difficulty: "상급+", workload: 450, deadline: 11, cash: 1510, reputation: 30, eventEvery: 1, recommended: ["sales", "md", "finance"], summary: "경쟁사보다 좋은 조건을 제시해 화제의 브랜드를 독점 확보합니다." },
+  { id: "com-cross-border", industry: "commerce", chapter: 4, art: "integration", name: "해외 직구 시장 진출", difficulty: "최상급", workload: 495, deadline: 12, cash: 1680, reputation: 34, eventEvery: 1, recommended: ["logistics", "md", "marketing"], summary: "통관과 배송, 현지 상품 구성을 연결해 해외 시장을 엽니다." },
 
-  { id: "it-mvp", industry: "it", art: "campaign", name: "첫 서비스 MVP 출시", difficulty: "초급", workload: 230, deadline: 8, cash: 770, reputation: 14, eventEvery: 2, recommended: ["planning", "dev", "design"], summary: "핵심 기능을 정리해 첫 사용자에게 서비스를 공개합니다." },
-  { id: "it-migration", industry: "it", art: "migration", name: "무중단 서버 이전", difficulty: "중급", workload: 305, deadline: 9, cash: 970, reputation: 18, eventEvery: 2, recommended: ["dev", "operations", "planning"], summary: "서비스를 멈추지 않고 모든 데이터를 새 서버로 옮깁니다." },
-  { id: "it-renewal", industry: "it", art: "revision", name: "전면 UX 개편", difficulty: "중상급", workload: 360, deadline: 10, cash: 1160, reputation: 22, eventEvery: 2, recommended: ["design", "planning", "dev"], summary: "복잡해진 서비스를 사용자가 이해하기 쉽게 다시 설계합니다." },
-  { id: "it-security", industry: "it", art: "audit", name: "보안 취약점 감사", difficulty: "상급", workload: 430, deadline: 11, cash: 1450, reputation: 29, eventEvery: 1, recommended: ["operations", "dev", "planning"], summary: "서비스 곳곳의 위험 요소를 찾아 출시 전에 차단합니다." }
+  { id: "it-mvp", industry: "it", chapter: 1, art: "campaign", name: "첫 서비스 MVP 출시", difficulty: "초급", workload: 230, deadline: 8, cash: 770, reputation: 14, eventEvery: 2, recommended: ["planning", "dev", "design"], summary: "핵심 기능을 정리해 첫 사용자에게 서비스를 공개합니다." },
+  { id: "it-first-users", industry: "it", chapter: 1, art: "launch", name: "첫 1만 사용자 유입", difficulty: "초급+", workload: 260, deadline: 8, cash: 840, reputation: 16, eventEvery: 2, recommended: ["operations", "dev", "planning"], summary: "예상보다 빠르게 몰린 사용자를 맞아 서비스의 첫 성장을 지켜냅니다." },
+  { id: "it-migration", industry: "it", chapter: 2, art: "migration", name: "무중단 서버 이전", difficulty: "중급", workload: 305, deadline: 9, cash: 970, reputation: 18, eventEvery: 2, recommended: ["dev", "operations", "planning"], summary: "서비스를 멈추지 않고 모든 데이터를 새 서버로 옮깁니다." },
+  { id: "it-payment", industry: "it", chapter: 2, art: "integration", name: "결제 시스템 연동", difficulty: "중급+", workload: 340, deadline: 9, cash: 1080, reputation: 21, eventEvery: 2, recommended: ["dev", "planning", "finance"], summary: "복잡한 결제 흐름과 정산 기준을 하나의 안정적인 기능으로 연결합니다." },
+  { id: "it-renewal", industry: "it", chapter: 3, art: "revision", name: "전면 UX 개편", difficulty: "중상급", workload: 360, deadline: 10, cash: 1160, reputation: 22, eventEvery: 2, recommended: ["design", "planning", "dev"], summary: "복잡해진 서비스를 사용자가 이해하기 쉽게 다시 설계합니다." },
+  { id: "it-security", industry: "it", chapter: 3, art: "audit", name: "보안 취약점 감사", difficulty: "상급", workload: 430, deadline: 11, cash: 1450, reputation: 29, eventEvery: 1, recommended: ["operations", "dev", "planning"], summary: "서비스 곳곳의 위험 요소를 찾아 출시 전에 차단합니다." },
+  { id: "it-ai-feature", industry: "it", chapter: 4, art: "campaign", name: "AI 신기능 베타 출시", difficulty: "상급+", workload: 465, deadline: 11, cash: 1570, reputation: 31, eventEvery: 1, recommended: ["dev", "design", "planning"], summary: "새로운 AI 기능을 실제 사용자가 믿고 쓸 수 있는 제품으로 다듬습니다." },
+  { id: "it-global-localization", industry: "it", chapter: 4, art: "launch", name: "글로벌 서비스 현지화", difficulty: "최상급", workload: 505, deadline: 12, cash: 1720, reputation: 35, eventEvery: 1, recommended: ["planning", "design", "operations"], summary: "언어와 정책, 운영 시간을 맞춰 서비스를 여러 국가에 동시에 엽니다." }
 ];
 
 const BOSS_PROJECTS = [
-  { id: "boss-recall", industry: "manufacturing", art: "boss-transformation", name: "전국 제품 리콜", difficulty: "BOSS", workload: 820, deadline: 19, cash: 2800, reputation: 58, eventEvery: 1, boss: true, recommended: ["quality", "production", "product"], summary: "전국에 출고된 제품을 회수하고 원인을 고치는 초대형 장기 프로젝트입니다.", phaseNames: ["원인 추적", "전량 회수", "생산 재개"] },
-  { id: "boss-logistics", industry: "commerce", art: "boss-global-launch", name: "전국 물류망 마비", difficulty: "BOSS", workload: 830, deadline: 19, cash: 2850, reputation: 58, eventEvery: 1, boss: true, recommended: ["logistics", "md", "sales"], summary: "멈춰버린 물류센터와 배송망을 순서대로 복구하는 장기 프로젝트입니다.", phaseNames: ["병목 확인", "거점 복구", "전국 정상화"] },
-  { id: "boss-launch-outage", industry: "it", art: "boss-transformation", name: "출시 당일 서버 대폭주", difficulty: "BOSS", workload: 840, deadline: 19, cash: 2900, reputation: 60, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "예상을 뛰어넘은 접속자를 버티며 장애를 막아내는 장기 프로젝트입니다.", phaseNames: ["트래픽 분석", "긴급 증설", "서비스 안정화"] }
+  { id: "boss-recall", industry: "manufacturing", chapter: 1, art: "boss-transformation", name: "전국 제품 리콜", difficulty: "BOSS", workload: 820, deadline: 19, cash: 2800, reputation: 58, eventEvery: 1, boss: true, recommended: ["quality", "production", "product"], summary: "전국에 출고된 제품을 회수하고 원인을 고치는 초대형 장기 프로젝트입니다.", phaseNames: ["원인 추적", "전량 회수", "생산 재개"] },
+  { id: "boss-mfg-line-stop", industry: "manufacturing", chapter: 2, art: "boss-transformation", name: "전 공장 생산라인 정지", difficulty: "BOSS+", workload: 1030, deadline: 22, cash: 3650, reputation: 72, eventEvery: 1, boss: true, recommended: ["production", "quality", "procurement"], summary: "연쇄 고장으로 멈춘 모든 공장의 원인을 격리하고 생산을 되살립니다.", phaseNames: ["원인 격리", "설비 복구", "전면 재가동"] },
+  { id: "boss-mfg-overseas-defect", industry: "manufacturing", chapter: 3, art: "boss-transformation", name: "해외 공장 품질 붕괴", difficulty: "BOSS++", workload: 1210, deadline: 24, cash: 4300, reputation: 84, eventEvery: 1, boss: true, recommended: ["quality", "procurement", "product"], summary: "해외 생산 거점의 품질 체계를 처음부터 재건하고 거래처의 신뢰를 되찾습니다.", phaseNames: ["현지 원인 조사", "공정 재설계", "품질 승인"] },
+  { id: "boss-mfg-mega-contract", industry: "manufacturing", chapter: 4, art: "boss-global-launch", name: "국가 핵심 설비 수주", difficulty: "BOSS EX", workload: 1480, deadline: 27, cash: 5600, reputation: 108, eventEvery: 1, boss: true, recommended: ["product", "production", "finance"], summary: "회사의 미래를 건 초대형 설비 계약을 설계부터 전국 납품까지 완수합니다.", phaseNames: ["기술 제안", "초도 생산", "전국 납품"] },
+
+  { id: "boss-logistics", industry: "commerce", chapter: 1, art: "boss-global-launch", name: "전국 물류망 마비", difficulty: "BOSS", workload: 830, deadline: 19, cash: 2850, reputation: 58, eventEvery: 1, boss: true, recommended: ["logistics", "md", "sales"], summary: "멈춰버린 물류센터와 배송망을 순서대로 복구하는 장기 프로젝트입니다.", phaseNames: ["병목 확인", "거점 복구", "전국 정상화"] },
+  { id: "boss-com-black-friday", industry: "commerce", chapter: 2, art: "boss-global-launch", name: "블랙프라이데이 주문 폭주", difficulty: "BOSS+", workload: 1050, deadline: 22, cash: 3720, reputation: 73, eventEvery: 1, boss: true, recommended: ["logistics", "marketing", "md"], summary: "예측을 넘어선 주문과 문의를 견디며 모든 상품을 약속대로 배송합니다.", phaseNames: ["주문 폭발", "창고 사수", "배송 정상화"] },
+  { id: "boss-com-price-war", industry: "commerce", chapter: 3, art: "boss-transformation", name: "전국 공급망 가격 전쟁", difficulty: "BOSS++", workload: 1200, deadline: 24, cash: 4250, reputation: 83, eventEvery: 1, boss: true, recommended: ["md", "sales", "logistics"], summary: "경쟁사의 공세 속에서 공급처와 가격, 재고를 지켜 회사의 유통망을 사수합니다.", phaseNames: ["공급처 확보", "가격 방어", "시장 회복"] },
+  { id: "boss-com-national-chain", industry: "commerce", chapter: 4, art: "boss-global-launch", name: "전국 유통망 독점 입점", difficulty: "BOSS EX", workload: 1460, deadline: 27, cash: 5520, reputation: 106, eventEvery: 1, boss: true, recommended: ["sales", "md", "finance"], summary: "전국 매장에 독점 상품을 동시에 공급하는 회사 최대의 계약을 성사시킵니다.", phaseNames: ["조건 협상", "전국 발주", "매장 안착"] },
+
+  { id: "boss-launch-outage", industry: "it", chapter: 1, art: "boss-transformation", name: "출시 당일 서버 대폭주", difficulty: "BOSS", workload: 840, deadline: 19, cash: 2900, reputation: 60, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "예상을 뛰어넘은 접속자를 버티며 장애를 막아내는 장기 프로젝트입니다.", phaseNames: ["트래픽 분석", "긴급 증설", "서비스 안정화"] },
+  { id: "boss-it-data-center", industry: "it", chapter: 2, art: "boss-transformation", name: "데이터센터 연쇄 장애", difficulty: "BOSS+", workload: 1070, deadline: 22, cash: 3800, reputation: 75, eventEvery: 1, boss: true, recommended: ["operations", "dev", "finance"], summary: "여러 지역의 장애를 격리하고 데이터를 지키며 서비스를 되살립니다.", phaseNames: ["장애 격리", "데이터 복구", "서비스 재개"] },
+  { id: "boss-it-zero-day", industry: "it", chapter: 3, art: "boss-transformation", name: "제로데이 보안 침해", difficulty: "BOSS++", workload: 1230, deadline: 24, cash: 4380, reputation: 86, eventEvery: 1, boss: true, recommended: ["operations", "dev", "planning"], summary: "알려지지 않은 공격을 추적하고 고객 데이터를 지키며 서비스 전체를 정화합니다.", phaseNames: ["침입 추적", "취약점 봉쇄", "신뢰 복구"] },
+  { id: "boss-it-global-platform", industry: "it", chapter: 4, art: "boss-global-launch", name: "글로벌 플랫폼 통합", difficulty: "BOSS EX", workload: 1500, deadline: 27, cash: 5700, reputation: 110, eventEvery: 1, boss: true, recommended: ["planning", "dev", "operations"], summary: "각국의 시스템과 데이터를 하나의 플랫폼으로 전환하는 초대형 통합을 완수합니다.", phaseNames: ["지역 통합", "데이터 이관", "전 세계 전환"] }
 ];
 
 const DEFAULT_REPRESENTATIVE_APPEARANCE = {
@@ -866,9 +898,18 @@ function scaledProject(project) {
   };
 }
 
+function currentProjectChapter() {
+  return Math.min(PROJECT_EPISODES.length, Math.floor(state.projectClears / 5) + 1);
+}
+
+function projectEpisode(project) {
+  return PROJECT_EPISODES.find(episode => episode.chapter === (project.chapter || 1)) || PROJECT_EPISODES[0];
+}
+
 function regularProjectOptions() {
-  const industryProjects = PROJECTS.filter(project => project.industry === state.industry);
-  const commonProjects = PROJECTS.filter(project => project.industry === "common");
+  const chapter = currentProjectChapter();
+  const industryProjects = PROJECTS.filter(project => project.industry === state.industry && project.chapter <= chapter);
+  const commonProjects = PROJECTS.filter(project => project.industry === "common" && project.chapter <= chapter);
   const pool = [...industryProjects, ...commonProjects];
   const start = state.projectClears % pool.length;
   return [0, 1, 2].map(offset => scaledProject(pool[(start + offset) % pool.length]));
@@ -876,7 +917,7 @@ function regularProjectOptions() {
 
 function nextBossProject() {
   const pool = BOSS_PROJECTS.filter(project => project.industry === state.industry);
-  return scaledProject(pool[state.bossClears % pool.length] || BOSS_PROJECTS[0]);
+  return scaledProject(pool[Math.min(state.bossClears, pool.length - 1)] || BOSS_PROJECTS[0]);
 }
 
 function bossProjectReady() {
@@ -890,8 +931,9 @@ function bossProjectProgress() {
 function projectCard(project, locked = false) {
   const reward = project.boss ? `현금 ${project.cash} · 희귀 장비 2개` : `현금 ${project.cash} · 평판 ${project.reputation}`;
   const recommended = (project.recommended || []).map(department => DEPARTMENTS[department]?.short).filter(Boolean).join(" · ");
+  const episode = projectEpisode(project);
   return `<article class="project-card panel ${project.boss ? "boss-project" : ""} ${locked ? "locked" : ""}">
-    <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><strong>${escapeHtml(project.name)}</strong></div>
+    <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><strong>${escapeHtml(project.name)}</strong><small>EP.${episode.chapter} ${escapeHtml(episode.name)}</small></div>
     <p>${escapeHtml(project.summary)}</p>
     <div class="project-affinity"><b>추천 부서</b><span>${escapeHtml(recommended || "모든 부서")}</span><em>상성 피해 +18%</em></div>
     <div class="project-spec"><span>업무량 ${project.max}</span><span>마감 ${project.deadline}턴</span></div>
@@ -908,7 +950,8 @@ function renderProjectBoard() {
   const boss = nextBossProject();
   const bossCard = projectCard(boss, !bossProjectReady());
   const industry = currentIndustry();
-  app.innerHTML = `${header("프로젝트 선택", `${industry?.name || "회사"} 계약 · 추천 부서를 편성하면 처리량이 증가합니다.`)}
+  const episode = PROJECT_EPISODES[currentProjectChapter() - 1];
+  app.innerHTML = `${header("프로젝트 선택", `${industry?.name || "회사"} · EP.${episode.chapter} ${episode.name} · ${episode.description}`)}
     <section class="screen project-board">
       <div class="project-list">${regularCards}${bossCard}</div>
       <button class="ink" id="back-from-projects">← 사무실</button>

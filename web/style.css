@@ -653,6 +653,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .project-card-head { display: flex; align-items: center; gap: 7px; }
 .project-card-head span { flex: 0 0 auto; padding: 3px 5px; border: 2px solid var(--ink); background: var(--mustard); font-size: 8px; font-weight: 900; }
 .project-card-head strong { min-width: 0; overflow: hidden; font-size: 13px; white-space: nowrap; text-overflow: ellipsis; }
+.project-card-head small { flex: 0 0 auto; margin-left: auto; color: var(--teal); font-size: 7px; font-weight: 1000; white-space: nowrap; }
 .project-card p { margin: 7px 0; color: var(--muted); font-size: 9px; font-weight: 800; line-height: 1.35; }
 .project-affinity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 5px; margin: 5px 0 6px; padding: 4px 5px; border-left: 3px solid var(--mustard); background: rgba(214,161,44,.1); }
 .project-affinity b { color: var(--muted); font-size: 7px; }

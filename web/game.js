@@ -514,19 +514,9 @@ function renderSetup() {
   if (!industry) return renderIndustrySelection();
   app.innerHTML = `${header("회사 이름 정하기", `${industry.name} · ${industry.tagline}`)}
     <section class="screen"><div class="setup panel">
-      <div class="setup-story-preview" aria-label="거대한 프로젝트에 도전하는 팀의 연출 장면">
-        <span class="setup-project-glow" aria-hidden="true"></span>
-        <span class="setup-deadline-stamp">DEADLINE<br><strong>D-8</strong></span>
-        <canvas id="setup-boss" width="64" height="64" aria-label="프로젝트 보스"></canvas>
-        <i class="story-paper story-paper-one" aria-hidden="true"></i>
-        <i class="story-paper story-paper-two" aria-hidden="true"></i>
-        <i class="story-paper story-paper-three" aria-hidden="true"></i>
-        <div class="setup-story-team">
-          <canvas width="24" height="24" data-setup-member="0" aria-label="대표의 뒷모습"></canvas>
-          <canvas width="24" height="24" data-setup-member="1" aria-label="${escapeHtml(DEPARTMENTS[industry.starters[0].department].name)} 담당자의 뒷모습"></canvas>
-          <canvas width="24" height="24" data-setup-member="2" aria-label="${escapeHtml(DEPARTMENTS[industry.starters[1].department].name)} 담당자의 뒷모습"></canvas>
-        </div>
-      </div>
+      <figure class="setup-story-preview">
+        <img src="assets/company-setup-desk.webp?v=20260901-company-desk-v1" alt="서류 뭉치와 포스트잇, 마감 D-8 도장이 놓인 첫 프로젝트 책상">
+      </figure>
       <h2>${escapeHtml(industry.name)} 창업</h2>
       <p>${escapeHtml(industry.departmentLabel)}<br>${escapeHtml(industry.combatStyle)}</p>
       <span class="genre-tag">${escapeHtml(industry.name)} · 창립 준비</span>
@@ -534,12 +524,6 @@ function renderSetup() {
       <div class="input-with-button"><input id="company-name" maxlength="18" value="${escapeHtml(state.companyName || generateCompanyName(state.industry))}" autocomplete="organization"><button id="random-company" class="mustard">랜덤 생성</button></div>
       <div class="setup-actions"><button id="back-industry" class="ink">← 업종</button><button id="create-company" class="teal">다음 · 대표 만들기</button></div>
     </div></section>`;
-  drawBoss(document.querySelector("#setup-boss"));
-  const setupDepartments = ["management", ...industry.starters.map(member => member.department)];
-  document.querySelectorAll("[data-setup-member]").forEach((canvas, index) => {
-    const department = setupDepartments[index];
-    drawBackPortrait(canvas, { department, appearance: appearance([1103, industry.starters[0].look, industry.starters[1].look][index]) });
-  });
   document.querySelector("#random-company").addEventListener("click", randomizeCompanyName);
   document.querySelector("#back-industry").addEventListener("click", renderIndustrySelection);
   document.querySelector("#create-company").addEventListener("click", openRepresentativeSetup);
@@ -1891,10 +1875,11 @@ function executeDirective() {
   battle.awaitingDirective = false;
   battle.directiveReason = "";
   checkWorkloadThresholds();
-  const varianceResult = actualTotal >= Math.round(total * 1.1) ? " · GREAT!" : actualTotal <= Math.round(total * .9) ? " · 변동 최소" : "";
+  const outcome = actualTotal >= Math.round(total * 1.1) ? "great" : actualTotal <= Math.round(total * .9) ? "low" : "normal";
+  const varianceResult = outcome === "great" ? " · GREAT!" : outcome === "low" ? " · 변동 최소" : "";
   const detail = `업무량 ${actualTotal} 처리 · 예상 ${expected.min}~${expected.max}${varianceResult}${combo ? ` · ${combo} 연계` : ""}${cleared ? " · 상태 제거" : ""}`;
   battle.log = `PERFECT WORKFLOW! ${detail}`;
-  battle.skillFx = { title: combo || "PERFECT WORKFLOW", detail };
+  battle.skillFx = { title: combo || "PERFECT WORKFLOW", detail, outcome };
   if (battle.workload <= 0) finishBattleSuccess(false);
   else if (Math.floor(battle.action / team.length) >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
@@ -1999,7 +1984,8 @@ function renderBattle() {
   const statusName = battle.status ? `${battle.status.name} ${battle.status.turns}턴` : "안정";
   const statusTone = battle.status ? battle.status.tone : "good";
   const directive = directivePanel(team);
-  const skillFx = battle.skillFx ? `<div class="skill-cinematic"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
+  const skillFxOutcome = ["low", "normal", "great"].includes(battle.skillFx?.outcome) ? battle.skillFx.outcome : "normal";
+  const skillFx = battle.skillFx ? `<div class="skill-cinematic outcome-${skillFxOutcome}"><i></i><i></i><i></i><strong>${escapeHtml(battle.skillFx.title)}</strong><span>${escapeHtml(battle.skillFx.detail)}</span></div>` : "";
   const phaseText = battle.project.boss ? `PHASE ${battle.phase}/3 · ${battle.project.phaseNames[battle.phase - 1]}` : battle.project.difficulty;
   const workloadPercent = Math.min(100, battle.workload / battle.max * 100);
   const previewMin = preview?.damageMin || 0;

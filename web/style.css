@@ -256,73 +256,14 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 
 .setup-story-preview {
   position: relative;
-  height: 188px;
+  height: 218px;
   margin: 0 0 14px;
   overflow: hidden;
   border: 2px solid var(--ink);
-  background: linear-gradient(155deg, transparent 0 53%, rgba(23,54,74,.12) 53% 55%, transparent 55%), linear-gradient(25deg, transparent 0 58%, rgba(214,161,44,.18) 58% 60%, transparent 60%), #d9ccb1;
-  box-shadow: inset 0 -35px 0 rgba(23,54,74,.12);
+  background: #9c5b25;
+  box-shadow: 3px 3px 0 rgba(23,54,74,.2);
 }
-.setup-story-preview::before {
-  content: "THE FIRST BIG PROJECT";
-  position: absolute;
-  top: 7px;
-  left: 8px;
-  color: rgba(23,54,74,.55);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 1px;
-}
-.setup-story-preview::after { content: ""; position: absolute; z-index: 1; right: -18%; bottom: -26px; left: -18%; height: 58px; border-top: 3px solid var(--ink); background: rgba(23,54,74,.13); transform: perspective(90px) rotateX(24deg); }
-.setup-project-glow { position: absolute; top: -24px; left: 50%; width: 145px; height: 145px; transform: translateX(-50%) rotate(45deg); background: rgba(214,161,44,.3); }
-.setup-deadline-stamp { position: absolute; z-index: 4; top: 12px; right: 11px; padding: 4px 6px; transform: rotate(5deg); border: 2px solid var(--red); color: var(--red); font-size: 7px; font-weight: 900; line-height: 1; }
-.setup-deadline-stamp strong { display: block; margin-top: 2px; font-size: 15px; }
-#setup-boss {
-  position: absolute;
-  z-index: 3;
-  top: 2px;
-  left: 50%;
-  width: 105px;
-  height: 105px;
-  transform: translateX(-50%);
-  image-rendering: pixelated;
-  filter: drop-shadow(4px 5px 0 rgba(23,54,74,.28));
-}
-.setup-story-team {
-  position: absolute;
-  z-index: 4;
-  right: 7%;
-  bottom: 4px;
-  left: 7%;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  align-items: end;
-}
-.setup-story-team :is(canvas, .character-svg) {
-  width: 64px;
-  max-width: 100%;
-  margin: 0 auto;
-  image-rendering: pixelated;
-  filter: drop-shadow(2px 2px 0 rgba(23,54,74,.28));
-}
-.setup-story-team :is(canvas, .character-svg):nth-child(2) { width: 71px; transform: translateY(6px); }
-.story-paper {
-  position: absolute;
-  z-index: 3;
-  width: 17px;
-  height: 12px;
-  border: 2px solid var(--ink);
-  background: var(--panel);
-  box-shadow: inset 0 -3px 0 rgba(23,54,74,.18);
-  animation: story-paper-float 2.2s steps(4) infinite alternate;
-}
-.story-paper-one { top: 66px; left: 22%; transform: rotate(-16deg); }
-.story-paper-two { top: 91px; right: 19%; transform: rotate(19deg); animation-delay: -.7s; }
-.story-paper-three { top: 31px; left: 29%; transform: rotate(9deg); animation-delay: -1.3s; }
-@keyframes story-paper-float {
-  from { margin-top: -3px; }
-  to { margin-top: 5px; }
-}
+.setup-story-preview img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 48%; }
 .setup h2 { margin: 0 0 8px; font-size: 25px; }
 .setup p { margin: 0 0 20px; font-size: 13px; line-height: 1.55; }
 .genre-tag { display: inline-block; margin: -8px 0 15px; padding: 4px 8px; border: 1px solid var(--teal); color: var(--teal); font-size: 10px; font-weight: 900; }
@@ -848,14 +789,35 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .execute-directive:not(:disabled) { animation: plan-ready-pulse 1.3s steps(3) infinite; }
 @keyframes plan-ready-pulse { 50% { filter: brightness(1.12); box-shadow: 4px 4px 0 var(--ink), inset 0 -6px 0 rgba(23,54,74,.14), 0 0 18px rgba(214,161,44,.6); } }
 .skill-cinematic { position: absolute; z-index: 12; inset: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,20,30,.66); color: white; text-align: center; animation: cinematic-pop 1.8s ease-out both; isolation: isolate; }
-.skill-cinematic::before { content: ""; position: absolute; z-index: 0; inset: -2%; background: url("assets/perfect-workflow-vfx.webp?v=20260901-battle-art-v1") center / cover no-repeat; mix-blend-mode: screen; animation: workflow-vfx-in .7s ease-out both; }
+.skill-cinematic::before { content: ""; position: absolute; z-index: 0; inset: -2%; background: url("assets/perfect-workflow-vfx.webp?v=20260901-workflow-v2") center / contain no-repeat; mix-blend-mode: screen; animation: workflow-vfx-in .7s ease-out both; }
 .skill-cinematic::after { display: none; }
 .skill-cinematic i { display: none; }
 .skill-cinematic strong, .skill-cinematic span { position: relative; z-index: 2; }
 .skill-cinematic strong { padding: 4px 9px; border: 2px solid rgba(255,250,240,.8); background: rgba(23,54,74,.82); color: var(--mustard); font-size: 22px; text-shadow: 3px 3px 0 var(--ink); box-shadow: 3px 3px 0 rgba(5,20,30,.8); }
 .skill-cinematic span { max-width: 84%; margin-top: 8px; padding: 3px 6px; background: rgba(5,20,30,.72); font-size: 11px; font-weight: 900; }
 @keyframes cinematic-pop { 0% { opacity: 1; transform: scale(.82); } 16%, 100% { opacity: 1; transform: scale(1); } }
-@keyframes workflow-vfx-in { from { opacity: .68; transform: scale(.72); filter: brightness(1.8); } to { opacity: 1; transform: scale(1); filter: brightness(1); } }
+.skill-cinematic.outcome-low { background: rgba(9,27,35,.78); }
+.skill-cinematic.outcome-low::before { --workflow-opacity: .68; --workflow-scale: .93; --workflow-filter: saturate(.58) brightness(.78); }
+.skill-cinematic.outcome-low strong { color: #d8c98f; }
+.skill-cinematic.outcome-normal::before { --workflow-opacity: 1; --workflow-scale: 1; --workflow-filter: saturate(.95) brightness(.98); }
+.skill-cinematic.outcome-great { background: rgba(5,20,30,.58); }
+.skill-cinematic.outcome-great::before { --workflow-opacity: 1; --workflow-scale: 1.04; --workflow-filter: saturate(1.12) brightness(1.14); }
+.skill-cinematic.outcome-great::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 49%;
+  left: 50%;
+  display: block;
+  width: 6px;
+  height: 6px;
+  background: var(--mustard);
+  box-shadow: -122px -70px 0 var(--red), -92px 75px 0 var(--teal), -48px -105px 0 #fff2bc, 55px -94px 0 var(--teal), 92px 68px 0 var(--red), 126px -38px 0 var(--mustard), 142px 83px 0 #fff2bc, -145px 34px 0 var(--mustard);
+  animation: workflow-confetti 1.15s ease-out both;
+}
+.skill-cinematic.outcome-great strong { color: #ffd55c; box-shadow: 3px 3px 0 rgba(5,20,30,.8), 0 0 20px rgba(214,161,44,.65); }
+@keyframes workflow-vfx-in { from { opacity: .38; transform: scale(.72); filter: brightness(1.6); } to { opacity: var(--workflow-opacity, 1); transform: scale(var(--workflow-scale, 1)); filter: var(--workflow-filter, brightness(1)); } }
+@keyframes workflow-confetti { from { opacity: 0; transform: scale(.45) rotate(-16deg); } 45% { opacity: 1; } to { opacity: .9; transform: scale(1) rotate(8deg); } }
 @keyframes preview-pulse { 50% { filter: brightness(1.25); } }
 
 #boss-canvas { position: absolute; z-index: 2; top: 10px; left: 50%; width: 150px; height: 150px; transform: translateX(-50%); image-rendering: pixelated; }
@@ -978,7 +940,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title-art, .title-actions button, .launch-grid, .launch-logo, .launch-card, .launch-member, .office-room.office-entry, .office-room.office-entry .desk, .office-equipment-prop, .execute-directive, .fighter.active-fighter :is(canvas, .character-svg) { animation: none; }
+  .title-art, .title-actions button, .launch-grid, .launch-logo, .launch-card, .launch-member, .office-room.office-entry, .office-room.office-entry .desk, .office-equipment-prop, .execute-directive, .fighter.active-fighter :is(canvas, .character-svg), .skill-cinematic::before, .skill-cinematic::after { animation: none; }
   .title-screen, .company-launch-screen { transition: none; }
   .launch-member, .office-room.office-entry .desk { opacity: 1; transform: none; }
 }
@@ -1034,13 +996,6 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   .opening-team canvas { width: 58px; }
   .setup { padding: 12px 14px; }
   .setup-story-preview { height: 128px; margin-bottom: 8px; }
-  #setup-boss { width: 69px; height: 69px; }
-  .setup-story-team :is(canvas, .character-svg) { width: 43px; }
-  .setup-story-team :is(canvas, .character-svg):nth-child(2) { width: 48px; }
-  .story-paper { width: 12px; height: 9px; }
-  .story-paper-one { top: 45px; }
-  .story-paper-two { top: 62px; }
-  .story-paper-three { top: 25px; }
   .setup h2 { font-size: 21px; }
   .setup p { margin-bottom: 14px; }
 }

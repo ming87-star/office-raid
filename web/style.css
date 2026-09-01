@@ -854,8 +854,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .skill-cinematic strong, .skill-cinematic span { position: relative; z-index: 2; }
 .skill-cinematic strong { padding: 4px 9px; border: 2px solid rgba(255,250,240,.8); background: rgba(23,54,74,.82); color: var(--mustard); font-size: 22px; text-shadow: 3px 3px 0 var(--ink); box-shadow: 3px 3px 0 rgba(5,20,30,.8); }
 .skill-cinematic span { max-width: 84%; margin-top: 8px; padding: 3px 6px; background: rgba(5,20,30,.72); font-size: 11px; font-weight: 900; }
-@keyframes cinematic-pop { 0% { opacity: 0; transform: scale(.82); } 12%, 84% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.04); } }
-@keyframes workflow-vfx-in { from { opacity: 0; transform: scale(.72); filter: brightness(1.8); } to { opacity: 1; transform: scale(1); filter: brightness(1); } }
+@keyframes cinematic-pop { 0% { opacity: 1; transform: scale(.82); } 16%, 100% { opacity: 1; transform: scale(1); } }
+@keyframes workflow-vfx-in { from { opacity: .68; transform: scale(.72); filter: brightness(1.8); } to { opacity: 1; transform: scale(1); filter: brightness(1); } }
 @keyframes preview-pulse { 50% { filter: brightness(1.25); } }
 
 #boss-canvas { position: absolute; z-index: 2; top: 10px; left: 50%; width: 150px; height: 150px; transform: translateX(-50%); image-rendering: pixelated; }

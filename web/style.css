@@ -1360,3 +1360,13 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .equipment-tab-panel{display:grid;gap:7px;min-height:0}
 .trade-inventory .equipment-item{grid-template-columns:44px minmax(0,1fr) auto}
 .trade-inventory .equipment-item>button{min-width:62px}
+
+.damage-number strong{
+  font-family:"Roboto Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  font-weight:900;
+  font-stretch:condensed;
+  font-variant-numeric:lining-nums tabular-nums;
+  letter-spacing:-.6px;
+  -webkit-text-stroke:.7px var(--ink);
+  text-rendering:geometricPrecision;
+}

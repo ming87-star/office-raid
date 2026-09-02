@@ -1072,10 +1072,11 @@ function equipmentIconMarkup(item, className = "") {
 function officeEquipmentUsage(item) {
   const art = equipmentArtFor(item);
   if (art === "headset") return "머리에 착용 중";
-  if (["laptop", "tablet", "calculator"].includes(art)) return "모니터 앞에서 사용 중";
-  if (art === "planner") return "책상 왼쪽에서 사용 중";
+  if (["laptop", "tablet"].includes(art)) return "모니터 앞에서 사용 중";
+  if (art === "calculator") return "사용자 가까운 책상 쪽에서 사용 중";
+  if (art === "planner") return "사용자 가까운 책상 왼쪽에서 사용 중";
   if (art === "wallet") return "책상 왼쪽에 보관 중";
-  if (["coffee", "tumbler"].includes(art)) return "책상 오른쪽에서 사용 중";
+  if (["coffee", "tumbler"].includes(art)) return "사용자 가까운 책상 오른쪽에서 사용 중";
   return "모니터 모서리에 걸어둠";
 }
 
@@ -2858,7 +2859,8 @@ function drawEquipmentIcon(canvas, art, rarity = 0) {
   const outline = COLORS.ink;
   const accent = EQUIPMENT_RARITIES[Math.max(0, Math.min(EQUIPMENT_RARITIES.length - 1, rarity))].color;
   const light = rarity >= 3 ? "#ffe6a1" : COLORS.paper;
-  if (rarity >= 2) {
+  const wearableHeadset = art === "headset" && canvas.classList.contains("placement-wearable");
+  if (rarity >= 2 && !wearableHeadset) {
     pixel(accent, 1, 10, 3, 3); pixel(accent, 20, 5, 2, 2); pixel(accent, 19, 19, 3, 3);
     pixel(light, 2, 3, 2, 2); pixel(light, 21, 13, 2, 2);
   }
@@ -2871,8 +2873,15 @@ function drawEquipmentIcon(canvas, art, rarity = 0) {
     pixel(outline, 5, 2, 14, 20); pixel("#6d7c8c", 7, 4, 10, 5); pixel(light, 8, 5, 8, 2);
     [[7,11],[11,11],[15,11],[7,15],[11,15],[15,15],[7,19],[11,19],[15,19]].forEach(([x,y], index) => pixel(index === 8 ? accent : COLORS.paper, x, y, 2, 2));
   } else if (art === "headset") {
-    pixel(outline, 5, 3, 14, 3); pixel(outline, 3, 6, 4, 11); pixel(outline, 17, 6, 4, 11);
-    pixel(accent, 5, 6, 2, 8); pixel(accent, 17, 6, 2, 8); pixel(outline, 4, 14, 5, 6); pixel(outline, 15, 14, 5, 6); pixel(light, 6, 16, 3, 2); pixel(light, 15, 16, 3, 2);
+    if (wearableHeadset) {
+      pixel(outline, 8, 2, 8, 2); pixel(outline, 6, 3, 3, 2); pixel(outline, 15, 3, 3, 2);
+      pixel(outline, 5, 5, 2, 8); pixel(outline, 17, 5, 2, 8); pixel(outline, 3, 10, 4, 7); pixel(outline, 17, 10, 4, 7);
+      pixel(accent, 4, 11, 3, 5); pixel(accent, 17, 11, 3, 5); pixel(COLORS.paper, 5, 12, 2, 3); pixel(COLORS.paper, 17, 12, 2, 3);
+      pixel(outline, 18, 16, 2, 2); pixel(outline, 15, 17, 4, 1); pixel(accent, 14, 17, 2, 2);
+    } else {
+      pixel(outline, 5, 3, 14, 3); pixel(outline, 3, 6, 4, 11); pixel(outline, 17, 6, 4, 11);
+      pixel(accent, 5, 6, 2, 8); pixel(accent, 17, 6, 2, 8); pixel(outline, 4, 14, 5, 6); pixel(outline, 15, 14, 5, 6); pixel(light, 6, 16, 3, 2); pixel(light, 15, 16, 3, 2);
+    }
   } else if (art === "planner") {
     pixel(outline, 4, 2, 16, 20); pixel(accent, 7, 4, 11, 16); pixel(light, 9, 7, 7, 2); pixel(light, 9, 11, 7, 1); pixel(light, 9, 14, 5, 1);
     pixel(outline, 4, 5, 3, 2); pixel(outline, 4, 10, 3, 2); pixel(outline, 4, 15, 3, 2);

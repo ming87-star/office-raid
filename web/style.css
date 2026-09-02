@@ -438,12 +438,14 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .placement-monitor-mounted { z-index: 6; }
 .prop-laptop { top: 62%; left: 50%; width: 29px; height: 29px; rotate: 180deg; translate: -50% 0; animation: office-work-use 1.1s steps(2) infinite; }
 .prop-tablet { top: 64%; left: 50%; width: 25px; height: 25px; rotate: 180deg; translate: -50% 0; animation: office-work-use 1.3s steps(2) infinite; }
-.prop-calculator { top: 65%; left: 50%; width: 22px; height: 22px; rotate: 180deg; translate: -50% 0; animation: office-work-use .9s steps(2) infinite; }
-.prop-headset { top: 8%; left: 50%; width: 63px; height: 63px; translate: -50% 0; animation: office-headset-use 1.8s steps(2) infinite; }
-.prop-planner { top: 61%; left: 9%; width: 25px; height: 25px; rotate: 180deg; animation: office-note-use 1.15s steps(2) infinite; }
-.prop-wallet { top: 63%; left: 11%; width: 22px; height: 22px; animation: office-wallet-use 1.4s steps(3) infinite; }
-.prop-tumbler { top: 60%; right: 10%; width: 24px; height: 24px; animation: office-drink-use 2.4s steps(4) infinite; }
-.prop-coffee { top: 59%; right: 8%; width: 25px; height: 25px; animation: office-drink-use 2.1s steps(4) infinite; }
+.prop-calculator { top: 47%; right: 7%; left: auto; width: 20px; height: 20px; rotate: 180deg; translate: 0 0; animation: office-work-use .9s steps(2) infinite; }
+.office-character:has(.prop-coffee, .prop-tumbler) .prop-calculator { right: auto; left: 7%; }
+.office-character:has(.prop-planner, .prop-wallet):has(.prop-coffee, .prop-tumbler) .prop-calculator { top: 44%; left: 50%; translate: -50% 0; }
+.prop-headset { top: 2%; left: 50%; width: 54px; height: 54px; translate: -50% 0; animation: office-headset-use 1.8s steps(2) infinite; }
+.prop-planner { top: 49%; left: 7%; width: 25px; height: 25px; rotate: 180deg; animation: office-note-use 1.15s steps(2) infinite; }
+.prop-wallet { top: 51%; left: 9%; width: 22px; height: 22px; animation: office-wallet-use 1.4s steps(3) infinite; }
+.prop-tumbler { top: 50%; right: 8%; width: 24px; height: 24px; animation: office-drink-use 2.4s steps(4) infinite; }
+.prop-coffee { top: 49%; right: 6%; width: 25px; height: 25px; animation: office-drink-use 2.1s steps(4) infinite; }
 .prop-charm { z-index: 6; top: 62%; right: 21%; width: 20px; height: 20px; transform-origin: 50% 0; animation: office-charm-use 1.5s steps(4) infinite; }
 .office-loadout-popover { position: absolute; z-index: 8; right: 50%; bottom: calc(100% - 22px); width: min(146px, 43vw); padding: 6px; border: 2px solid var(--ink); background: var(--panel); box-shadow: 3px 3px 0 var(--ink); opacity: 0; pointer-events: none; translate: 50% 5px; transition: opacity .15s ease, translate .15s ease; }
 .office-loadout-popover::after { content: ""; position: absolute; bottom: -7px; left: 50%; width: 10px; height: 10px; border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink); background: var(--panel); transform: translateX(-50%) rotate(45deg); }

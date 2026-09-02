@@ -40,6 +40,7 @@ jobs:
           node web/balance-rules.test.js
           node web/restored-features.test.js
           node web/project-report-rules.test.js
+          node web/work-mail-layout.test.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

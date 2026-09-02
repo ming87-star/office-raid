@@ -1232,7 +1232,7 @@ function renderWorkMail(notice) {
     <article class="work-mail panel">
       <div class="work-mail-toolbar"><span>받은편지함</span><b>${completed ? "처리 완료" : "답변 필요"}</b></div>
       <div class="work-mail-head">
-        <canvas width="24" height="24" data-portrait="${sender?.id || ""}" data-portrait-crop="face" aria-hidden="true"></canvas>
+        <span class="work-mail-avatar"><canvas width="24" height="24" data-portrait="${sender?.id || ""}" data-portrait-crop="face" aria-hidden="true"></canvas></span>
         <div><small>보낸 사람</small><strong>${escapeHtml(problem.senderName)}</strong><span>${escapeHtml(problem.typeLabel)} · 오늘 ${escapeHtml(mail.date)}</span></div>
       </div>
       <h2>${escapeHtml(problem.subject)}</h2>

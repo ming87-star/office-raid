@@ -1303,7 +1303,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .work-mail-toolbar { display: flex; justify-content: space-between; padding: 6px 9px; background: var(--ink); color: white; font-size: 8px; }
 .work-mail-toolbar b { color: var(--mustard); }
 .work-mail-head { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 7px; padding: 10px 10px 6px; border-bottom: 1px solid rgba(23,54,74,.2); }
-.work-mail-head canvas { width: 38px; height: 38px; image-rendering: pixelated; }
+.work-mail-avatar { display: grid; width: 40px; height: 40px; place-items: center; overflow: hidden; }
+.work-mail-avatar :is(canvas, .character-svg) { display: block; width: 40px; height: 40px; max-width: 100%; max-height: 100%; overflow: hidden; image-rendering: pixelated; }
 .work-mail-head div { min-width: 0; display: grid; }
 .work-mail-head small, .work-mail-head span { color: var(--muted); font-size: 7px; font-weight: 900; }
 .work-mail-head strong { font-size: 13px; }
@@ -1387,8 +1388,6 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   text-shadow:none;
   text-rendering:auto;
 }
-.work-mail-head{grid-template-columns:50px 1fr}
-.work-mail-head .character-svg{width:46px;height:46px;image-rendering:pixelated}
 .office-mail.waiting{background:#eef1ef}
 .office-mail.waiting>span{background:#9aa6ab}
 .office-mail.waiting>b{background:var(--muted)}

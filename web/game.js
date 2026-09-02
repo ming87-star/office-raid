@@ -328,6 +328,8 @@ const NORMAL_DAMAGE_VARIANCE = .12;
 const DIRECTIVE_DAMAGE_VARIANCE = .15;
 const SAVE_KEY = "office-raid-save";
 const SAVE_VERSION = 1;
+const FEATURES = window.OfficeRaidFeatures;
+if (!FEATURES) throw new Error("restored-features.js must load before game.js");
 const COMPANY_LEVELS = [
   { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
   { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
@@ -348,6 +350,7 @@ let representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESEN
 let representativeMode = "basic";
 let openingPage = 0;
 let equipmentTargetId = null;
+let equipmentSaleTargetId = null;
 let officePage = 0;
 let officeDialogueTimer = null;
 let recentOfficeDialogueIds = [];
@@ -363,6 +366,11 @@ function createInitialState() {
     companyLevel: 0,
     capacity: COMPANY_LEVELS[0].capacity,
     equipment: [],
+    equipmentDropPity: 0,
+    equipmentTradeCount: 0,
+    equipmentTradeRevenue: 0,
+    workMail: null,
+    workMailStats: { correct: 0, total: 0, streak: 0, bestStreak: 0, completed: 0 },
     employees: [],
     teamIds: [],
     postingRefreshes: POSTING_REFRESH_MAX,
@@ -377,7 +385,8 @@ function createInitialState() {
     financialHistory: [],
     financialPeriod: {
       number: 1, startCash: 1200, revenue: 0, payroll: 0,
-      recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0
+      recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0,
+      equipmentSales: 0, workErrors: 0
     }
   };
 }
@@ -436,6 +445,11 @@ function normalizeSavedState(savedState) {
     companyLevel,
     capacity: company.capacity,
     equipment: Array.isArray(savedState.equipment) ? savedState.equipment : [],
+    equipmentDropPity: Math.max(0, Math.min(2, Number(savedState.equipmentDropPity) || 0)),
+    equipmentTradeCount: Math.max(0, Number(savedState.equipmentTradeCount) || 0),
+    equipmentTradeRevenue: Math.max(0, Number(savedState.equipmentTradeRevenue) || 0),
+    workMail: savedState.workMail && typeof savedState.workMail === "object" ? savedState.workMail : null,
+    workMailStats: { ...initial.workMailStats, ...(savedState.workMailStats || {}) },
     tutorialBattleCompleted: typeof savedState.tutorialBattleCompleted === "boolean"
       ? savedState.tutorialBattleCompleted
       : Number(savedState.projectClears || 0) > 0 || employees.length > 3,
@@ -501,6 +515,7 @@ function applySavedGame(payload) {
   representativeMode = "basic";
   openingPage = 0;
   equipmentTargetId = state.employees[0]?.id || null;
+  equipmentSaleTargetId = null;
   officePage = 0;
   recentOfficeDialogueIds = [];
   hrTerminationTargetId = null;
@@ -522,6 +537,7 @@ function resetGameState() {
   representativeMode = "basic";
   openingPage = 0;
   equipmentTargetId = null;
+  equipmentSaleTargetId = null;
   officePage = 0;
   recentOfficeDialogueIds = [];
   hrTerminationTargetId = null;
@@ -1084,7 +1100,7 @@ function recordFinancialAmount(category, amount) {
 }
 
 function financialExpenseTotal(period) {
-  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0);
+  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.workErrors || 0);
 }
 
 function closeFinancialPeriodIfDue() {
@@ -1104,7 +1120,8 @@ function closeFinancialPeriodIfDue() {
   state.pendingFinancialReport = report;
   state.financialPeriod = {
     number: period.number + 1, startCash: state.cash, revenue: 0, payroll: 0,
-    recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0
+    recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0,
+    equipmentSales: 0, workErrors: 0
   };
   return report;
 }
@@ -1161,11 +1178,106 @@ function officeEquipmentMarkup(member) {
   </div><div class="office-loadout-popover" aria-hidden="true"><em>현재 사용 장비</em>${details}</div>`;
 }
 
+
+function ensureWorkMail() {
+  if (!state.tutorialBattleCompleted) return null;
+  const date = FEATURES.todayKey(new Date());
+  if (state.workMail?.date === date) return state.workMail;
+  const availableSenders = state.employees.filter(member => !member.isRepresentative);
+  const seed = `${date}|${state.companyName}|${state.projectClears}`;
+  const sender = availableSenders[FEATURES.hashString(seed) % Math.max(1, availableSenders.length)] || state.employees[0];
+  state.workMail = {
+    date,
+    completed: false,
+    wrongAttempts: 0,
+    senderId: sender?.id || null,
+    problem: FEATURES.createWorkMailProblem({
+      seed,
+      senderName: sender?.name || "직원",
+      industry: state.industry
+    })
+  };
+  return state.workMail;
+}
+
+function workMailAccuracyLabel() {
+  const stats = state.workMailStats || {};
+  return stats.total ? `${FEATURES.workMailAccuracy(stats)}% · ${stats.correct}/${stats.total}` : "첫 답변 대기";
+}
+
+function openWorkMail(notice = "직원이 보낸 도움 요청을 확인하세요.") {
+  currentView = "work-mail";
+  clearBattleTimer();
+  clearOfficeDialogue();
+  ensureWorkMail();
+  renderWorkMail(notice);
+}
+
+function renderWorkMail(notice) {
+  const mail = ensureWorkMail();
+  if (!mail) return renderOffice("첫 프로젝트 완료 후 업무 메일이 도착합니다.");
+  const problem = mail.problem;
+  const sender = state.employees.find(member => member.id === mail.senderId);
+  const completed = Boolean(mail.completed);
+  const options = completed ? "" : problem.options.map((option, index) =>
+    `<button class="work-mail-option" data-work-mail-answer="${index}"><i>${index + 1}</i><span>${escapeHtml(option)}</span></button>`
+  ).join("");
+  const outcome = completed
+    ? `<div class="work-mail-complete"><small>TODAY'S TASK</small><strong>오늘의 임무 완료!</strong><span>누적 정확도 ${workMailAccuracyLabel()} · 평판 +2</span></div>`
+    : `<div class="work-mail-options">${options}</div>`;
+  app.innerHTML = `${header("업무 메일", notice)}<section class="screen work-mail-screen">
+    <article class="work-mail panel">
+      <div class="work-mail-toolbar"><span>받은편지함</span><b>${completed ? "처리 완료" : "답변 필요"}</b></div>
+      <div class="work-mail-head">
+        <canvas width="24" height="24" data-portrait="${sender?.id || ""}" data-portrait-crop="face" aria-hidden="true"></canvas>
+        <div><small>보낸 사람</small><strong>${escapeHtml(problem.senderName)}</strong><span>${escapeHtml(problem.typeLabel)} · 오늘 ${escapeHtml(mail.date)}</span></div>
+      </div>
+      <h2>${escapeHtml(problem.subject)}</h2>
+      <p class="work-mail-body">${escapeHtml(problem.body)}</p>
+      <div class="work-mail-question"><small>HELP REQUEST</small><strong>${escapeHtml(problem.question)}</strong></div>
+      ${outcome}
+      ${completed ? `<p class="work-mail-explanation">${escapeHtml(problem.explanation)}</p>` : `<p class="work-mail-penalty">오답 시 재작업비 30만원 · 답변마다 누적 정확도에 반영</p>`}
+    </article>
+    <button class="ink" id="back-from-work-mail">← 사무실</button>
+  </section>`;
+  mountPortraits();
+  document.querySelectorAll("[data-work-mail-answer]").forEach(button =>
+    button.addEventListener("click", () => submitWorkMailAnswer(Number(button.dataset.workMailAnswer)))
+  );
+  document.querySelector("#back-from-work-mail").addEventListener("click", () => renderOffice());
+}
+
+function submitWorkMailAnswer(answerIndex) {
+  const mail = ensureWorkMail();
+  if (!mail || mail.completed) return renderWorkMail("이미 완료한 업무 메일입니다.");
+  const stats = state.workMailStats;
+  stats.total += 1;
+  if (FEATURES.validateWorkMailAnswer(mail.problem, answerIndex)) {
+    stats.correct += 1;
+    stats.streak += 1;
+    stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+    stats.completed += 1;
+    mail.completed = true;
+    mail.completedAt = new Date().toISOString();
+    state.reputation += 2;
+    saveGame();
+    return renderWorkMail("정확하게 답변했습니다. 오늘의 임무를 완료했습니다!");
+  }
+  stats.streak = 0;
+  mail.wrongAttempts += 1;
+  const penalty = Math.min(30, Math.max(0, state.cash));
+  state.cash -= penalty;
+  recordFinancialAmount("workErrors", penalty);
+  saveGame();
+  renderWorkMail(`오답입니다. 재작업비 ${penalty}만원이 발생했습니다. 다시 확인해 주세요.`);
+}
+
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.", animateEntry = false) {
   currentView = "office";
   clearCompanyLaunchTimer();
   clearBattleTimer();
   repairProjectTeam();
+  if (state.tutorialBattleCompleted) ensureWorkMail();
   saveGame();
   const tutorialPending = !state.tutorialBattleCompleted;
   const officeNotice = tutorialPending ? "창립팀으로 첫 프로젝트를 완료해 면접 기능을 해금하세요." : notice;
@@ -1178,6 +1290,8 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   officePage = Math.min(officePage, officePageCount - 1);
   const officeMembers = state.employees.slice(officePage * officePageSize, (officePage + 1) * officePageSize);
   const equippedCount = equippedEquipmentCount();
+  const activeMail = state.workMail;
+  const mailMarkup = tutorialPending ? "" : `<button class="office-mail ${activeMail?.completed ? "completed" : "unread"}" id="work-mail"><span aria-hidden="true">✉</span><div><small>${activeMail?.completed ? "TODAY'S TASK COMPLETE" : "NEW WORK MAIL"}</small><strong>${activeMail?.completed ? "오늘의 임무 완료!" : `${escapeHtml(activeMail?.problem?.senderName || "직원")}의 도움 요청`}</strong><em>정확도 ${workMailAccuracyLabel()}</em></div><b>${activeMail?.completed ? "확인" : "답변"}</b></button>`;
   const industry = currentIndustry();
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
@@ -1187,6 +1301,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   app.innerHTML = `${header(company.name, officeNotice)}
     <section class="screen">
       <div class="office-room panel company-level-${company.id} staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 직원 ${officeMembers.length}명">${officeZone}${desks}</div>
+      ${mailMarkup}
       <div class="company-card panel">
         <div class="company-card-head"><div><small>COMPANY FILE · ${company.grade}</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</b></div>
         <div class="company-stats" aria-label="회사 현황">
@@ -1197,6 +1312,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
         <div class="company-notes">
           <p><b>ACTION ORDER</b><span>${teamNames}</span></p>
           <p><b>성과 ${state.projectClears}회 · 급여 D-${projectsUntilPayroll()}</b><span>월급 ${totalPayroll()} · 특별채용 ${specialRecruitment}</span></p>
+          ${tutorialPending ? "" : `<p><b>업무 정확도</b><span>${workMailAccuracyLabel()} · 연속 ${state.workMailStats.streak}회</span></p>`}
           ${tutorialPending ? `<p class="onboarding-note"><b>FIRST MISSION</b><span>첫 프로젝트 성공 시 면접 기능 해금</span></p>` : ""}
         </div>
       </div>
@@ -1211,6 +1327,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
     </section>`;
   mountPortraits();
   mountEquipmentIcons();
+  document.querySelector("#work-mail")?.addEventListener("click", () => openWorkMail());
   document.querySelector("#interview").addEventListener("click", () => openInterview());
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
@@ -1493,17 +1610,19 @@ function renderFinancialReport() {
     <article class="financial-report panel ${grade.tone}">
       <div class="financial-title"><div><small>QUARTERLY REPORT</small><h2>제${report.number}분기 손익 요약</h2></div><span>${grade.label}</span></div>
       <div class="financial-chart" aria-label="매출과 비용 비교">
-        <div><b>프로젝트 매출</b><i><em style="width:${revenueWidth}%"></em></i><strong>+${report.revenue}</strong></div>
+        <div><b>총매출</b><i><em style="width:${revenueWidth}%"></em></i><strong>+${report.revenue}</strong></div>
         <div class="expense"><b>총비용</b><i><em style="width:${expenseWidth}%"></em></i><strong>-${report.expenses}</strong></div>
       </div>
       <div class="financial-statement">
-        <p><span>프로젝트 매출</span><b class="positive">+${report.revenue}만원</b></p>
+        <p><span>프로젝트 매출</span><b class="positive">+${report.revenue - (report.equipmentSales || 0)}만원</b></p>
+        <p><span>장비 중고거래</span><b class="positive">+${report.equipmentSales || 0}만원</b></p>
         <p><span>급여</span><b>-${report.payroll}만원</b></p>
         <p><span>채용 계약금</span><b>-${report.recruitment}만원</b></p>
         <p><span>채용 공고</span><b>-${report.posting}만원</b></p>
         <p><span>직원 유지 비용</span><b>-${report.retention}만원</b></p>
         <p><span>계약 종료 정산금</span><b>-${report.termination}만원</b></p>
         <p><span>사무실 확장 투자</span><b>-${report.expansion || 0}만원</b></p>
+        <p><span>업무 오답 재작업</span><b>-${report.workErrors || 0}만원</b></p>
         <p class="profit"><span>영업이익</span><b class="${report.operatingProfit >= 0 ? "positive" : "negative"}">${profitSign}${report.operatingProfit}만원</b></p>
       </div>
       <div class="financial-balance"><span><small>기초 현금</small><strong>${report.startCash}만원</strong></span><i>→</i><span><small>기말 현금</small><strong>${report.endingCash}만원</strong></span></div>
@@ -1579,7 +1698,9 @@ function bossProjectProgress() {
 }
 
 function projectCard(project, locked = false) {
-  const reward = project.boss ? `현금 ${project.cash} · 희귀 장비 2개` : `현금 ${project.cash} · 평판 ${project.reputation}`;
+  const dropChance = FEATURES.equipmentDropChance(project, !state.tutorialBattleCompleted);
+  const dropText = project.boss ? "희귀 장비 2개 확정" : `장비 드롭 ${Math.round(dropChance * 100)}%${state.equipmentDropPity >= 2 ? " · 확정 보정" : ""}`;
+  const reward = `현금 ${project.cash} · 평판 ${project.reputation} · ${dropText}`;
   const recommended = (project.recommended || []).map(department => DEPARTMENTS[department]?.short).filter(Boolean).join(" · ");
   const episode = projectEpisode(project);
   return `<article class="project-card panel ${project.boss ? "boss-project" : ""} ${locked ? "locked" : ""}">
@@ -1641,19 +1762,29 @@ function renderEquipment(notice) {
     const item = target.equipment[slot];
     return `<article class="equipment-slot ${item ? "filled" : ""}"><span style="${item ? `--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}` : ""}">${item ? equipmentIconMarkup(item) : info.icon}</span><div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}</article>`;
   }).join("");
-  const inventory = state.equipment.length ? state.equipment.map(item => `<article class="equipment-item"><span style="--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}">${equipmentIconMarkup(item)}</span><div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div><button class="teal" data-equip="${item.id}">장착</button></article>`).join("") : `<div class="empty-inventory">프로젝트를 완료하면 장비를 획득합니다.</div>`;
+  const inventory = state.equipment.length ? state.equipment.map(item => {
+    const resale = FEATURES.equipmentResalePrice(item);
+    return `<article class="equipment-item"><span style="--rarity-color:${EQUIPMENT_RARITIES[item.rarity].color}">${equipmentIconMarkup(item)}</span><div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div><div class="equipment-item-actions"><button class="teal" data-equip="${item.id}">장착</button><button class="mustard" data-sell-equipment="${item.id}">판매 ${resale}</button></div></article>`;
+  }).join("") : `<div class="empty-inventory">프로젝트에서 장비를 획득하면 장착하거나 중고로 판매할 수 있습니다.</div>`;
+  const saleItem = state.equipment.find(item => item.id === equipmentSaleTargetId);
+  const saleConfirm = saleItem ? `<div class="equipment-sale-backdrop" role="dialog" aria-modal="true" aria-labelledby="equipment-sale-title"><div class="equipment-sale-confirm panel"><small>USED EQUIPMENT MARKET</small><strong id="equipment-sale-title">${escapeHtml(saleItem.name)}을 판매할까요?</strong><p>판매 대금 <b>${FEATURES.equipmentResalePrice(saleItem)}만원</b>을 받고 보관함에서 제거합니다. 판매 후에는 되돌릴 수 없습니다.</p><div><button class="ink" id="cancel-equipment-sale">취소</button><button class="mustard" id="confirm-equipment-sale">판매 확정</button></div></div></div>` : "";
   app.innerHTML = `${header("장비 관리", `${target.name} · 실무 ${stats.work} · 협업 ${stats.collaboration} · ${notice}`)}<section class="screen equipment-screen">
     <div class="equipment-people">${people}</div>
     <div class="equipment-slots panel">${slots}</div>
+    <div class="equipment-market-summary panel"><div><small>장비 중고거래</small><strong>누적 ${state.equipmentTradeCount}건 · +${state.equipmentTradeRevenue}만원</strong></div><span>보관 장비만 판매 가능</span></div>
     <p class="section-label">보관함 · ${state.equipment.length}</p>
     <div class="equipment-inventory">${inventory}</div>
     <button class="ink" id="back-from-equipment">← 사무실</button>
+    ${saleConfirm}
   </section>`;
   mountPortraits();
   mountEquipmentIcons();
   document.querySelectorAll("[data-equipment-target]").forEach(button => button.addEventListener("click", () => { equipmentTargetId = button.dataset.equipmentTarget; renderEquipment("장착 대상을 변경했습니다."); }));
   document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
   document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
+  document.querySelectorAll("[data-sell-equipment]").forEach(button => button.addEventListener("click", () => requestEquipmentSale(button.dataset.sellEquipment)));
+  document.querySelector("#cancel-equipment-sale")?.addEventListener("click", cancelEquipmentSale);
+  document.querySelector("#confirm-equipment-sale")?.addEventListener("click", confirmEquipmentSale);
   document.querySelector("#back-from-equipment").addEventListener("click", () => renderOffice());
 }
 
@@ -1675,6 +1806,36 @@ function unequipItem(itemId) {
   state.equipment.push(target.equipment[slot]);
   target.equipment[slot] = null;
   renderEquipment("장비를 보관함으로 옮겼습니다.");
+}
+
+function requestEquipmentSale(itemId) {
+  if (!state.equipment.some(item => item.id === itemId)) return renderEquipment("판매할 장비를 찾을 수 없습니다.");
+  equipmentSaleTargetId = itemId;
+  renderEquipment("판매 금액과 장비를 확인해 주세요.");
+}
+
+function cancelEquipmentSale() {
+  equipmentSaleTargetId = null;
+  renderEquipment("중고거래를 취소했습니다.");
+}
+
+function confirmEquipmentSale() {
+  const index = state.equipment.findIndex(item => item.id === equipmentSaleTargetId);
+  if (index < 0) {
+    equipmentSaleTargetId = null;
+    return renderEquipment("판매할 장비를 찾을 수 없습니다.");
+  }
+  const item = state.equipment[index];
+  const price = FEATURES.equipmentResalePrice(item);
+  state.equipment.splice(index, 1);
+  state.cash += price;
+  state.equipmentTradeCount += 1;
+  state.equipmentTradeRevenue += price;
+  recordFinancialAmount("revenue", price);
+  recordFinancialAmount("equipmentSales", price);
+  equipmentSaleTargetId = null;
+  saveGame();
+  renderEquipment(`${item.name}을(를) ${price}만원에 판매했습니다.`);
 }
 
 function rollRank(mode = "regular") {
@@ -1902,6 +2063,8 @@ function battleStep() {
       battle.workload = Math.max(0, battle.workload - automationResult);
       battle.automationTurns -= 1;
       battle.eventText = `✓ 자동화 배포! 업무량 ${automationResult} 처리`;
+      spawnDamageNumber(automationResult, { kind: "automation", label: "AUTO" });
+      updateBattleNumbers(round);
       checkWorkloadThresholds();
       if (battle.workload <= 0) return finishBattleSuccess();
     }
@@ -1947,6 +2110,7 @@ function battleStep() {
   checkWorkloadThresholds();
   animatePacket(member.department, battle.action % 3);
   updateBattleNumbers(round);
+  spawnDamageNumber(damage, { kind: affinity ? "affinity" : "normal", label: affinity ? "상성" : "업무", lane: team.indexOf(member) });
 
   if (battle.workload <= 0) return finishBattleSuccess();
   if (battle.directiveGauge >= 100) return openDirective();
@@ -1984,10 +2148,19 @@ function finishBattleSuccess(scheduleRender = true) {
       ? "면접 기능 해금! 이제 새로운 직원을 채용할 수 있습니다."
       : specialUnlocked ? "헤드헌팅권 1장 획득!" : `공고 갱신 ${POSTING_REFRESH_MAX}/${POSTING_REFRESH_MAX} 회복`;
     battle.payrollNotice = payroll ? `급여 정산 -${payroll}만원 · 현재 현금 ${state.cash}만원` : "";
-    battle.rewards = battle.project.boss
-      ? [generateEquipmentReward(2), generateEquipmentReward(2)]
-      : [generateEquipmentReward()];
-    battle.reward = battle.rewards[0];
+    const dropResult = FEATURES.resolveEquipmentDrops({
+      project: battle.project,
+      tutorial: battle.tutorialMode,
+      pity: state.equipmentDropPity,
+      roll: Math.random()
+    });
+    state.equipmentDropPity = dropResult.nextPity;
+    battle.dropChance = dropResult.chance;
+    battle.rewards = Array.from({ length: dropResult.dropCount }, () => generateEquipmentReward(dropResult.minimumRarity));
+    battle.reward = battle.rewards[0] || null;
+    battle.dropNotice = dropResult.dropCount
+      ? `장비 ${dropResult.dropCount}개 획득 · 드롭률 ${Math.round(dropResult.chance * 100)}%`
+      : `장비 미획득 · 확정 보정 ${state.equipmentDropPity}/2`;
     state.equipment.push(...battle.rewards);
     const financialReport = closeFinancialPeriodIfDue();
     battle.financialNotice = financialReport ? `${financialReport.number}분기 결산이 준비됐습니다.` : "";
@@ -2359,6 +2532,7 @@ function resolveDirective() {
     battle.log = "마감 직전 긴급 지시로도 업무를 끝내지 못했습니다.";
   }
   renderBattle();
+  window.setTimeout(() => spawnDamageNumber(actualTotal, { kind: outcome === "great" ? "critical" : "directive", label: combo || "긴급 지시" }), 70);
   window.setTimeout(() => {
     if (currentView !== "battle") return;
     battle.skillFx = null;
@@ -2523,7 +2697,9 @@ function renderBattle() {
   const preview = activeDirectivePreview(team);
   const rewards = battle.rewards || (battle.reward ? [battle.reward] : []);
   const bestRewardRarity = rewards.length ? Math.max(...rewards.map(reward => reward.rarity)) : 0;
-  const rewardShowcase = rewards.length ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div></div>` : "";
+  const rewardShowcase = rewards.length
+    ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div><p>${escapeHtml(battle.dropNotice || "")}</p></div>`
+    : battle.result === "success" ? `<div class="reward-showcase no-drop"><small class="reward-label">EQUIPMENT DROP</small><strong>이번에는 장비가 나오지 않았습니다.</strong><p>${escapeHtml(battle.dropNotice || "")}</p></div>` : "";
   const interviewUnlock = battle.tutorialUnlock ? `<div class="tutorial-unlock"><small>NEW FEATURE</small><strong>면접 기능 해금</strong><span>새로운 직원을 채용해 다음 팀을 구성할 수 있습니다.</span></div>` : "";
   const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${interviewUnlock}${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.financialNotice ? `<p class="reward-notice financial-notice">${escapeHtml(battle.financialNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>${battle.tutorialMode ? "능력치와 행동 순서를 확인한 뒤 첫 프로젝트에 다시 도전하세요." : "팀 편성과 부서 연계를 바꿔 다시 도전하세요."}</p></div>` : "";
   const actingMemberId = battle.awaitingDirective ? battle.directiveFocusId : team[battle.action % Math.max(1, team.length)]?.id;
@@ -2608,6 +2784,17 @@ function updateBattleNumbers(round) {
   boss.classList.remove("hit");
   void boss.offsetWidth;
   boss.classList.add("hit");
+}
+
+function spawnDamageNumber(amount, { kind = "normal", label = "업무", lane = 1 } = {}) {
+  const arena = document.querySelector("#arena");
+  if (!arena || !Number.isFinite(Number(amount))) return;
+  const number = document.createElement("span");
+  number.className = `damage-number damage-${kind}`;
+  number.style.setProperty("--damage-x", `${Math.max(-34, Math.min(34, (Number(lane) - 1.5) * 18))}px`);
+  number.innerHTML = `<small>${escapeHtml(label)}</small><strong>-${Math.max(0, Math.round(Number(amount)))}</strong>`;
+  arena.appendChild(number);
+  window.setTimeout(() => number.remove(), 1150);
 }
 
 function animatePacket(department, lane) {

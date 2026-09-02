@@ -27,6 +27,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate restored game systems
+        run: |
+          node --check web/restored-features.js
+          node --check web/game.js
+          node web/restored-features.test.js
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 

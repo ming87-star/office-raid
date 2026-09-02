@@ -1291,7 +1291,15 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const officeMembers = state.employees.slice(officePage * officePageSize, (officePage + 1) * officePageSize);
   const equippedCount = equippedEquipmentCount();
   const activeMail = state.workMail;
-  const mailMarkup = tutorialPending ? "" : `<button class="office-mail ${activeMail?.completed ? "completed" : "unread"}" id="work-mail"><span aria-hidden="true">✉</span><div><small>${activeMail?.completed ? "TODAY'S TASK COMPLETE" : "NEW WORK MAIL"}</small><strong>${activeMail?.completed ? "오늘의 임무 완료!" : `${escapeHtml(activeMail?.problem?.senderName || "직원")}의 도움 요청`}</strong><em>정확도 ${workMailAccuracyLabel()}</em></div><b>${activeMail?.completed ? "확인" : "답변"}</b></button>`;
+  const dailyMail = state.dailyMissions;
+  const pendingMail = dailyMail?.items?.find(item => item.arrived && !item.completed);
+  const allMailCompleted = Boolean(dailyMail?.items?.length && dailyMail.items.every(item => item.completed));
+  const pendingSender = state.employees.find(member => member.id === pendingMail?.senderId);
+  const mailStateClass = pendingMail ? "unread" : allMailCompleted ? "completed" : "waiting";
+  const mailKicker = pendingMail ? "NEW WORK MAIL" : allMailCompleted ? "TODAY'S TASK COMPLETE" : "MAILBOX";
+  const mailTitle = pendingMail ? `${escapeHtml(pendingSender?.name || activeMail?.problem?.senderName || "직원")}의 검토 요청` : allMailCompleted ? "오늘의 임무 완료!" : "다음 업무 메일 대기 중";
+  const mailAction = pendingMail ? "답변" : "확인";
+  const mailMarkup = tutorialPending ? "" : `<button class="office-mail ${mailStateClass}" id="work-mail"><span aria-hidden="true">✉</span><div><small>${mailKicker}</small><strong>${mailTitle}</strong><em>정확도 ${workMailAccuracyLabel()}</em></div><b>${mailAction}</b></button>`;
   const industry = currentIndustry();
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
@@ -2817,6 +2825,7 @@ function mountPortraits() {
     if (member) {
       if (canvas.dataset.facing === "back") drawBackPortrait(canvas, member);
       else if (canvas.dataset.portraitCrop === "face") drawFacePreview(canvas, member);
+      else if (canvas.dataset.portraitCrop === "upper") drawUpperBodyPreview(canvas, member);
       else drawPortrait(canvas, member);
     }
   });
@@ -2959,6 +2968,12 @@ function drawPortrait(target, member) {
 
 function drawFacePreview(target, member) {
   return window.OfficeRaidCharacter.mount(target, member, "front", true);
+}
+
+function drawUpperBodyPreview(target, member) {
+  const portrait = window.OfficeRaidCharacter.mount(target, member, "front", false);
+  if (portrait) portrait.setAttribute("viewBox", "28 10 104 154");
+  return portrait;
 }
 
 const BOTTOM_COLORS = ["#314c68", "#b89b72", "#405a55", "#5c536b", "#65727c", "#725145", "#435f78", "#79636a"];

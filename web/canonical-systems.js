@@ -59,7 +59,7 @@
   function syncLegacy(daily){
     const next=daily.items.find(x=>x.arrived&&!x.completed);
     const sender=state.employees.find(m=>m.id===next?.senderId);
-    state.workMail={date:daily.date,completed:daily.items.every(x=>x.completed),problem:{senderName:sender?.name||"직원"}};
+    state.workMail={date:daily.date,completed:daily.items.every(x=>x.completed),hasPending:Boolean(next),problem:{senderName:sender?.name||"직원"}};
     state.workMailStats={...(state.workMailStats||{}),streak:0};
   }
 
@@ -107,7 +107,7 @@
       <div class="work-mail-summary panel"><span><small>오늘의 요청</small><strong>${done}/${d.total}</strong></span><span><small>정확도</small><strong>${d.accuracy}%</strong></span><span><small>도착</small><strong>${arrived.length}/${d.total}</strong></span></div>
       <div class="work-mail-list">${tabs}</div><article class="work-mail panel">
       <div class="work-mail-toolbar"><span>받은편지함 · ${escapeHtml(d.date)}</span><b>${mail.completed?"처리 완료":"답변 필요"}</b></div>
-      <div class="work-mail-head"><canvas width="24" height="24" data-portrait="${sender?.id||""}" data-portrait-crop="face"></canvas><div><small>보낸 사람</small><strong>${escapeHtml(sender?.name||"직원")}</strong><span>${escapeHtml(DEPARTMENTS[sender?.department]?.name||"담당 부서")} · ${escapeHtml(employeePosition(sender))}</span></div></div>
+      <div class="work-mail-head"><canvas width="24" height="24" data-portrait="${sender?.id||""}" data-portrait-crop="upper"></canvas><div><small>보낸 사람</small><strong>${escapeHtml(sender?.name||"직원")}</strong><span>${escapeHtml(DEPARTMENTS[sender?.department]?.name||"담당 부서")} · ${escapeHtml(employeePosition(sender))}</span></div></div>
       <h2>${escapeHtml(p.subject)}</h2><p class="work-mail-body">${escapeHtml(p.body)}\n\n${escapeHtml(tone(sender,mail.wrongAttempts?"retry":"request"))}</p>
       <div class="work-mail-question"><small>대표 검토 요청 · ${escapeHtml(p.typeLabel)}</small><strong>${escapeHtml(p.question)}</strong></div>${result}
       ${mail.completed?`<p class="work-mail-explanation">${escapeHtml(p.explanation)}</p>`:`<p class="work-mail-penalty">오답 시 오늘의 정확도 -20 · 정답을 찾을 때까지 다시 검토할 수 있습니다.</p>`}

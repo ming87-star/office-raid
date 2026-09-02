@@ -1370,3 +1370,20 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   -webkit-text-stroke:.7px var(--ink);
   text-rendering:geometricPrecision;
 }
+
+.damage-number strong{
+  font-family:"Arial Rounded MT Bold","Pretendard","Noto Sans KR","Roboto",system-ui,sans-serif;
+  font-weight:900;
+  font-stretch:normal;
+  font-variant-numeric:lining-nums tabular-nums;
+  letter-spacing:0;
+  -webkit-text-stroke:0 transparent;
+  text-shadow:none;
+  text-rendering:auto;
+}
+.work-mail-head{grid-template-columns:50px 1fr}
+.work-mail-head .character-svg{width:46px;height:46px;image-rendering:pixelated}
+.office-mail.waiting{background:#eef1ef}
+.office-mail.waiting>span{background:#9aa6ab}
+.office-mail.waiting>b{background:var(--muted)}
+.office-mail.waiting small{color:var(--muted)}

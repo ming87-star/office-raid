@@ -43,7 +43,9 @@
   }
 
   function equipmentDropChance(project = {}, tutorial = false) {
-    return tutorial || project.boss ? 1 : DROP_RATES[0];
+    if (tutorial || project.boss) return 1;
+    const configured = Number(project.dropChance);
+    return Number.isFinite(configured) && configured >= 0 && configured <= 1 ? configured : DROP_RATES[0];
   }
 
   function resolveEquipmentDrops({ project = {}, tutorial = false, roll = Math.random() } = {}) {

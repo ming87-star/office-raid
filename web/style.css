@@ -1387,3 +1387,15 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-mail.waiting>span{background:#9aa6ab}
 .office-mail.waiting>b{background:var(--muted)}
 .office-mail.waiting small{color:var(--muted)}
+
+.project-card-head strong{flex:1 1 auto}
+.project-card-head small{max-width:82px;overflow:hidden;text-overflow:ellipsis}
+.project-risk-badge{align-self:center;padding:3px 5px;border:2px solid var(--ink);font-size:7px;font-weight:1000;line-height:1}
+.project-risk-badge.risk-stable{background:#dce9df;color:var(--green)}
+.project-risk-badge.risk-challenge{background:#fff0b8;color:#8a6100}
+.project-risk-badge.risk-high{background:#ffd7cf;color:var(--red)}
+.project-risk-badge.risk-boss{background:var(--red);color:white}
+.project-card.risk-high{border-color:var(--red)}
+.project-affinity.team-ready{box-shadow:inset 4px 0 0 var(--teal)}
+.project-affinity.team-short{box-shadow:inset 4px 0 0 var(--red)}
+.project-affinity.team-short em{color:var(--red)}

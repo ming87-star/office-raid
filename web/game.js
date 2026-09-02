@@ -329,7 +329,9 @@ const DIRECTIVE_DAMAGE_VARIANCE = .15;
 const SAVE_KEY = "office-raid-save";
 const SAVE_VERSION = 1;
 const FEATURES = window.OfficeRaidFeatures;
+const BALANCE = window.OfficeRaidBalance;
 if (!FEATURES) throw new Error("restored-features.js must load before game.js");
+if (!BALANCE) throw new Error("balance-rules.js must load before game.js");
 const COMPANY_LEVELS = [
   { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
   { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
@@ -1664,14 +1666,14 @@ function generateEquipmentReward(minimumRarity = 0) {
 }
 
 function scaledProject(project) {
-  const growth = Math.floor(state.projectClears / 4);
-  const workloadBonus = growth * (project.boss ? 55 : 22);
-  return {
-    ...project,
-    max: project.workload + workloadBonus,
-    cash: project.cash + growth * (project.boss ? 300 : 90),
-    reputation: project.reputation + growth * (project.boss ? 5 : 2)
-  };
+  return BALANCE.scaleProject(project, {
+    clears: state.projectClears,
+    tutorial: !state.tutorialBattleCompleted
+  });
+}
+
+function projectWithRisk(project, riskTier = "stable") {
+  return BALANCE.applyRisk(project, riskTier);
 }
 
 function currentProjectChapter() {
@@ -1689,7 +1691,8 @@ function regularProjectOptions() {
   const commonProjects = PROJECTS.filter(project => project.industry === "common" && project.chapter <= chapter);
   const pool = [...industryProjects, ...commonProjects];
   const start = state.projectClears % pool.length;
-  return [0, 1, 2].map(offset => scaledProject(pool[(start + offset) % pool.length]));
+  const riskTiers = ["stable", "challenge", "high"];
+  return [0, 1, 2].map(offset => projectWithRisk(scaledProject(pool[(start + offset) % pool.length]), riskTiers[offset]));
 }
 
 function nextBossProject() {
@@ -1711,13 +1714,17 @@ function projectCard(project, locked = false) {
   const reward = `현금 ${project.cash} · 평판 ${project.reputation} · ${dropText}`;
   const recommended = (project.recommended || []).map(department => DEPARTMENTS[department]?.short).filter(Boolean).join(" · ");
   const episode = projectEpisode(project);
-  return `<article class="project-card panel ${project.boss ? "boss-project" : ""} ${locked ? "locked" : ""}">
-    <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><strong>${escapeHtml(project.name)}</strong><small>EP.${episode.chapter} ${escapeHtml(episode.name)}</small></div>
+  const coverage = BALANCE.recommendedCoverage(currentTeam(), project);
+  const ready = coverage.missing === 0;
+  const riskLabel = project.riskLabel || (project.boss ? "장기" : "안정");
+  const riskTone = project.riskTone || (project.boss ? "boss" : "stable");
+  return `<article class="project-card panel ${project.boss ? "boss-project" : ""} risk-${riskTone} ${locked ? "locked" : ""}">
+    <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><b class="project-risk-badge risk-${riskTone}">${escapeHtml(riskLabel)}</b><strong>${escapeHtml(project.name)}</strong><small>EP.${episode.chapter} ${escapeHtml(episode.name)}</small></div>
     <p>${escapeHtml(project.summary)}</p>
-    <div class="project-affinity"><b>추천 부서</b><span>${escapeHtml(recommended || "모든 부서")}</span><em>상성 피해 +18%</em></div>
+    <div class="project-affinity ${ready ? "team-ready" : "team-short"}"><b>추천 부서</b><span>${escapeHtml(recommended || "모든 부서")}</span><em>상성 +18% · 적합 ${coverage.matches}/${coverage.target}</em></div>
     <div class="project-spec"><span>업무량 ${project.max}</span><span>마감 ${project.deadline}턴</span></div>
     <div class="project-reward">${locked ? `일반 프로젝트 ${bossProjectProgress()}/4 완료` : escapeHtml(reward)}</div>
-    <button class="${project.boss ? "red" : "teal"}" data-project-id="${project.id}" ${locked ? "disabled" : ""}>${locked ? "보스 계약 잠김" : project.boss ? "장기 프로젝트 도전" : "계약 선택"}</button>
+    <button class="${project.boss || riskTone === "high" ? "red" : "teal"}" data-project-id="${project.id}" data-risk-tier="${project.riskTier || "stable"}" ${locked ? "disabled" : ""}>${locked ? "보스 계약 잠김" : project.boss ? "장기 프로젝트 도전" : `${riskLabel} 계약 선택`}</button>
   </article>`;
 }
 
@@ -1739,7 +1746,7 @@ function renderProjectBoard() {
       <div class="project-list">${regularCards}${bossCard}</div>
       <button class="ink" id="back-from-projects">← 사무실</button>
     </section>`;
-  document.querySelectorAll("[data-project-id]:not(:disabled)").forEach(button => button.addEventListener("click", () => startBattle(button.dataset.projectId)));
+  document.querySelectorAll("[data-project-id]:not(:disabled)").forEach(button => button.addEventListener("click", () => startBattle(button.dataset.projectId, button.dataset.riskTier)));
   document.querySelector("#back-from-projects").addEventListener("click", () => renderOffice());
 }
 
@@ -2031,15 +2038,18 @@ function saveTeam() {
   renderOffice("프로젝트 팀 편성을 저장했습니다.");
 }
 
-function startBattle(projectId) {
+function startBattle(projectId, riskTier = "stable") {
   currentView = "battle";
   const tutorialMode = !state.tutorialBattleCompleted;
   const selectedSource = [...PROJECTS, ...BOSS_PROJECTS].find(project => project.id === projectId) || PROJECTS[0];
   const source = tutorialMode ? tutorialProjectSource() : selectedSource;
   if (source.boss && !bossProjectReady()) return renderProjectBoard();
-  const project = scaledProject(source);
+  const scaled = scaledProject(source);
+  const project = tutorialMode || source.boss ? scaled : projectWithRisk(scaled, riskTier);
+  const coverage = BALANCE.recommendedCoverage(orderedBattleTeam(), project);
+  const pressure = BALANCE.eventProfile({ project, missingRecommended: coverage.missing });
   battle = {
-    project,
+    project, coverage, pressure,
     max: project.max, workload: project.max, action: 0, deadline: project.deadline, momentum: 0, requirements: false,
     result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
     eventText: "", nextEventRound: tutorialMode ? Number.POSITIVE_INFINITY : project.eventEvery, eventCursor: randomInt(4), preparedRound: 0,
@@ -2561,25 +2571,26 @@ function advanceBattleStatus() {
 function triggerBattleEvent() {
   const event = battle.eventCursor % 4;
   battle.eventCursor += 1;
+  const pressure = battle.pressure || BALANCE.eventProfile({ project: battle.project, missingRecommended: battle.coverage?.missing || 0 });
   if (event === 0) {
-    const added = 12;
-    battle.workload = Math.min(battle.max + 30, battle.workload + added);
+    const added = pressure.reworkAdded;
+    battle.workload = Math.min(battle.max + pressure.reworkCap, battle.workload + added);
     battle.requirements = false;
-    battle.status = { name: "재작업", turns: 1, efficiency: .9, flat: 0, tone: "bad" };
-    battle.eventText = `⚠ 요구사항 변경! 업무량 +${added}`;
+    battle.status = { name: "재작업", turns: pressure.reworkTurns, efficiency: pressure.reworkEfficiency, flat: 0, tone: "bad" };
+    battle.eventText = `⚠ 요구사항 변경! 업무량 +${added}${battle.coverage?.missing ? " · 추천 부서 부족" : ""}`;
     addDirectiveGauge(20, "요구사항 변경에 대응해야 합니다.");
   } else if (event === 1) {
-    battle.status = { name: "긴급회의", turns: 1, efficiency: .75, flat: 0, tone: "bad" };
-    battle.eventText = "⚠ 긴급회의! 오늘 업무 효율 -25%";
+    battle.status = { name: "긴급회의", turns: pressure.meetingTurns, efficiency: pressure.meetingEfficiency, flat: 0, tone: "bad" };
+    battle.eventText = `⚠ 긴급회의! ${pressure.meetingTurns}턴 동안 업무 효율 -${Math.round((1 - pressure.meetingEfficiency) * 100)}%`;
     addDirectiveGauge(20, "긴급회의 대응이 필요합니다.");
   } else if (event === 2) {
-    battle.status = { name: "예산 압박", turns: 2, efficiency: 1, flat: -3, tone: "bad" };
-    battle.eventText = "⚠ 예산 삭감! 2턴 동안 처리량 -3";
+    battle.status = { name: "예산 압박", turns: pressure.budgetTurns, efficiency: 1, flat: pressure.budgetFlat, tone: "bad" };
+    battle.eventText = `⚠ 예산 삭감! ${pressure.budgetTurns}턴 동안 처리량 ${pressure.budgetFlat}`;
     addDirectiveGauge(20, "예산 삭감에 대응해야 합니다.");
   } else {
-    battle.momentum += 4;
-    battle.status = { name: "합의 완료", turns: 2, efficiency: 1, flat: 4, tone: "good" };
-    battle.eventText = "✓ 고객의 빠른 승인! 2턴 동안 처리량 +4";
+    battle.momentum += pressure.goodFlat;
+    battle.status = { name: "합의 완료", turns: pressure.goodTurns, efficiency: 1, flat: pressure.goodFlat, tone: "good" };
+    battle.eventText = `✓ 고객 승인! ${pressure.goodTurns}턴 동안 처리량 +${pressure.goodFlat}`;
     addDirectiveGauge(12, "고객 승인을 활용할 기회입니다.");
   }
 }

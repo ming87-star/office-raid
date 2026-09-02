@@ -5,6 +5,7 @@
   let tradeIds = [];
   let tradeBaseId = null;
   let equipmentTab = "equip";
+  let equipmentSortMode = "newest";
   let selectedMailId = null;
   const P = (id, typeLabel, department, subject, body, question, options, answerIndex, explanation) =>
     ({ id, typeLabel, department, subject, body, question, options, answerIndex, explanation });
@@ -145,6 +146,13 @@
     saveGame();
     const stats = effectiveStats(target);
     const order = orderedBattleTeam().map(member => member.id);
+    const sortedEquipment = OfficeRaidEquipmentSort.sortEquipment(state.equipment, equipmentSortMode);
+    const sortControl = `<label class="equipment-sort"><span>정렬</span><select data-equipment-sort aria-label="보유 장비 정렬 기준">
+      <option value="newest" ${equipmentSortMode === "newest" ? "selected" : ""}>최신 획득순</option>
+      <option value="rarity" ${equipmentSortMode === "rarity" ? "selected" : ""}>희귀도 높은순</option>
+      <option value="stats" ${equipmentSortMode === "stats" ? "selected" : ""}>능력치 합계순</option>
+      <option value="slot" ${equipmentSortMode === "slot" ? "selected" : ""}>장비 부위순</option>
+    </select></label>`;
     const tabs = `<div class="equipment-tabs" role="tablist" aria-label="장비 관리 메뉴">
       <button class="${equipmentTab === "equip" ? "active" : ""}" data-equipment-tab="equip" role="tab" aria-selected="${equipmentTab === "equip"}">장착 관리</button>
       <button class="${equipmentTab === "trade" ? "active" : ""}" data-equipment-tab="trade" role="tab" aria-selected="${equipmentTab === "trade"}">중고거래${tradeIds.length ? ` <b>${tradeIds.length}/3</b>` : ""}</button>
@@ -168,7 +176,7 @@
       </article>`;
     }).join("");
 
-    const equipInventory = state.equipment.length ? state.equipment.map(item =>
+    const equipInventory = state.equipment.length ? sortedEquipment.map(item =>
       `<article class="equipment-item">
         <span>${equipmentIconMarkup(item)}</span>
         <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
@@ -182,7 +190,7 @@
     const ready = selected.length === 3 && selected.every(item => item.slot === first.slot && item.rarity === first.rarity) && first.rarity < 4 && base;
     const cost = first ? COSTS[first.rarity] : 0;
 
-    const tradeInventory = state.equipment.length ? state.equipment.map(item => {
+    const tradeInventory = state.equipment.length ? sortedEquipment.map(item => {
       const chosen = tradeIds.includes(item.id);
       const selectable = item.rarity < 4 && (!first || (item.slot === first.slot && item.rarity === first.rarity) || chosen);
       return `<article class="equipment-item ${chosen ? "trade-selected" : ""}">
@@ -199,12 +207,12 @@
 
     const equipView = `<div class="equipment-people">${people}</div>
       <div class="equipment-slots panel">${slots}</div>
-      <p class="section-label">보관함 · ${state.equipment.length}</p>
+      <div class="equipment-inventory-head"><p class="section-label">보관함 · ${state.equipment.length}</p>${sortControl}</div>
       <div class="equipment-inventory">${equipInventory}</div>`;
 
     const tradeView = `<div class="equipment-market-summary panel"><div><small>장비 중고거래</small><strong>누적 ${state.equipmentTradeCount || 0}건 · 비용 ${state.equipmentTradeSpend || 0}만원</strong></div><span>보관 장비만 거래</span></div>
       ${tradePanel}
-      <p class="section-label">거래할 장비 · ${state.equipment.length}</p>
+      <div class="equipment-inventory-head"><p class="section-label">거래할 장비 · ${state.equipment.length}</p>${sortControl}</div>
       <div class="equipment-inventory trade-inventory">${tradeInventory}</div>`;
 
     const headerNotice = equipmentTab === "equip"
@@ -224,6 +232,10 @@
       equipmentTab = button.dataset.equipmentTab;
       renderEquipment(equipmentTab === "equip" ? "직원과 장착 장비를 관리하세요." : "교환할 보관 장비를 선택하세요.");
     }));
+    document.querySelector("[data-equipment-sort]")?.addEventListener("change", event => {
+      equipmentSortMode = event.currentTarget.value;
+      renderEquipment("장비 정렬 기준을 변경했습니다.");
+    });
     document.querySelectorAll("[data-equipment-target]").forEach(button => button.addEventListener("click", () => {
       equipmentTargetId = button.dataset.equipmentTarget;
       renderEquipment("장착 대상을 변경했습니다.");

@@ -29,10 +29,12 @@ jobs:
 
       - name: Validate restored game systems
         run: |
+          node --check web/equipment-sort.js
           node --check web/balance-rules.js
           node --check web/restored-features.js
           node --check web/game.js
           node --check web/canonical-systems.js
+          node web/equipment-sort.test.js
           node web/balance-rules.test.js
           node web/restored-features.test.js
 

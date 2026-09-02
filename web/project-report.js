@@ -53,7 +53,7 @@
     const completed = Math.min(battle.max, Math.max(0, battle.max - battle.workload));
     const progress = Math.round(completed / Math.max(1, battle.max) * 100);
     const memberRows = rows.map(row => `<article class="project-report-member ${row.mvp ? "is-mvp" : ""}">
-      <canvas width="24" height="24" data-portrait="${row.member.id}" data-portrait-crop="face" aria-hidden="true"></canvas>
+      <span class="project-report-avatar"><canvas width="24" height="24" data-portrait="${row.member.id}" data-portrait-crop="face" aria-hidden="true"></canvas></span>
       <div><strong>${escapeHtml(row.member.name)}</strong><small>${escapeHtml(DEPARTMENTS[row.member.department]?.short || "담당")} · 일반 행동 ${row.actions}회 · 긴급 지시 ${row.directives}회</small></div>
       <span class="project-report-contribution"><i><em style="width:${Math.max(4, row.percent)}%"></em></i><b>${row.percent}%</b></span>
       ${row.mvp ? "<mark>MVP</mark>" : ""}

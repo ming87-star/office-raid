@@ -1100,7 +1100,7 @@ function recordFinancialAmount(category, amount) {
 }
 
 function financialExpenseTotal(period) {
-  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.workErrors || 0);
+  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.equipmentTrade || 0) + (period.workErrors || 0);
 }
 
 function closeFinancialPeriodIfDue() {
@@ -1614,8 +1614,8 @@ function renderFinancialReport() {
         <div class="expense"><b>총비용</b><i><em style="width:${expenseWidth}%"></em></i><strong>-${report.expenses}</strong></div>
       </div>
       <div class="financial-statement">
-        <p><span>프로젝트 매출</span><b class="positive">+${report.revenue - (report.equipmentSales || 0)}만원</b></p>
-        <p><span>장비 중고거래</span><b class="positive">+${report.equipmentSales || 0}만원</b></p>
+        <p><span>프로젝트 매출</span><b class="positive">+${report.revenue}만원</b></p>
+        <p><span>장비 중고거래 비용</span><b>-${report.equipmentTrade || 0}만원</b></p>
         <p><span>급여</span><b>-${report.payroll}만원</b></p>
         <p><span>채용 계약금</span><b>-${report.recruitment}만원</b></p>
         <p><span>채용 공고</span><b>-${report.posting}만원</b></p>
@@ -1699,7 +1699,7 @@ function bossProjectProgress() {
 
 function projectCard(project, locked = false) {
   const dropChance = FEATURES.equipmentDropChance(project, !state.tutorialBattleCompleted);
-  const dropText = project.boss ? "희귀 장비 2개 확정" : `장비 드롭 ${Math.round(dropChance * 100)}%${state.equipmentDropPity >= 2 ? " · 확정 보정" : ""}`;
+  const dropText = project.boss ? "희귀 이상 장비 2개 확정" : `장비 드롭 ${Math.round(dropChance * 100)}%`;
   const reward = `현금 ${project.cash} · 평판 ${project.reputation} · ${dropText}`;
   const recommended = (project.recommended || []).map(department => DEPARTMENTS[department]?.short).filter(Boolean).join(" · ");
   const episode = projectEpisode(project);
@@ -2099,7 +2099,10 @@ function battleStep() {
   if (battle.status) {
     damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
   }
-  damage = battle.tutorialMode ? Math.max(1, damage) : rollDamage(Math.max(1, damage));
+  const expectedDamage = Math.max(1, damage);
+  const expectedRange = damageRange(expectedDamage);
+  damage = battle.tutorialMode ? expectedDamage : rollDamage(expectedDamage);
+  const strongHit = !battle.tutorialMode && damage >= Math.ceil(expectedRange.min + (expectedRange.max - expectedRange.min) * .75);
   battle.workload = Math.max(0, battle.workload - damage);
   const eventLine = battle.eventText ? `${battle.eventText}\n` : "";
   const directiveCharge = directiveChargeFor(member);
@@ -2110,7 +2113,7 @@ function battleStep() {
   checkWorkloadThresholds();
   animatePacket(member.department, battle.action % 3);
   updateBattleNumbers(round);
-  spawnDamageNumber(damage, { kind: affinity ? "affinity" : "normal", label: affinity ? "상성" : "업무", lane: team.indexOf(member) });
+  spawnDamageNumber(damage, { kind: strongHit ? "strong" : "normal", label: affinity ? "상성" : "업무", lane: team.indexOf(member) });
 
   if (battle.workload <= 0) return finishBattleSuccess();
   if (battle.directiveGauge >= 100) return openDirective();
@@ -2160,7 +2163,7 @@ function finishBattleSuccess(scheduleRender = true) {
     battle.reward = battle.rewards[0] || null;
     battle.dropNotice = dropResult.dropCount
       ? `장비 ${dropResult.dropCount}개 획득 · 드롭률 ${Math.round(dropResult.chance * 100)}%`
-      : `장비 미획득 · 확정 보정 ${state.equipmentDropPity}/2`;
+      : `장비 미획득 · 드롭률 ${Math.round(dropResult.chance * 100)}%`;
     state.equipment.push(...battle.rewards);
     const financialReport = closeFinancialPeriodIfDue();
     battle.financialNotice = financialReport ? `${financialReport.number}분기 결산이 준비됐습니다.` : "";

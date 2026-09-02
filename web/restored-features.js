@@ -5,7 +5,7 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.OfficeRaidFeatures = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function createOfficeRaidFeatures() {
-  const DROP_RATES = [0.60, 0.65, 0.70, 0.75];
+  const DROP_RATES = [0.40];
   const RESALE_BASE = [80, 160, 320, 620, 1200];
 
   function clamp(value, min, max) {
@@ -43,35 +43,24 @@
   }
 
   function equipmentDropChance(project = {}, tutorial = false) {
-    if (tutorial || project.boss) return 1;
-    const chapter = clamp(Math.round(Number(project.chapter) || 1), 1, DROP_RATES.length);
-    return DROP_RATES[chapter - 1];
+    return tutorial || project.boss ? 1 : DROP_RATES[0];
   }
 
-  function resolveEquipmentDrops({ project = {}, tutorial = false, pity = 0, roll = Math.random() } = {}) {
+  function resolveEquipmentDrops({ project = {}, tutorial = false, roll = Math.random() } = {}) {
     const chance = equipmentDropChance(project, tutorial);
     if (project.boss) return { chance, dropCount: 2, minimumRarity: 2, nextPity: 0, guaranteed: true };
     if (tutorial) return { chance, dropCount: 1, minimumRarity: 0, nextPity: 0, guaranteed: true };
-    const safePity = clamp(Math.round(Number(pity) || 0), 0, 2);
-    const guaranteed = safePity >= 2;
-    const dropped = guaranteed || Number(roll) < chance;
-    return {
-      chance,
-      dropCount: dropped ? 1 : 0,
-      minimumRarity: 0,
-      nextPity: dropped ? 0 : safePity + 1,
-      guaranteed
-    };
+    const dropped = Number(roll) < chance;
+    return { chance, dropCount: dropped ? 1 : 0, minimumRarity: 0, nextPity: 0, guaranteed: false };
   }
 
-  function todayKey(date = new Date()) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+function todayKey(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+    const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${value.year}-${value.month}-${value.day}`;
   }
 
-  function shuffledOptions(correct, distractors, random) {
+function shuffledOptions(correct, distractors, random) {
     const unique = [correct, ...distractors.filter(value => value !== correct)]
       .filter((value, index, values) => values.indexOf(value) === index)
       .slice(0, 4)

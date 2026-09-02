@@ -4,6 +4,7 @@
   const COSTS = [50, 150, 450, 1200];
   let tradeIds = [];
   let tradeBaseId = null;
+  let equipmentTab = "equip";
   let selectedMailId = null;
   const P = (id, typeLabel, department, subject, body, question, options, answerIndex, explanation) =>
     ({ id, typeLabel, department, subject, body, question, options, answerIndex, explanation });
@@ -133,29 +134,117 @@
     mail.wrongAttempts++;d.accuracy=Math.max(0,d.accuracy-20);syncLegacy(d);saveGame();renderWorkMail(`조건과 맞지 않습니다. 오늘의 정확도 ${d.accuracy}%. 다시 검토해 주세요.`);
   };
 
-  renderEquipment=function(notice){
-    const target=state.employees.find(m=>m.id===equipmentTargetId)||state.employees[0];if(!target)return renderOffice("장비를 사용할 직원이 없습니다.");
-    tradeIds=tradeIds.filter(id=>state.equipment.some(x=>x.id===id));if(!tradeIds.includes(tradeBaseId))tradeBaseId=tradeIds[0]||null;
-    if(!state.financialPeriod.equipmentTrade)state.financialPeriod.equipmentTrade=0;
-    saveGame();const stats=effectiveStats(target),order=orderedBattleTeam().map(m=>m.id);
-    const people=state.employees.map(m=>{const d=DEPARTMENTS[m.department],n=order.indexOf(m.id);return `<button class="equipment-person ${m.id===target.id?"active":""} ${n>=0?"project-member":""}" data-equipment-target="${m.id}" style="--department-color:${d.color}"><span class="equipment-person-portrait"><canvas width="24" height="24" data-portrait="${m.id}" data-portrait-crop="face"></canvas></span><span class="equipment-person-copy"><small>${d.name}</small><strong>${escapeHtml(m.name)}</strong><em class="equipment-team-badge ${n<0?"off-team":""}">${n>=0?`<b>프로젝트 팀</b> · 행동 ${n+1}`:"대기 직원"}</em></span></button>`;}).join("");
-    const slots=Object.entries(EQUIPMENT_SLOTS).map(([slot,info])=>{const x=target.equipment[slot];return `<article class="equipment-slot ${x?"filled":""}"><span>${x?equipmentIconMarkup(x):info.icon}</span><div><small>${info.name}</small><strong>${x?escapeHtml(x.name):"비어 있음"}</strong>${x?`<em>${EQUIPMENT_RARITIES[x.rarity].name} · 실무 +${x.workBonus} · 협업 +${x.collaborationBonus}</em>`:""}</div>${x?`<button class="ink" data-unequip="${x.id}">해제</button>`:""}</article>`;}).join("");
-    const selected=tradeIds.map(id=>state.equipment.find(x=>x.id===id)).filter(Boolean),first=selected[0],base=state.equipment.find(x=>x.id===tradeBaseId);
-    const ready=selected.length===3&&selected.every(x=>x.slot===first.slot&&x.rarity===first.rarity)&&first.rarity<4&&base,cost=first?COSTS[first.rarity]:0;
-    const inventory=state.equipment.length?state.equipment.map(x=>{const chosen=tradeIds.includes(x.id),selectable=x.rarity<4&&(!first||(x.slot===first.slot&&x.rarity===first.rarity)||chosen);return `<article class="equipment-item ${chosen?"trade-selected":""}"><span>${equipmentIconMarkup(x)}</span><div><strong>${escapeHtml(x.name)}</strong><small>${EQUIPMENT_RARITIES[x.rarity].name} ${EQUIPMENT_SLOTS[x.slot].name}</small><em>실무 +${x.workBonus} · 협업 +${x.collaborationBonus}</em></div><div class="equipment-item-actions"><button class="teal" data-equip="${x.id}">장착</button><button class="${chosen?"red":"mustard"}" data-trade="${x.id}" ${selectable?"":"disabled"}>${chosen?"선택 해제":"거래 선택"}</button></div>${chosen?`<label class="trade-base-choice"><input type="radio" name="trade-base" data-trade-base="${x.id}" ${tradeBaseId===x.id?"checked":""}> 받을 모델</label>`:""}</article>`;}).join(""):`<div class="empty-inventory">프로젝트에서 장비를 획득하면 여기에 표시됩니다.</div>`;
-    const trade=selected.length?`<div class="equipment-trade-preview"><small>중고거래 ${selected.length}/3</small><strong>${ready?`${escapeHtml(base.name)} · ${EQUIPMENT_RARITIES[base.rarity+1].name}으로 교환`:"동일 부위·동일 등급 장비 3개를 선택하세요."}</strong><span>추가 비용 ${cost}만원 · 받을 모델 선택</span><button class="mustard" id="confirm-trade" ${ready&&state.cash>=cost?"":"disabled"}>${ready&&state.cash<cost?"현금 부족":"중고거래 성사"}</button><button class="ink" id="clear-trade">초기화</button></div>`:`<div class="equipment-trade-guide"><b>동일 부위·동일 등급 장비 3개</b><span>+ 추가 비용 → 선택 모델의 다음 등급 장비 1개</span><small>일반 50 · 고급 150 · 희귀 450 · 영웅 1200만원</small></div>`;
-    app.innerHTML=`${header("장비 관리",`${target.name} · 실무 ${stats.work} · 협업 ${stats.collaboration} · ${notice}`)}<section class="screen equipment-screen"><div class="equipment-people">${people}</div><div class="equipment-slots panel">${slots}</div><div class="equipment-market-summary panel"><div><small>장비 중고거래</small><strong>누적 ${state.equipmentTradeCount||0}건 · 비용 ${state.equipmentTradeSpend||0}만원</strong></div><span>보관 장비만 거래</span></div>${trade}<p class="section-label">보관함 · ${state.equipment.length}</p><div class="equipment-inventory">${inventory}</div><button class="ink" id="back-from-equipment">← 사무실</button></section>`;
-    mountPortraits();mountEquipmentIcons();
-    document.querySelectorAll("[data-equipment-target]").forEach(b=>b.addEventListener("click",()=>{equipmentTargetId=b.dataset.equipmentTarget;renderEquipment("장착 대상을 변경했습니다.");}));
-    document.querySelectorAll("[data-equip]").forEach(b=>b.addEventListener("click",()=>equipItem(b.dataset.equip)));
-    document.querySelectorAll("[data-unequip]").forEach(b=>b.addEventListener("click",()=>unequipItem(b.dataset.unequip)));
-    document.querySelectorAll("[data-trade]").forEach(b=>b.addEventListener("click",()=>toggleTrade(b.dataset.trade)));
-    document.querySelectorAll("[data-trade-base]").forEach(b=>b.addEventListener("change",()=>{tradeBaseId=b.dataset.tradeBase;renderEquipment("받을 모델을 선택했습니다.");}));
-    document.querySelector("#confirm-trade")?.addEventListener("click",confirmTrade);
-    document.querySelector("#clear-trade")?.addEventListener("click",()=>{tradeIds=[];tradeBaseId=null;renderEquipment("선택을 초기화했습니다.");});
-    document.querySelector("#back-from-equipment").addEventListener("click",()=>renderOffice());
+  renderEquipment = function(notice) {
+    const target = state.employees.find(member => member.id === equipmentTargetId) || state.employees[0];
+    if (!target) return renderOffice("장비를 사용할 직원이 없습니다.");
+
+    tradeIds = tradeIds.filter(id => state.equipment.some(item => item.id === id));
+    if (!tradeIds.includes(tradeBaseId)) tradeBaseId = tradeIds[0] || null;
+    if (!Object.prototype.hasOwnProperty.call(state.financialPeriod, "equipmentTrade")) state.financialPeriod.equipmentTrade = 0;
+
+    saveGame();
+    const stats = effectiveStats(target);
+    const order = orderedBattleTeam().map(member => member.id);
+    const tabs = `<div class="equipment-tabs" role="tablist" aria-label="장비 관리 메뉴">
+      <button class="${equipmentTab === "equip" ? "active" : ""}" data-equipment-tab="equip" role="tab" aria-selected="${equipmentTab === "equip"}">장착 관리</button>
+      <button class="${equipmentTab === "trade" ? "active" : ""}" data-equipment-tab="trade" role="tab" aria-selected="${equipmentTab === "trade"}">중고거래${tradeIds.length ? ` <b>${tradeIds.length}/3</b>` : ""}</button>
+    </div>`;
+
+    const people = state.employees.map(member => {
+      const department = DEPARTMENTS[member.department];
+      const actionOrder = order.indexOf(member.id);
+      return `<button class="equipment-person ${member.id === target.id ? "active" : ""} ${actionOrder >= 0 ? "project-member" : ""}" data-equipment-target="${member.id}" style="--department-color:${department.color}">
+        <span class="equipment-person-portrait"><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face"></canvas></span>
+        <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong><em class="equipment-team-badge ${actionOrder < 0 ? "off-team" : ""}">${actionOrder >= 0 ? `<b>프로젝트 팀</b> · 행동 ${actionOrder + 1}` : "대기 직원"}</em></span>
+      </button>`;
+    }).join("");
+
+    const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
+      const item = target.equipment[slot];
+      return `<article class="equipment-slot ${item ? "filled" : ""}">
+        <span>${item ? equipmentIconMarkup(item) : info.icon}</span>
+        <div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em>${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>
+        ${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}
+      </article>`;
+    }).join("");
+
+    const equipInventory = state.equipment.length ? state.equipment.map(item =>
+      `<article class="equipment-item">
+        <span>${equipmentIconMarkup(item)}</span>
+        <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
+        <button class="teal" data-equip="${item.id}">장착</button>
+      </article>`
+    ).join("") : `<div class="empty-inventory">프로젝트에서 장비를 획득하면 여기에 표시됩니다.</div>`;
+
+    const selected = tradeIds.map(id => state.equipment.find(item => item.id === id)).filter(Boolean);
+    const first = selected[0];
+    const base = state.equipment.find(item => item.id === tradeBaseId);
+    const ready = selected.length === 3 && selected.every(item => item.slot === first.slot && item.rarity === first.rarity) && first.rarity < 4 && base;
+    const cost = first ? COSTS[first.rarity] : 0;
+
+    const tradeInventory = state.equipment.length ? state.equipment.map(item => {
+      const chosen = tradeIds.includes(item.id);
+      const selectable = item.rarity < 4 && (!first || (item.slot === first.slot && item.rarity === first.rarity) || chosen);
+      return `<article class="equipment-item ${chosen ? "trade-selected" : ""}">
+        <span>${equipmentIconMarkup(item)}</span>
+        <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
+        <button class="${chosen ? "red" : "mustard"}" data-trade="${item.id}" ${selectable ? "" : "disabled"}>${chosen ? "선택 해제" : "거래 선택"}</button>
+        ${chosen ? `<label class="trade-base-choice"><input type="radio" name="trade-base" data-trade-base="${item.id}" ${tradeBaseId === item.id ? "checked" : ""}> 받을 모델</label>` : ""}
+      </article>`;
+    }).join("") : `<div class="empty-inventory">거래할 보관 장비가 없습니다.</div>`;
+
+    const tradePanel = selected.length
+      ? `<div class="equipment-trade-preview"><small>중고거래 ${selected.length}/3</small><strong>${ready ? `${escapeHtml(base.name)} · ${EQUIPMENT_RARITIES[base.rarity + 1].name}으로 교환` : "동일 부위·동일 등급 장비 3개를 선택하세요."}</strong><span>추가 비용 ${cost}만원 · 받을 모델 선택</span><button class="mustard" id="confirm-trade" ${ready && state.cash >= cost ? "" : "disabled"}>${ready && state.cash < cost ? "현금 부족" : "중고거래 성사"}</button><button class="ink" id="clear-trade">초기화</button></div>`
+      : `<div class="equipment-trade-guide"><b>동일 부위·동일 등급 장비 3개</b><span>+ 추가 비용 → 선택 모델의 다음 등급 장비 1개</span><small>일반 50 · 고급 150 · 희귀 450 · 영웅 1200만원</small></div>`;
+
+    const equipView = `<div class="equipment-people">${people}</div>
+      <div class="equipment-slots panel">${slots}</div>
+      <p class="section-label">보관함 · ${state.equipment.length}</p>
+      <div class="equipment-inventory">${equipInventory}</div>`;
+
+    const tradeView = `<div class="equipment-market-summary panel"><div><small>장비 중고거래</small><strong>누적 ${state.equipmentTradeCount || 0}건 · 비용 ${state.equipmentTradeSpend || 0}만원</strong></div><span>보관 장비만 거래</span></div>
+      ${tradePanel}
+      <p class="section-label">거래할 장비 · ${state.equipment.length}</p>
+      <div class="equipment-inventory trade-inventory">${tradeInventory}</div>`;
+
+    const headerNotice = equipmentTab === "equip"
+      ? `${target.name} · 실무 ${stats.work} · 협업 ${stats.collaboration} · ${notice}`
+      : `보관 장비 ${state.equipment.length}개 · ${notice}`;
+
+    app.innerHTML = `${header("장비 관리", headerNotice)}<section class="screen equipment-screen">
+      ${tabs}
+      <div class="equipment-tab-panel" role="tabpanel">${equipmentTab === "equip" ? equipView : tradeView}</div>
+      <button class="ink" id="back-from-equipment">← 사무실</button>
+    </section>`;
+
+    mountPortraits();
+    mountEquipmentIcons();
+
+    document.querySelectorAll("[data-equipment-tab]").forEach(button => button.addEventListener("click", () => {
+      equipmentTab = button.dataset.equipmentTab;
+      renderEquipment(equipmentTab === "equip" ? "직원과 장착 장비를 관리하세요." : "교환할 보관 장비를 선택하세요.");
+    }));
+    document.querySelectorAll("[data-equipment-target]").forEach(button => button.addEventListener("click", () => {
+      equipmentTargetId = button.dataset.equipmentTarget;
+      renderEquipment("장착 대상을 변경했습니다.");
+    }));
+    document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
+    document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
+    document.querySelectorAll("[data-trade]").forEach(button => button.addEventListener("click", () => toggleTrade(button.dataset.trade)));
+    document.querySelectorAll("[data-trade-base]").forEach(button => button.addEventListener("change", () => {
+      tradeBaseId = button.dataset.tradeBase;
+      renderEquipment("받을 모델을 선택했습니다.");
+    }));
+    document.querySelector("#confirm-trade")?.addEventListener("click", confirmTrade);
+    document.querySelector("#clear-trade")?.addEventListener("click", () => {
+      tradeIds = [];
+      tradeBaseId = null;
+      renderEquipment("선택을 초기화했습니다.");
+    });
+    document.querySelector("#back-from-equipment").addEventListener("click", () => renderOffice());
   };
-  function toggleTrade(id){
+
+function toggleTrade(id){
     const item=state.equipment.find(x=>x.id===id);if(!item)return;
     if(tradeIds.includes(id)){tradeIds=tradeIds.filter(x=>x!==id);if(tradeBaseId===id)tradeBaseId=tradeIds[0]||null;return renderEquipment("선택에서 제외했습니다.");}
     const first=state.equipment.find(x=>x.id===tradeIds[0]);if(first&&(first.slot!==item.slot||first.rarity!==item.rarity))return renderEquipment("같은 부위와 등급만 선택할 수 있습니다.");

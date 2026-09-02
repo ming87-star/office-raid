@@ -1,0 +1,25 @@
+.prop-headset {
+  top: 1%;
+  width: 58px;
+  height: 58px;
+}
+
+.prop-planner {
+  top: 49%;
+  left: 7%;
+}
+
+.prop-wallet {
+  top: 51%;
+  left: 9%;
+}
+
+.prop-tumbler {
+  top: 50%;
+  right: 8%;
+}
+
+.prop-coffee {
+  top: 49%;
+  right: 6%;
+}

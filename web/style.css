@@ -1018,9 +1018,25 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 #boss-canvas { position: absolute; z-index: 2; top: 10px; left: 50%; width: 150px; height: 150px; transform: translateX(-50%); image-rendering: pixelated; }
 .directive-active .arena:not(.boss-arena) #boss-canvas { width: 118px; height: 118px; }
 .boss-arena #boss-canvas { top: 8px; width: clamp(180px, 44vw, 210px); height: clamp(180px, 44vw, 210px); filter: drop-shadow(7px 9px 0 rgba(23,54,74,.28)); }
-.battle-team { position: absolute; z-index: 3; right: 4px; bottom: 7px; left: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
-.battle-team.team-size-4 { grid-template-columns: repeat(4, 1fr); }
-.battle-team:is(.team-size-5, .team-size-6) { grid-template-columns: repeat(3, 1fr); row-gap: 0; bottom: 1px; }
+.battle-team {
+  --team-count: 3;
+  --team-width: 68%;
+  position: absolute;
+  z-index: 3;
+  bottom: 7px;
+  left: 50%;
+  width: var(--team-width);
+  display: grid;
+  grid-template-columns: repeat(var(--team-count), minmax(0, 1fr));
+  gap: 2px;
+  transform: translateX(-50%);
+}
+.battle-team.team-size-1 { --team-count: 1; --team-width: 27%; }
+.battle-team.team-size-2 { --team-count: 2; --team-width: 48%; }
+.battle-team.team-size-3 { --team-count: 3; --team-width: 68%; }
+.battle-team.team-size-4 { --team-count: 4; --team-width: 82%; }
+.battle-team.team-size-5 { --team-count: 5; --team-width: 94%; }
+.battle-team.team-size-6 { --team-count: 6; --team-width: calc(100% - 8px); }
 .fighter { position: relative; min-width: 0; padding-top: 12px; text-align: center; }
 .fighter :is(canvas, .character-svg) { width: min(100%, 28cqw); height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; }
 .expanded-team #boss-canvas { top: 3px; width: 108px; height: 108px; }
@@ -1036,7 +1052,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .fighter.active-fighter strong { color: var(--teal); }
 @keyframes active-fighter-pulse { 50% { translate: 0 -2px; } }
 .fighter.preview-target :is(canvas, .character-svg) { outline: 3px solid var(--mustard); outline-offset: -2px; background: rgba(22,140,139,.24); filter: drop-shadow(0 0 5px white); animation: preview-pulse .75s steps(2) infinite; }
-.boss-arena .battle-team { right: 28px; bottom: 5px; left: 28px; }
+.boss-arena .battle-team { bottom: 5px; }
 .boss-arena.expanded-team #boss-canvas { width: 130px; height: 130px; }
 .boss-arena .fighter :is(canvas, .character-svg) { width: min(100%, 18cqw); }
 .boss-arena.expanded-team .fighter :is(canvas, .character-svg) { width: min(100%, 15cqw); }

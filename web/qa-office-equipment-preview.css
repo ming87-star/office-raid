@@ -1,7 +1,27 @@
 .prop-headset {
-  top: 1%;
-  width: 58px;
-  height: 58px;
+  top: 2%;
+  width: 54px;
+  height: 54px;
+}
+
+.prop-calculator {
+  top: 47%;
+  right: 7%;
+  left: auto;
+  width: 20px;
+  height: 20px;
+  translate: 0 0;
+}
+
+.office-character:has(.prop-coffee, .prop-tumbler) .prop-calculator {
+  right: auto;
+  left: 7%;
+}
+
+.office-character:has(.prop-planner, .prop-wallet):has(.prop-coffee, .prop-tumbler) .prop-calculator {
+  top: 44%;
+  left: 50%;
+  translate: -50% 0;
 }
 
 .prop-planner {

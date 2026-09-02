@@ -2056,7 +2056,9 @@ function startBattle(projectId, riskTier = "stable") {
     eventText: "", nextEventRound: tutorialMode ? Number.POSITIVE_INFINITY : project.eventEvery, eventCursor: randomInt(4), preparedRound: 0,
     directiveGauge: 50, awaitingDirective: false, directiveReason: "", directiveSelections: {}, directiveFocusId: null, directiveCooldowns: {},
     thresholdSeventy: false, thresholdForty: false, phase: 1, phaseAnnouncement: "",
-    deadlineBonus: 0, automationDamage: 0, automationTurns: 0, skillFx: null, confirmingLeave: false,
+    deadlineBonus: 0, automationDamage: 0, automationTurns: 0, automationSourceId: null, skillFx: null, confirmingLeave: false,
+    memberStats: Object.fromEntries(orderedBattleTeam().map(member => [member.id, { actions: 0, directives: 0, normalDamage: 0, directiveDamage: 0, automationDamage: 0, totalDamage: 0 }])),
+    negativeEvents: 0, positiveEvents: 0, comboCount: 0,
     tutorialMode, tutorialPage: tutorialMode ? 0 : null, tutorialSkipped: false, tutorialDirectiveExplained: false, tutorialReplay: false, tutorialUnlock: false
   };
   renderBattle();
@@ -2080,6 +2082,11 @@ function battleStep() {
     if (battle.automationTurns > 0) {
       const automationResult = battle.tutorialMode ? battle.automationDamage : rollDamage(battle.automationDamage);
       battle.workload = Math.max(0, battle.workload - automationResult);
+      const automationReport = battle.memberStats?.[battle.automationSourceId];
+      if (automationReport) {
+        automationReport.automationDamage += automationResult;
+        automationReport.totalDamage += automationResult;
+      }
       battle.automationTurns -= 1;
       battle.eventText = `✓ 자동화 배포! 업무량 ${automationResult} 처리`;
       spawnDamageNumber(automationResult, { kind: "automation", label: "AUTO" });
@@ -2122,6 +2129,12 @@ function battleStep() {
   const expectedRange = damageRange(expectedDamage);
   damage = battle.tutorialMode ? expectedDamage : rollDamage(expectedDamage);
   const strongHit = !battle.tutorialMode && damage >= Math.ceil(expectedRange.min + (expectedRange.max - expectedRange.min) * .75);
+  const memberReport = battle.memberStats?.[member.id];
+  if (memberReport) {
+    memberReport.actions += 1;
+    memberReport.normalDamage += damage;
+    memberReport.totalDamage += damage;
+  }
   battle.workload = Math.max(0, battle.workload - damage);
   const eventLine = battle.eventText ? `${battle.eventText}\n` : "";
   const directiveCharge = directiveChargeFor(member);
@@ -2507,9 +2520,11 @@ function resolveDirective() {
   const skills = Object.values(battle.directiveSelections);
   let total = 0;
   let cleared = false;
+  const directiveParts = [];
   const boosted = skills.includes("emergency-command") || skills.includes("budget-approval");
   directiveExecutionTeam(team).forEach(member => {
     const stats = effectiveStats(member);
+    const contributionBefore = total;
     const skill = battle.directiveSelections[member.id];
     if (skill === "requirement-brief") { battle.requirements = true; total += 8 + Math.floor(stats.collaboration / 2); }
     else if (skill === "client-persuasion") { cleared = clearNegativeBattleStatus() || cleared; total += 6 + Math.floor(stats.collaboration / 2); }
@@ -2518,20 +2533,36 @@ function resolveDirective() {
     else if (skill === "work-allocation") { battle.momentum += 8; total += 8 + stats.collaboration; }
     else if (skill === "emergency-command") total += 8 + team.length * 3;
     else if (skill === "focus-development") total += 16 + stats.work + (battle.requirements ? 8 : 0);
-    else if (skill === "automation-deploy") { battle.automationDamage = 8 + Math.floor(stats.work / 2); battle.automationTurns = 2; total += 8; }
+    else if (skill === "automation-deploy") { battle.automationDamage = 8 + Math.floor(stats.work / 2); battle.automationTurns = 2; battle.automationSourceId = member.id; total += 8; }
     else if (skill === "night-shift") total += 24 + stats.work;
     else if (skill === "budget-approval") total += 6 + Math.floor(member.speed / 2);
     else if (skill === "cost-defense") { cleared = clearNegativeBattleStatus() || cleared; total += 7 + Math.floor(stats.collaboration / 2); }
     else if (skill === "emergency-approval") { if (battle.deadlineBonus < 2) { battle.deadline += 1; battle.deadlineBonus += 1; } total += 12 + member.speed; }
+    directiveParts.push({ memberId: member.id, value: Math.max(0, total - contributionBefore) });
   });
   let combo = "";
   if (skills.includes("requirement-brief") && skills.includes("focus-development")) { total += 18; combo = "명확한 목표"; }
   else if (skills.includes("work-allocation") && skills.includes("automation-deploy")) { total += 14; battle.automationTurns += 1; combo = "완벽한 업무 흐름"; }
+  if (combo) battle.comboCount += 1;
   if (boosted) total = Math.round(total * 1.2);
   const expected = battle.tutorialMode
     ? { min: total, max: total }
     : damageRange(total, DIRECTIVE_DAMAGE_VARIANCE);
   const actualTotal = battle.tutorialMode ? total : rollDamage(total, DIRECTIVE_DAMAGE_VARIANCE);
+  const directiveBaseTotal = Math.max(1, directiveParts.reduce((sum, part) => sum + part.value, 0));
+  let distributedDirective = 0;
+  directiveParts.forEach((part, index) => {
+    const share = index === directiveParts.length - 1
+      ? Math.max(0, actualTotal - distributedDirective)
+      : Math.max(0, Math.round(actualTotal * part.value / directiveBaseTotal));
+    distributedDirective += share;
+    const report = battle.memberStats?.[part.memberId];
+    if (report) {
+      report.directives += 1;
+      report.directiveDamage += share;
+      report.totalDamage += share;
+    }
+  });
   battle.workload = Math.max(0, battle.workload - actualTotal);
   tickDirectiveCooldowns(team);
   team.forEach(member => {
@@ -2572,6 +2603,8 @@ function advanceBattleStatus() {
 function triggerBattleEvent() {
   const event = battle.eventCursor % 4;
   battle.eventCursor += 1;
+  if (event === 3) battle.positiveEvents += 1;
+  else battle.negativeEvents += 1;
   const pressure = battle.pressure || BALANCE.eventProfile({ project: battle.project, missingRecommended: battle.coverage?.missing || 0 });
   if (event === 0) {
     const added = pressure.reworkAdded;

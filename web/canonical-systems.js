@@ -148,6 +148,7 @@
     const stats = effectiveStats(target);
     const order = orderedBattleTeam().map(member => member.id);
     const sortedEquipment = OfficeRaidEquipmentSort.sortEquipment(state.equipment, equipmentSortMode);
+    const saleRecommendations = new Set(secretarySaleRecommendationsVisible ? secretarySaleRecommendationIds() : []);
     const sortControl = `<label class="equipment-sort"><span>정렬</span><select data-equipment-sort aria-label="보유 장비 정렬 기준">
       <option value="newest" ${equipmentSortMode === "newest" ? "selected" : ""}>최신 획득순</option>
       <option value="rarity" ${equipmentSortMode === "rarity" ? "selected" : ""}>희귀도 높은순</option>
@@ -171,19 +172,22 @@
 
     const slots = Object.entries(EQUIPMENT_SLOTS).map(([slot, info]) => {
       const item = target.equipment[slot];
+      const locked = item && secretaryEquipmentLocked(item.id);
       return `<article class="equipment-slot ${item ? "filled" : ""}">
         <span>${item ? equipmentIconMarkup(item) : info.icon}</span>
         <div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em>${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>
-        ${item ? `<button class="ink" data-unequip="${item.id}">해제</button>` : ""}
+        ${item ? `<div class="equipment-slot-actions"><button class="${locked ? "mustard" : "ink"}" data-equipment-lock="${item.id}">${locked ? "잠금됨" : "잠금"}</button><button class="ink" data-unequip="${item.id}" ${locked ? "disabled" : ""}>해제</button></div>` : ""}
       </article>`;
     }).join("");
 
     const equipInventory = state.equipment.length ? sortedEquipment.map(item => {
       const resale = FEATURES.equipmentResalePrice(item);
-      return `<article class="equipment-item">
+      const locked = secretaryEquipmentLocked(item.id);
+      const recommended = saleRecommendations.has(item.id);
+      return `<article class="equipment-item ${locked ? "equipment-locked" : ""} ${recommended ? "secretary-sale-recommended" : ""}">
         <span>${equipmentIconMarkup(item)}</span>
-        <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em><small class="equipment-resale-price">예상 판매가 ${resale}만원</small></div>
-        <div class="equipment-item-actions"><button class="teal" data-equip="${item.id}">장착</button><button class="mustard" data-sell-equipment="${item.id}">판매</button></div>
+        <div><strong>${escapeHtml(item.name)}${recommended ? ` <i class="secretary-recommend-label">비서 추천</i>` : ""}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em><small class="equipment-resale-price">예상 판매가 ${resale}만원</small></div>
+        <div class="equipment-item-actions"><button class="${locked ? "mustard" : "ink"}" data-equipment-lock="${item.id}">${locked ? "잠금됨" : "잠금"}</button><button class="teal" data-equip="${item.id}">장착</button><button class="mustard" data-sell-equipment="${item.id}" ${locked ? "disabled" : ""}>판매</button></div>
       </article>`;
     }).join("") : `<div class="empty-inventory">프로젝트에서 장비를 획득하면 여기에 표시됩니다.</div>`;
 
@@ -198,12 +202,13 @@
 
     const tradeInventory = state.equipment.length ? sortedEquipment.map(item => {
       const chosen = tradeIds.includes(item.id);
-      const selectable = item.rarity < 4 && (!first || (item.slot === first.slot && item.rarity === first.rarity) || chosen);
-      return `<article class="equipment-item ${chosen ? "trade-selected" : ""}">
+      const locked = secretaryEquipmentLocked(item.id);
+      const selectable = !locked && item.rarity < 4 && (!first || (item.slot === first.slot && item.rarity === first.rarity) || chosen);
+      return `<article class="equipment-item ${chosen ? "trade-selected" : ""} ${locked ? "equipment-locked" : ""}">
         <span>${equipmentIconMarkup(item)}</span>
         <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
-        <button class="${chosen ? "red" : "mustard"}" data-trade="${item.id}" ${selectable ? "" : "disabled"}>${chosen ? "선택 해제" : "거래 선택"}</button>
-        ${chosen ? `<label class="trade-base-choice"><input type="radio" name="trade-base" data-trade-base="${item.id}" ${tradeBaseId === item.id ? "checked" : ""}> 받을 모델</label>` : ""}
+        <button class="${chosen ? "red" : locked ? "ink" : "mustard"}" data-trade="${item.id}" ${selectable ? "" : "disabled"}>${locked ? "잠금됨" : chosen ? "선택 해제" : "거래 선택"}</button>
+        ${chosen && !locked ? `<label class="trade-base-choice"><input type="radio" name="trade-base" data-trade-base="${item.id}" ${tradeBaseId === item.id ? "checked" : ""}> 받을 모델</label>` : ""}
       </article>`;
     }).join("") : `<div class="empty-inventory">거래할 보관 장비가 없습니다.</div>`;
 
@@ -249,6 +254,7 @@
     }));
     document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
     document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
+    document.querySelectorAll("[data-equipment-lock]").forEach(button => button.addEventListener("click", () => toggleEquipmentLock(button.dataset.equipmentLock)));
     document.querySelectorAll("[data-sell-equipment]").forEach(button => button.addEventListener("click", () => requestEquipmentSale(button.dataset.sellEquipment)));
     document.querySelector("#cancel-equipment-sale")?.addEventListener("click", cancelEquipmentSale);
     document.querySelector("#confirm-equipment-sale")?.addEventListener("click", confirmEquipmentSale);
@@ -268,6 +274,7 @@
 
 function toggleTrade(id){
     const item=state.equipment.find(x=>x.id===id);if(!item)return;
+    if(secretaryEquipmentLocked(id))return renderEquipment("잠긴 장비는 중고거래에 사용할 수 없습니다.");
     if(tradeIds.includes(id)){tradeIds=tradeIds.filter(x=>x!==id);if(tradeBaseId===id)tradeBaseId=tradeIds[0]||null;return renderEquipment("선택에서 제외했습니다.");}
     const first=state.equipment.find(x=>x.id===tradeIds[0]);if(first&&(first.slot!==item.slot||first.rarity!==item.rarity))return renderEquipment("같은 부위와 등급만 선택할 수 있습니다.");
     if(tradeIds.length>=3)return renderEquipment("3개까지 선택할 수 있습니다.");if(item.rarity>=4)return renderEquipment("전설 장비는 교환할 수 없습니다.");

@@ -278,6 +278,17 @@ const OFFICE_DIALOGUES = [
     }
   },
   {
+    id: "professional-boundary", opener: "공과 사는 구분해야죠. 미운 건 아닌 거 아시죠?", formalOpener: "업무 중 제 말이 조금 강했죠? 개인적인 감정은 아닙니다.", representativeOpener: "의견이 달라도 감정으로 번지지는 않게 합시다.", representativeResponse: "업무 의견은 분명히 말하되 서로에 대한 예의는 지켜주세요.",
+    responses: {
+      perfectionist: "알고 있습니다. 저도 기준 때문에 예민해졌던 것 같아요.",
+      mood: "알죠. 퇴근하고 나면 다시 같은 편입니다.",
+      realist: "괜찮습니다. 결론만 잘 정리되면 됩니다.",
+      quiet: "네. 저도 업무 의견으로만 받아들였습니다.",
+      competitive: "좋습니다. 결과로 어느 쪽이 맞는지 확인해보죠.",
+      creative: "다른 의견이 있어야 더 좋은 방법도 나오니까요."
+    }
+  },
+  {
     id: "wrap-up", opener: "오늘은 제시간에 갈 수 있겠죠?", formalOpener: "오늘은 정시에 마무리할 수 있을까요?", representativeOpener: "오늘은 정시에 마무리합시다.", representativeResponse: "남은 업무를 정리하고 무리하지 말고 마칩시다.",
     responses: {
       perfectionist: "마지막 검수만 끝나면 가능합니다.",
@@ -331,9 +342,17 @@ const SAVE_VERSION = 1;
 const FEATURES = window.OfficeRaidFeatures;
 const BALANCE = window.OfficeRaidBalance;
 const ACTIVITIES = window.OfficeRaidActivities;
+const MANAGEMENT = window.OfficeRaidManagement;
+const LABOR = window.OfficeRaidLaborInspection;
+const TEAM_DISPUTE = window.OfficeRaidTeamDispute;
+const SECRETARY = window.OfficeRaidSecretary;
 if (!FEATURES) throw new Error("restored-features.js must load before game.js");
 if (!BALANCE) throw new Error("balance-rules.js must load before game.js");
 if (!ACTIVITIES) throw new Error("employee-activities.js must load before game.js");
+if (!MANAGEMENT) throw new Error("office-management.js must load before game.js");
+if (!LABOR) throw new Error("labor-inspection.js must load before game.js");
+if (!TEAM_DISPUTE) throw new Error("team-dispute.js must load before game.js");
+if (!SECRETARY) throw new Error("secretary-system.js must load before game.js");
 const COMPANY_LEVELS = [
   { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
   { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
@@ -363,6 +382,12 @@ let hrTerminationTargetId = null;
 let activityMiniGamePicks = [];
 let activityMiniGameKey = null;
 let centerNoticeTimer = null;
+let hrSelectedMemberId = null;
+let hrProfileScrollTop = 0;
+let officeDragState = null;
+let officeSuppressClickUntil = 0;
+let secretaryStartPending = false;
+let secretarySaleRecommendationsVisible = false;
 
 function createInitialState() {
   return {
@@ -380,14 +405,21 @@ function createInitialState() {
     workMailStats: { correct: 0, total: 0, streak: 0, bestStreak: 0, completed: 0 },
     employees: [],
     teamIds: [],
+    officeSeats: [],
+    hrSortKey: "rank",
+    employeeJoinSequence: 0,
     postingRefreshes: POSTING_REFRESH_MAX,
     projectClears: 0,
+    clearedProjectIds: [],
     bossClears: 0,
     specialRecruitmentTickets: 0,
     tutorialBattleCompleted: false,
     payrollPayments: 0,
     turnoverEvents: 0,
     pendingTurnover: null,
+    laborCompliance: LABOR.normalizeCompliance(),
+    pendingLaborInspection: null,
+    laborInspectionHistory: [],
     pendingFinancialReport: null,
     training: null,
     businessTrip: null,
@@ -397,11 +429,14 @@ function createInitialState() {
     activityCycles: 0,
     nextBusinessTripCycle: 5,
     activityHistory: [],
+    secretary: null,
+    secretaryRoadmapClaimed: [],
+    equipmentLockedIds: [],
     financialHistory: [],
     financialPeriod: {
       number: 1, startCash: 1200, revenue: 0, payroll: 0,
       recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0,
-      equipmentSales: 0, workErrors: 0, training: 0, tripRevenue: 0
+      equipmentSales: 0, workErrors: 0, training: 0, tripRevenue: 0, laborCompliance: 0
     }
   };
 }
@@ -429,12 +464,14 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
 
-function normalizeSavedMember(member) {
+function normalizeSavedMember(member, fallbackIndex = 0) {
   if (!member || typeof member !== "object" || typeof member.id !== "string") return null;
   return {
     ...member,
     growthPotential: Math.max(0, Math.min(2, Number.isInteger(member.growthPotential) ? member.growthPotential : 1)),
     trainingCount: Math.max(0, Number(member.trainingCount) || 0),
+    projectParticipation: Math.max(0, Number(member.projectParticipation) || 0),
+    joinOrder: Math.max(1, Number(member.joinOrder) || fallbackIndex + 1),
     equipment: { work: null, support: null, personal: null, ...(member.equipment || {}) },
     appearance: { ...appearance(0), ...(member.appearance || {}) }
   };
@@ -443,7 +480,7 @@ function normalizeSavedMember(member) {
 function normalizeSavedState(savedState) {
   if (!savedState || typeof savedState !== "object") return null;
   const initial = createInitialState();
-  const employees = Array.isArray(savedState.employees) ? savedState.employees.map(normalizeSavedMember).filter(Boolean) : [];
+  const employees = Array.isArray(savedState.employees) ? savedState.employees.map((member, index) => normalizeSavedMember(member, index)).filter(Boolean) : [];
   if (!INDUSTRIES[savedState.industry] || !savedState.companyName || employees.length < 3) return null;
   const inferredLevel = Number(savedState.capacity || 0) >= COMPANY_LEVELS[2].capacity
     ? 2 : Number(savedState.capacity || 0) >= COMPANY_LEVELS[1].capacity ? 1 : 0;
@@ -454,11 +491,16 @@ function normalizeSavedState(savedState) {
   employees.forEach(member => {
     if (teamIds.length < 3 && !teamIds.includes(member.id)) teamIds.push(member.id);
   });
+  const officeSeats = MANAGEMENT.normalizeOfficeSeats(employees, savedState.officeSeats, company.capacity, companyLevel);
+  const employeeJoinSequence = Math.max(Number(savedState.employeeJoinSequence) || 0, ...employees.map(member => member.joinOrder || 0));
   return {
     ...initial,
     ...savedState,
     employees,
     teamIds,
+    officeSeats,
+    hrSortKey: MANAGEMENT.HR_SORT_KEYS.includes(savedState.hrSortKey) ? savedState.hrSortKey : "rank",
+    employeeJoinSequence,
     companyLevel,
     capacity: company.capacity,
     equipment: Array.isArray(savedState.equipment) ? savedState.equipment : [],
@@ -467,6 +509,9 @@ function normalizeSavedState(savedState) {
     equipmentTradeRevenue: Math.max(0, Number(savedState.equipmentTradeRevenue) || 0),
     workMail: savedState.workMail && typeof savedState.workMail === "object" ? savedState.workMail : null,
     workMailStats: { ...initial.workMailStats, ...(savedState.workMailStats || {}) },
+    laborCompliance: LABOR.normalizeCompliance(savedState.laborCompliance),
+    pendingLaborInspection: savedState.pendingLaborInspection && typeof savedState.pendingLaborInspection === "object" ? savedState.pendingLaborInspection : null,
+    laborInspectionHistory: Array.isArray(savedState.laborInspectionHistory) ? savedState.laborInspectionHistory.slice(-8) : [],
     training: savedState.training && typeof savedState.training === "object" ? savedState.training : null,
     businessTrip: savedState.businessTrip && typeof savedState.businessTrip === "object" ? savedState.businessTrip : null,
     pendingBusinessTripOffer: savedState.pendingBusinessTripOffer && typeof savedState.pendingBusinessTripOffer === "object" ? savedState.pendingBusinessTripOffer : null,
@@ -475,6 +520,10 @@ function normalizeSavedState(savedState) {
     activityCycles: Math.max(0, Number(savedState.activityCycles) || 0),
     nextBusinessTripCycle: Math.max(5, Number(savedState.nextBusinessTripCycle) || 5),
     activityHistory: Array.isArray(savedState.activityHistory) ? savedState.activityHistory.slice(-8) : [],
+    secretary: SECRETARY.normalizeSecretary(savedState.secretary),
+    secretaryRoadmapClaimed: Array.isArray(savedState.secretaryRoadmapClaimed) ? [...new Set(savedState.secretaryRoadmapClaimed)] : [],
+    equipmentLockedIds: Array.isArray(savedState.equipmentLockedIds) ? [...new Set(savedState.equipmentLockedIds)] : [],
+    clearedProjectIds: Array.isArray(savedState.clearedProjectIds) ? [...new Set(savedState.clearedProjectIds)] : [],
     tutorialBattleCompleted: typeof savedState.tutorialBattleCompleted === "boolean"
       ? savedState.tutorialBattleCompleted
       : Number(savedState.projectClears || 0) > 0 || employees.length > 3,
@@ -546,6 +595,11 @@ function applySavedGame(payload) {
   hrTerminationTargetId = null;
   activityMiniGamePicks = [];
   activityMiniGameKey = null;
+  hrSelectedMemberId = state.employees[0]?.id || null;
+  hrProfileScrollTop = 0;
+  secretaryStartPending = false;
+  secretarySaleRecommendationsVisible = false;
+  cancelOfficeDrag();
   if (state.training && !state.employees.some(member => member.id === state.training.employeeId)) state.training = null;
   if (state.businessTrip && !state.employees.some(member => member.id === state.businessTrip.employeeId)) state.businessTrip = null;
   if (state.pendingBusinessTripOffer && !state.employees.some(member => member.id === state.pendingBusinessTripOffer.employeeId)) state.pendingBusinessTripOffer = null;
@@ -576,6 +630,11 @@ function resetGameState() {
   hrTerminationTargetId = null;
   activityMiniGamePicks = [];
   activityMiniGameKey = null;
+  hrSelectedMemberId = null;
+  hrProfileScrollTop = 0;
+  secretaryStartPending = false;
+  secretarySaleRecommendationsVisible = false;
+  cancelOfficeDrag();
   window.localStorage.removeItem(SAVE_KEY);
 }
 
@@ -596,14 +655,17 @@ function appearance(seed = randomInt(10000)) {
 }
 
 function employee(name, department, trait, work, collaboration, speed, look, rank = 0) {
+  const employeeNumber = nextId++;
   return {
-    id: `employee-${nextId++}`,
+    id: `employee-${employeeNumber}`,
     name, department, trait, work, collaboration, speed,
     focus: Math.round((work + collaboration) / 2),
     salary: 120 + rank * 72,
     rank, isRepresentative: false, joinedAt: 0, retentionCount: 0,
     growthPotential: Math.floor(Math.abs(Number(look) || 0) / 31) % 3,
     trainingCount: 0,
+    projectParticipation: 0,
+    joinOrder: 0,
     equipment: { work: null, support: null, personal: null },
     appearance: appearance(look)
   };
@@ -664,7 +726,10 @@ const PRELOAD_ASSETS = [
   "assets/office-monitor-back.webp?v=20260831",
   "assets/battle-background-normal.webp?v=20260901-battle-art-v1",
   "assets/battle-background-boss.webp?v=20260901-battle-art-v1",
-  "assets/perfect-workflow-vfx.webp?v=20260901-workflow-v2"
+  "assets/perfect-workflow-vfx.webp?v=20260901-workflow-v2",
+  "assets/secretary-a.webp?v=20260903",
+  "assets/secretary-b.webp?v=20260903",
+  "assets/secretary-c.webp?v=20260903"
 ];
 const preloadedImages = [];
 let assetsReady = false;
@@ -941,7 +1006,12 @@ function createCompany() {
     representative,
     ...industry.starters.map(member => employee(member.name, member.department, member.trait, member.work, member.collaboration, member.speed, member.look))
   ];
+  state.employees.forEach(member => {
+    state.employeeJoinSequence += 1;
+    member.joinOrder = state.employeeJoinSequence;
+  });
   state.teamIds = state.employees.map(member => member.id);
+  repairOfficeSeats();
   saveGame();
   renderCompanyLaunch();
 }
@@ -1104,7 +1174,8 @@ function pickOfficeDialogue() {
 
 function runOfficeDialogue() {
   if (currentView !== "office") return;
-  const members = availableEmployees();
+  const visibleIds = new Set([...document.querySelectorAll("[data-office-speech]")].map(element => element.dataset.officeSpeech));
+  const members = availableEmployees().filter(member => visibleIds.has(member.id));
   if (members.length < 2) return;
   const speakerIndex = randomInt(members.length);
   const listenerIndex = (speakerIndex + 1 + randomInt(members.length - 1)) % members.length;
@@ -1172,7 +1243,7 @@ function recordFinancialAmount(category, amount) {
 }
 
 function financialExpenseTotal(period) {
-  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.equipmentTrade || 0) + (period.workErrors || 0) + (period.training || 0);
+  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.equipmentTrade || 0) + (period.workErrors || 0) + (period.training || 0) + (period.laborCompliance || 0);
 }
 
 function closeFinancialPeriodIfDue() {
@@ -1193,7 +1264,7 @@ function closeFinancialPeriodIfDue() {
   state.financialPeriod = {
     number: period.number + 1, startCash: state.cash, revenue: 0, payroll: 0,
     recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0,
-    equipmentSales: 0, workErrors: 0, training: 0, tripRevenue: 0
+    equipmentSales: 0, workErrors: 0, training: 0, tripRevenue: 0, laborCompliance: 0
   };
   return report;
 }
@@ -1220,13 +1291,33 @@ function repairProjectTeam() {
   });
 }
 
+function repairOfficeSeats() {
+  state.officeSeats = MANAGEMENT.normalizeOfficeSeats(
+    state.employees,
+    state.officeSeats,
+    state.capacity,
+    state.companyLevel
+  );
+  return state.officeSeats;
+}
+
+function employeeForOfficeSeat(index) {
+  const id = state.officeSeats[index];
+  if (!id) return null;
+  const member = state.employees.find(item => item.id === id);
+  return member && !isEmployeeUnavailable(member.id) ? member : null;
+}
+
 function removeEmployee(member) {
   if (!member || member.isRepresentative) return [];
   const returnedEquipment = Object.values(member.equipment || {}).filter(Boolean).map(item => item.name);
   returnMemberEquipment(member);
   state.employees = state.employees.filter(employeeItem => employeeItem.id !== member.id);
+  state.officeSeats = state.officeSeats.map(id => id === member.id ? null : id);
   repairProjectTeam();
+  repairOfficeSeats();
   if (equipmentTargetId === member.id) equipmentTargetId = state.employees[0]?.id || null;
+  if (hrSelectedMemberId === member.id) hrSelectedMemberId = state.employees[0]?.id || null;
   return returnedEquipment;
 }
 
@@ -1345,24 +1436,248 @@ function submitWorkMailAnswer(answerIndex) {
   renderWorkMail(`오답입니다. 재작업비 ${penalty}만원이 발생했습니다. 다시 확인해 주세요.`);
 }
 
+function officeDeskMarkup(member, seatIndex = null, { executive = false, reservedMember = null } = {}) {
+  const seatAttribute = Number.isInteger(seatIndex) ? ` data-office-seat-index="${seatIndex}"` : "";
+  if (!member) {
+    const reserved = Boolean(reservedMember);
+    const label = reserved ? `${reservedMember.name}의 자리 · 현재 자리 비움` : "빈자리";
+    return `<div class="desk office-empty-desk ${reserved ? "reserved-desk" : ""}"${reserved ? ` data-office-worker="${reservedMember.id}"` : ""}${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(label)}">
+      <div class="office-workspace empty-workspace" aria-hidden="true"><img class="office-desk-base" src="assets/office-desk-base.webp?v=20260831" alt=""><img class="office-monitor-back" src="assets/office-monitor-back.webp?v=20260831" alt=""></div>
+      <span class="empty-seat-marker">${reserved ? "자리 비움" : "빈 자리"}</span>
+    </div>`;
+  }
+  return `<div class="desk ${executive ? "executive-desk" : ""}" data-office-worker="${member.id}"${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 ${executive ? "대표석" : "사용 장비 확인"}">
+    ${executive ? `<span class="executive-seat-label">대표석</span>` : ""}<span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<span class="desk-identity"><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></span>
+  </div>`;
+}
+
+function officePageDesks(page) {
+  repairOfficeSeats();
+  const seatIndices = MANAGEMENT.officeSeatIndicesForPage(page, state.companyLevel).filter(index => index < state.officeSeats.length);
+  const staffDesks = seatIndices.map(index => {
+    const assignedId = state.officeSeats[index];
+    const assignedMember = state.employees.find(member => member.id === assignedId) || null;
+    const visibleMember = assignedMember && !isEmployeeUnavailable(assignedMember.id) ? assignedMember : null;
+    return officeDeskMarkup(visibleMember, index, { reservedMember: visibleMember ? null : assignedMember });
+  });
+  if (MANAGEMENT.hasExecutiveSeat(state.companyLevel) && page === 0) {
+    const representative = state.employees.find(member => member.isRepresentative) || null;
+    staffDesks.splice(1, 0, officeDeskMarkup(representative, null, { executive: true }));
+  }
+  return staffDesks.join("");
+}
+
+function secretaryCandidate() {
+  return SECRETARY.candidate(state.secretary?.candidateId);
+}
+
+function secretaryRoadmap() {
+  return SECRETARY.roadmap(state);
+}
+
+function syncSecretaryRoadmapRewards() {
+  const claimed = new Set(state.secretaryRoadmapClaimed || []);
+  const newlyCompleted = secretaryRoadmap().stages.filter(stage => stage.complete && !claimed.has(stage.id));
+  if (!newlyCompleted.length) return "";
+  let cash = 0;
+  let reputation = 0;
+  newlyCompleted.forEach(stage => {
+    claimed.add(stage.id);
+    cash += stage.rewardCash || 0;
+    reputation += stage.rewardReputation || 0;
+  });
+  state.secretaryRoadmapClaimed = [...claimed];
+  if (cash) {
+    state.cash += cash;
+    recordFinancialAmount("revenue", cash);
+  }
+  if (reputation) state.reputation += reputation;
+  const rewards = [cash ? `현금 +${cash}만원` : "", reputation ? `평판 +${reputation}` : ""].filter(Boolean).join(" · ");
+  return `${newlyCompleted[newlyCompleted.length - 1].label} 달성${rewards ? ` · ${rewards}` : ""}`;
+}
+
+function secretaryArt(candidateId, compact = false) {
+  const safeId = SECRETARY.candidate(candidateId)?.id || "a";
+  return `<span class="secretary-art secretary-${safeId} ${compact ? "secretary-art-compact" : ""}" aria-hidden="true"></span>`;
+}
+
+function secretaryEquipmentLocked(itemId) {
+  return Boolean(itemId && (state.equipmentLockedIds || []).includes(itemId));
+}
+
+function secretarySaleRecommendationIds() {
+  return SECRETARY.saleRecommendationIds(state.equipment, state.equipmentLockedIds);
+}
+
+function toggleEquipmentLock(itemId) {
+  if (!itemId) return;
+  const locked = new Set(state.equipmentLockedIds || []);
+  if (locked.has(itemId)) locked.delete(itemId);
+  else locked.add(itemId);
+  state.equipmentLockedIds = [...locked];
+  saveGame();
+  renderEquipment(locked.has(itemId) ? "장비를 잠갔습니다. 비서 자동 장착·판매 추천에서 제외됩니다." : "장비 잠금을 해제했습니다.");
+}
+
+function secretaryAutoEquipTeam({ silent = false } = {}) {
+  if (!state.secretary) return 0;
+  const team = orderedBattleTeam();
+  if (!team.length) return 0;
+  const locked = new Set(state.equipmentLockedIds || []);
+  const pool = [...state.equipment];
+  state.employees.forEach(member => {
+    Object.keys(EQUIPMENT_SLOTS).forEach(slot => {
+      const item = member.equipment?.[slot];
+      if (item && !locked.has(item.id)) {
+        pool.push(item);
+        member.equipment[slot] = null;
+      }
+    });
+  });
+  const uniquePool = [...new Map(pool.filter(Boolean).map(item => [item.id, item])).values()];
+  let equipped = 0;
+  Object.keys(EQUIPMENT_SLOTS).forEach(slot => {
+    const slotItems = uniquePool.filter(item => item.slot === slot && !locked.has(item.id)).sort((left, right) => SECRETARY.equipmentValue(right) - SECRETARY.equipmentValue(left));
+    team.forEach(member => {
+      if (member.equipment?.[slot] || !slotItems.length) return;
+      member.equipment[slot] = slotItems.shift();
+      equipped += 1;
+    });
+  });
+  const assignedIds = new Set(state.employees.flatMap(member => Object.values(member.equipment || {}).filter(Boolean).map(item => item.id)));
+  state.equipment = uniquePool.filter(item => !assignedIds.has(item.id));
+  saveGame();
+  if (!silent) {
+    const candidate = secretaryCandidate();
+    renderSecretaryCenter(`${candidate?.equipmentLine || "프로젝트 팀의 장비를 자동 배치했습니다."} · ${equipped}개 장착`);
+  }
+  return equipped;
+}
+
+function secretaryRecommendTeam(projectId, { silent = false } = {}) {
+  if (!state.secretary) return false;
+  const project = [...PROJECTS, ...BOSS_PROJECTS].find(item => item.id === projectId);
+  if (!project) return false;
+  const recommended = SECRETARY.recommendTeam(availableEmployees(), project, projectTeamLimit(), effectiveStats);
+  if (recommended.length < 3) return false;
+  state.teamIds = recommended.map(member => member.id);
+  repairProjectTeam();
+  saveGame();
+  if (!silent) renderProjectBoard(`${secretaryCandidate()?.teamLine || "추천 팀을 편성했습니다."} · ${recommended.map(member => member.name).join(" → ")}`);
+  return true;
+}
+
+function secretaryRunProject(projectId, riskTier) {
+  const project = [...PROJECTS, ...BOSS_PROJECTS].find(item => item.id === projectId);
+  const allowed = state.secretary && state.companyLevel >= 2 && !project?.boss && state.clearedProjectIds.includes(projectId);
+  if (!allowed) return renderProjectBoard("비서 자동 진행은 대형 오피스에서 이미 완료한 일반 프로젝트에만 사용할 수 있습니다.");
+  if (!secretaryRecommendTeam(projectId, { silent: true })) return renderProjectBoard("프로젝트에 투입할 근무 직원이 부족합니다.");
+  secretaryAutoEquipTeam({ silent: true });
+  secretaryStartPending = true;
+  startBattle(projectId, riskTier);
+}
+
+function openSecretary() {
+  clearBattleTimer();
+  clearOfficeDialogue();
+  renderSecretaryCenter();
+}
+
+function renderSecretaryCenter(notice = "") {
+  currentView = "secretary";
+  saveGame();
+  if (state.secretary) return renderSecretaryOffice(notice);
+  const roadmap = secretaryRoadmap();
+  if (roadmap.ready) return renderSecretaryRecruitment(notice || "경영지원실 개설 조건을 모두 달성했습니다. 함께 일할 비서를 선택하세요.");
+  const stages = roadmap.stages.map((stage, index) => {
+    const current = roadmap.current?.id === stage.id;
+    const reward = [stage.rewardCash ? `현금 +${stage.rewardCash}` : "", stage.rewardReputation ? `평판 +${stage.rewardReputation}` : ""].filter(Boolean).join(" · ");
+    return `<article class="roadmap-stage ${stage.complete ? "complete" : current ? "current" : "locked"}"><i>${stage.complete ? "✓" : index + 1}</i><div><strong>${escapeHtml(stage.label)}</strong><span>${escapeHtml(stage.detail)}</span>${reward ? `<small>${escapeHtml(reward)}</small>` : ""}</div><b>${stage.value}/${stage.target}</b></article>`;
+  }).join("");
+  app.innerHTML = `${header("경영지원실 개설 준비", notice || "목표를 하나씩 달성하면 세 명의 비서 후보를 만날 수 있습니다.")}<section class="screen secretary-screen">
+    <div class="secretary-roadmap-head panel"><div><small>SHORT-TERM GOAL</small><strong>비서 채용까지 ${roadmap.completed}/${roadmap.total}</strong><span>${escapeHtml(roadmap.current?.label || "후보 면접 준비 완료")}</span></div><b>${Math.round(roadmap.completed / roadmap.total * 100)}%</b></div>
+    <div class="secretary-roadmap">${stages}</div>
+    <button class="ink" id="back-from-secretary">← 사무실</button>
+  </section>`;
+  document.querySelector("#back-from-secretary").addEventListener("click", () => renderOffice());
+}
+
+function renderSecretaryRecruitment(notice) {
+  const cards = SECRETARY.CANDIDATES.map(candidate => `<article class="secretary-candidate candidate-${candidate.tone}">
+    ${secretaryArt(candidate.id)}
+    <div class="secretary-candidate-copy"><small>MANAGEMENT SUPPORT · ${candidate.id.toUpperCase()}</small><h2>${escapeHtml(candidate.name)}</h2><strong>${escapeHtml(candidate.title)}</strong><p>${escapeHtml(candidate.summary)}</p><blockquote>${escapeHtml(candidate.greeting)}</blockquote></div>
+    <button class="mustard" data-hire-secretary="${candidate.id}">${escapeHtml(candidate.name)} 채용</button>
+  </article>`).join("");
+  app.innerHTML = `${header("경영지원 비서 채용", notice)}<section class="screen secretary-screen secretary-recruitment-screen">
+    <div class="secretary-equal-note panel"><b>세 후보의 자동화 성능은 동일합니다.</b><span>외형과 말투를 보고 마음에 드는 한 명을 선택하세요.</span></div>
+    <div class="secretary-candidate-list">${cards}</div>
+    <button class="ink" id="back-from-secretary">← 사무실</button>
+  </section>`;
+  document.querySelectorAll("[data-hire-secretary]").forEach(button => button.addEventListener("click", () => hireSecretary(button.dataset.hireSecretary)));
+  document.querySelector("#back-from-secretary").addEventListener("click", () => renderOffice());
+}
+
+function hireSecretary(candidateId) {
+  const candidate = SECRETARY.candidate(candidateId);
+  if (!candidate || !secretaryRoadmap().ready || state.secretary) return renderSecretaryCenter("채용 조건을 다시 확인해 주세요.");
+  state.secretary = SECRETARY.normalizeSecretary({ candidateId, hiredAt: state.projectClears, autoDirective: false, battleSpeed: 1 });
+  saveGame();
+  renderSecretaryOffice(`${candidate.name} 비서가 경영지원실에 합류했습니다. 첫 채용 비용은 없습니다.`);
+}
+
+function renderSecretaryOffice(notice = "") {
+  const candidate = secretaryCandidate();
+  const largeOffice = state.companyLevel >= 2;
+  const recommendations = secretarySaleRecommendationIds();
+  const autoDirective = Boolean(state.secretary.autoDirective && largeOffice);
+  app.innerHTML = `${header("경영지원실", notice || candidate.greeting)}<section class="screen secretary-screen">
+    <article class="secretary-profile panel tone-${candidate.tone}">${secretaryArt(candidate.id)}<div><small>EXECUTIVE ASSISTANT</small><h2>${escapeHtml(candidate.name)}</h2><strong>${escapeHtml(candidate.title)}</strong><p>“${escapeHtml(candidate.greeting)}”</p></div></article>
+    <div class="secretary-actions">
+      <button class="teal" id="secretary-projects"><strong>추천 팀 편성</strong><small>프로젝트별 추천 버튼 열기</small></button>
+      <button class="blue" id="secretary-auto-equip"><strong>장비 자동 장착</strong><small>잠금 장비를 제외하고 팀 최적화</small></button>
+      <button class="mustard" id="secretary-sale"><strong>판매 추천 ${recommendations.length}</strong><small>낮은 활용도의 보관 장비 확인</small></button>
+    </div>
+    <div class="secretary-tier panel"><div><small>현재 지원 단계</small><strong>${largeOffice ? "대형 오피스 자동화" : "중형 사무실 업무 지원"}</strong></div><span class="${largeOffice ? "unlocked" : "locked"}"><b>${largeOffice ? "✓" : "LOCK"}</b> 완료한 일반 프로젝트 3배속 자동 진행</span><button id="toggle-secretary-directive" class="${autoDirective ? "teal" : "ink"}" ${largeOffice ? "" : "disabled"}>긴급 지시 자동 선택 · ${largeOffice ? autoDirective ? "ON" : "OFF" : "대형 오피스 해금"}</button></div>
+    <p class="secretary-boundary">최초 프로젝트·보스전·프로젝트 분쟁·인사 및 돌발 이벤트는 대표가 직접 결정합니다.</p>
+    <button class="ink" id="back-from-secretary">← 사무실</button>
+  </section>`;
+  document.querySelector("#secretary-projects").addEventListener("click", () => renderProjectBoard(`${candidate.name} 비서가 프로젝트별 추천 팀을 준비했습니다.`));
+  document.querySelector("#secretary-auto-equip").addEventListener("click", () => secretaryAutoEquipTeam());
+  document.querySelector("#secretary-sale").addEventListener("click", () => {
+    secretarySaleRecommendationsVisible = true;
+    openEquipment(recommendations.length ? `${candidate.saleLine} · 추천 ${recommendations.length}개` : "현재 판매를 추천할 장비가 없습니다.", true);
+  });
+  document.querySelector("#toggle-secretary-directive")?.addEventListener("click", () => {
+    if (!largeOffice) return;
+    state.secretary.autoDirective = !state.secretary.autoDirective;
+    saveGame();
+    renderSecretaryOffice(`긴급 지시 자동 선택을 ${state.secretary.autoDirective ? "켰습니다" : "껐습니다"}.`);
+  });
+  document.querySelector("#back-from-secretary").addEventListener("click", () => renderOffice());
+}
+
 function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.", animateEntry = false) {
   currentView = "office";
   clearCompanyLaunchTimer();
   clearBattleTimer();
   repairProjectTeam();
   if (state.tutorialBattleCompleted) ensureWorkMail();
+  const roadmapReward = syncSecretaryRoadmapRewards();
   saveGame();
   const tutorialPending = !state.tutorialBattleCompleted;
-  const officeNotice = tutorialPending ? "창립팀으로 첫 프로젝트를 완료해 면접 기능을 해금하세요." : notice;
+  const officeNotice = tutorialPending ? "창립팀으로 첫 프로젝트를 완료해 면접 기능을 해금하세요." : roadmapReward || notice;
   const teamNames = orderedBattleTeam().map(member => escapeHtml(member.name)).join(" → ");
   const specialRecruitment = state.specialRecruitmentTickets > 0
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
-  const officePageSize = 6;
-  const workingEmployees = availableEmployees();
-  const officePageCount = Math.max(1, Math.ceil(workingEmployees.length / officePageSize));
+  repairOfficeSeats();
+  const maximumOfficePages = MANAGEMENT.maximumOfficePages(state.capacity, state.companyLevel);
+  const occupiedOfficePages = MANAGEMENT.occupiedOfficePages(state.officeSeats, state.companyLevel);
+  const officePageCount = officeDragState?.active ? maximumOfficePages : occupiedOfficePages;
   officePage = Math.min(officePage, officePageCount - 1);
-  const officeMembers = workingEmployees.slice(officePage * officePageSize, (officePage + 1) * officePageSize);
+  const visibleSeatIndices = MANAGEMENT.officeSeatIndicesForPage(officePage, state.companyLevel).filter(index => index < state.officeSeats.length);
+  const assignedMemberCount = visibleSeatIndices.filter(index => state.officeSeats[index]).length
+    + (MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? 1 : 0);
   const equippedCount = equippedEquipmentCount();
   const activeMail = state.workMail;
   const dailyMail = state.dailyMissions;
@@ -1378,18 +1693,28 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
   const expansionReady = nextCompany && state.projectClears >= nextCompany.requiredClears && state.cash >= nextCompany.cost;
+  const laborBand = LABOR.riskBand(state.laborCompliance.score);
   const activeActivities = [state.training, state.businessTrip].filter(Boolean);
   const activityMarkup = activeActivities.length ? `<div class="office-activities panel">${activeActivities.map(activity => {
     const member = state.employees.find(item => item.id === activity.employeeId);
     return `<span class="${activity.type}"><small>${activity.type === "training" ? "교육 중" : "출장 중"}</small><strong>${escapeHtml(member?.name || "직원")}</strong><em>${escapeHtml(activityStatusText(activity))}</em></span>`;
   }).join("")}</div>` : "";
-  const officeZone = `<div class="office-zone"><span>${company.grade} · 근무 구역 ${officePage + 1}/${officePageCount}</span>${officePageCount > 1 ? `<button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button>` : ""}</div>`;
-  const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<span class="desk-identity"><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></span></div>`).join("");
+  const roadmap = secretaryRoadmap();
+  const hiredSecretary = secretaryCandidate();
+  const secretaryMarkup = hiredSecretary ? `<button class="office-secretary tone-${hiredSecretary.tone}" id="office-secretary"><span class="secretary-mini-frame">${secretaryArt(hiredSecretary.id, true)}</span><div><small>MANAGEMENT SUPPORT</small><strong>${escapeHtml(hiredSecretary.name)} 비서</strong><em>${escapeHtml(hiredSecretary.greeting)}</em></div><b>열기</b></button>` : "";
+  const secretaryGoal = state.secretary
+    ? `<button class="secretary-goal-note complete" id="secretary-goal"><b>경영지원 비서</b><span>${escapeHtml(hiredSecretary?.name || "채용 완료")} · 업무 지원 중</span></button>`
+    : roadmap.ready
+      ? `<button class="secretary-goal-note ready" id="secretary-goal"><b>경영지원실 준비 완료</b><span>비서 후보 3명 면접 가능</span></button>`
+      : `<button class="secretary-goal-note" id="secretary-goal"><b>비서 채용 목표 ${roadmap.completed}/${roadmap.total}</b><span>${escapeHtml(roadmap.current.label)} ${roadmap.current.value}/${roadmap.current.target}</span></button>`;
+  const officeZone = `<div class="office-zone"><span>${company.grade} · 근무 구역 ${officePage + 1}/${officePageCount}</span><em>길게 눌러 자리 이동</em>${officePageCount > 1 ? `<button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button>` : ""}</div>`;
+  const desks = officePageDesks(officePage);
   app.innerHTML = `${header(company.name, officeNotice)}
     <section class="screen">
-      <div class="office-room panel company-level-${company.id} staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 직원 ${officeMembers.length}명">${officeZone}${desks}</div>
+      <div class="office-room panel company-level-${company.id} staff-${assignedMemberCount} ${MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? "has-executive-seat" : ""}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 배정 직원 ${assignedMemberCount}명">${officeZone}${desks}</div>
       ${activityMarkup}
       ${mailMarkup}
+      ${secretaryMarkup}
       <div class="company-card panel">
         <div class="company-card-head"><div><small>COMPANY FILE · ${company.grade}</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</b></div>
         <div class="company-stats" aria-label="회사 현황">
@@ -1401,6 +1726,8 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
           <p><b>ACTION ORDER</b><span>${teamNames}</span></p>
           <p><b>성과 ${state.projectClears}회 · 급여 D-${projectsUntilPayroll()}</b><span>월급 ${totalPayroll()} · 특별채용 ${specialRecruitment}</span></p>
           ${tutorialPending ? "" : `<p><b>업무 정확도</b><span>${workMailAccuracyLabel()} · 연속 ${state.workMailStats.streak}회</span></p>`}
+          ${state.companyLevel >= LABOR.UNLOCK_COMPANY_LEVEL ? `<p class="labor-risk-note risk-${laborBand.id}" style="--labor-tone:${laborBand.color}"><b>노무 위험도</b><span>${state.laborCompliance.score} · ${laborBand.label}</span></p>` : ""}
+          ${secretaryGoal}
           ${tutorialPending ? `<p class="onboarding-note"><b>FIRST MISSION</b><span>첫 프로젝트 성공 시 면접 기능 해금</span></p>` : ""}
         </div>
       </div>
@@ -1420,11 +1747,13 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#team").addEventListener("click", openTeam);
   document.querySelector("#equipment").addEventListener("click", () => openEquipment());
   document.querySelector("#hr").addEventListener("click", () => openHumanResources());
+  document.querySelector("#secretary-goal")?.addEventListener("click", openSecretary);
+  document.querySelector("#office-secretary")?.addEventListener("click", openSecretary);
   document.querySelector("#expand").addEventListener("click", openCompanyExpansion);
   document.querySelector("#project").addEventListener("click", renderProjectBoard);
   document.querySelector("#office-page-prev")?.addEventListener("click", () => { officePage -= 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
   document.querySelector("#office-page-next")?.addEventListener("click", () => { officePage += 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
-  document.querySelectorAll("[data-office-worker]").forEach(desk => {
+  document.querySelectorAll("[data-office-worker]:not(.office-empty-desk)").forEach(desk => {
     const toggleLoadout = () => {
       const willOpen = !desk.classList.contains("loadout-open");
       document.querySelectorAll("[data-office-worker].loadout-open").forEach(openDesk => {
@@ -1434,14 +1763,169 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
       desk.classList.toggle("loadout-open", willOpen);
       desk.querySelector(".office-loadout-popover")?.setAttribute("aria-hidden", willOpen ? "false" : "true");
     };
-    desk.addEventListener("click", toggleLoadout);
+    desk.addEventListener("click", () => {
+      if (Date.now() < officeSuppressClickUntil) return;
+      toggleLoadout();
+    });
     desk.addEventListener("keydown", event => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       toggleLoadout();
     });
   });
-  scheduleOfficeDialogue();
+  document.querySelectorAll(".office-empty-desk").forEach(desk => desk.addEventListener("click", () => {
+    showCenterNotice(desk.classList.contains("reserved-desk") ? "교육이나 출장 중인 직원의 자리입니다." : "옮길 직원을 길게 누른 뒤 이 자리로 끌어 놓으세요.");
+  }));
+  mountOfficeSeatInteractions();
+  if (!officeDragState?.active) scheduleOfficeDialogue();
+}
+
+function positionOfficeDragGhost(clientX, clientY) {
+  if (!officeDragState?.ghost) return;
+  officeDragState.ghost.style.left = `${clientX}px`;
+  officeDragState.ghost.style.top = `${clientY}px`;
+}
+
+function refreshOfficeDragTargets(clientX, clientY) {
+  document.querySelectorAll("[data-office-seat-index].drag-target").forEach(target => target.classList.remove("drag-target"));
+  if (!officeDragState?.active) return;
+  const target = document.elementFromPoint(clientX, clientY)?.closest?.("[data-office-seat-index]");
+  if (!target) {
+    officeDragState.targetIndex = null;
+    return;
+  }
+  officeDragState.targetIndex = Number(target.dataset.officeSeatIndex);
+  target.classList.add("drag-target");
+}
+
+function updateOfficeDragEdge(clientX) {
+  if (!officeDragState?.active) return;
+  const room = document.querySelector(".office-room");
+  if (!room) return;
+  const rect = room.getBoundingClientRect();
+  const maxPages = MANAGEMENT.maximumOfficePages(state.capacity, state.companyLevel);
+  const direction = clientX <= rect.left + 34 && officePage > 0
+    ? -1
+    : clientX >= rect.right - 34 && officePage < maxPages - 1 ? 1 : 0;
+  if (direction === officeDragState.edgeDirection) return;
+  window.clearTimeout(officeDragState.edgeTimer);
+  officeDragState.edgeDirection = direction;
+  officeDragState.edgeTimer = null;
+  document.querySelector(".office-room")?.classList.toggle("edge-prev", direction === -1);
+  document.querySelector(".office-room")?.classList.toggle("edge-next", direction === 1);
+  if (!direction) return;
+  officeDragState.edgeTimer = window.setTimeout(() => {
+    if (!officeDragState?.active) return;
+    officePage += direction;
+    officeDragState.edgeDirection = 0;
+    officeDragState.edgeTimer = null;
+    renderOffice("자리를 옮길 근무 구역을 선택하고 있습니다.");
+    window.requestAnimationFrame(() => refreshOfficeDragTargets(officeDragState?.lastX || clientX, officeDragState?.lastY || 0));
+  }, 620);
+}
+
+function beginOfficeDrag() {
+  if (!officeDragState || officeDragState.active || currentView !== "office") return;
+  const member = state.employees.find(item => item.id === officeDragState.memberId);
+  if (!member || member.isRepresentative && MANAGEMENT.hasExecutiveSeat(state.companyLevel)) return cancelOfficeDrag();
+  officeDragState.active = true;
+  clearOfficeDialogue();
+  document.querySelector(".office-room")?.classList.add("seat-dragging");
+  document.querySelector(`[data-office-seat-index="${officeDragState.sourceIndex}"]`)?.classList.add("drag-source");
+  const ghost = document.createElement("div");
+  ghost.className = "office-drag-ghost";
+  ghost.innerHTML = `<canvas width="24" height="24" aria-hidden="true"></canvas><strong>${escapeHtml(member.name)}</strong><small>자리 이동 중</small>`;
+  document.querySelector("#game-shell")?.appendChild(ghost);
+  drawUpperBodyPreview(ghost.querySelector("canvas"), member);
+  officeDragState.ghost = ghost;
+  positionOfficeDragGhost(officeDragState.lastX, officeDragState.lastY);
+  if (navigator.vibrate) navigator.vibrate(18);
+  showCenterNotice("다른 책상으로 끌어 놓으세요. 화면 가장자리에서 근무 구역이 바뀝니다.");
+}
+
+function cancelOfficeDrag() {
+  if (!officeDragState) return;
+  window.clearTimeout(officeDragState.longPressTimer);
+  window.clearTimeout(officeDragState.edgeTimer);
+  window.removeEventListener("pointermove", officeDragState.onMove);
+  window.removeEventListener("pointerup", officeDragState.onEnd);
+  window.removeEventListener("pointercancel", officeDragState.onEnd);
+  officeDragState.ghost?.remove();
+  document.querySelectorAll(".seat-dragging,.seat-target,.drag-source,.drag-target,.edge-prev,.edge-next").forEach(element => {
+    element.classList.remove("seat-dragging", "seat-target", "drag-source", "drag-target", "edge-prev", "edge-next");
+  });
+  officeDragState = null;
+}
+
+function finishOfficeDrag(event) {
+  if (!officeDragState || event.pointerId !== officeDragState.pointerId) return;
+  window.clearTimeout(officeDragState.longPressTimer);
+  if (!officeDragState.active) return cancelOfficeDrag();
+  event.preventDefault();
+  refreshOfficeDragTargets(event.clientX, event.clientY);
+  const sourceIndex = officeDragState.sourceIndex;
+  const targetIndex = officeDragState.targetIndex;
+  const moved = Number.isInteger(targetIndex) && targetIndex !== sourceIndex;
+  if (moved) {
+    [state.officeSeats[sourceIndex], state.officeSeats[targetIndex]] = [state.officeSeats[targetIndex], state.officeSeats[sourceIndex]];
+  }
+  officeSuppressClickUntil = Date.now() + 500;
+  cancelOfficeDrag();
+  if (!moved) return renderOffice();
+  saveGame();
+  renderOffice();
+  showCenterNotice("직원의 자리를 옮겼습니다.");
+}
+
+function mountOfficeSeatInteractions() {
+  if (officeDragState?.active) {
+    document.querySelector(".office-room")?.classList.add("seat-dragging");
+    document.querySelectorAll("[data-office-seat-index]").forEach(target => target.classList.add("seat-target"));
+    return;
+  }
+  document.querySelectorAll("[data-office-worker][data-office-seat-index]").forEach(desk => {
+    desk.addEventListener("contextmenu", event => event.preventDefault());
+    desk.addEventListener("pointerdown", event => {
+      if ((event.button !== undefined && event.button !== 0) || officeDragState) return;
+      const sourceIndex = Number(desk.dataset.officeSeatIndex);
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const drag = {
+        active: false,
+        pointerId: event.pointerId,
+        memberId: desk.dataset.officeWorker,
+        sourceIndex,
+        targetIndex: sourceIndex,
+        startX,
+        startY,
+        lastX: startX,
+        lastY: startY,
+        longPressTimer: null,
+        edgeTimer: null,
+        edgeDirection: 0,
+        ghost: null,
+        onMove: null,
+        onEnd: null
+      };
+      drag.onMove = moveEvent => {
+        if (!officeDragState || moveEvent.pointerId !== drag.pointerId) return;
+        drag.lastX = moveEvent.clientX;
+        drag.lastY = moveEvent.clientY;
+        if (!drag.active && Math.hypot(drag.lastX - drag.startX, drag.lastY - drag.startY) > 12) return cancelOfficeDrag();
+        if (!drag.active) return;
+        moveEvent.preventDefault();
+        positionOfficeDragGhost(drag.lastX, drag.lastY);
+        refreshOfficeDragTargets(drag.lastX, drag.lastY);
+        updateOfficeDragEdge(drag.lastX);
+      };
+      drag.onEnd = finishOfficeDrag;
+      drag.longPressTimer = window.setTimeout(beginOfficeDrag, 480);
+      officeDragState = drag;
+      window.addEventListener("pointermove", drag.onMove, { passive: false });
+      window.addEventListener("pointerup", drag.onEnd, { passive: false });
+      window.addEventListener("pointercancel", drag.onEnd, { passive: false });
+    });
+  });
 }
 
 function openCompanyExpansion() {
@@ -1487,7 +1971,12 @@ function expandCompany() {
   recordFinancialAmount("expansion", next.cost);
   state.companyLevel += 1;
   state.capacity = next.capacity;
+  if (MANAGEMENT.hasExecutiveSeat(state.companyLevel)) {
+    const representativeId = state.employees.find(member => member.isRepresentative)?.id;
+    state.officeSeats = state.officeSeats.filter(id => id && id !== representativeId);
+  }
   repairProjectTeam();
+  repairOfficeSeats();
   saveGame();
   renderCompanyExpansion(`${next.name}로 확장했습니다. 직원 정원 ${next.capacity}명 · 프로젝트 팀 최대 ${next.teamLimit}명`);
 }
@@ -1495,32 +1984,45 @@ function expandCompany() {
 function openHumanResources(notice = "직원 계약과 급여 현황을 관리하세요.") {
   currentView = "hr";
   hrTerminationTargetId = null;
+  if (!state.employees.some(member => member.id === hrSelectedMemberId)) {
+    hrSelectedMemberId = state.employees.find(member => member.isRepresentative)?.id || state.employees[0]?.id || null;
+  }
   renderHumanResources(notice);
 }
 
 function renderHumanResources(notice = "직원 계약과 급여 현황을 관리하세요.") {
   currentView = "hr";
   saveGame();
+  const sortLabels = { rank: "직급순", joined: "입사순", department: "부서순", participation: "참여순" };
+  const sortedEmployees = MANAGEMENT.sortEmployees(state.employees, state.hrSortKey, Object.keys(DEPARTMENTS));
+  if (!sortedEmployees.some(member => member.id === hrSelectedMemberId)) hrSelectedMemberId = sortedEmployees[0]?.id || null;
+  const selectedMember = sortedEmployees.find(member => member.id === hrSelectedMemberId) || sortedEmployees[0];
   const target = state.employees.find(member => member.id === hrTerminationTargetId && !member.isRepresentative);
-  const cards = state.employees.map(member => {
-    const stats = effectiveStats(member);
-    const equipped = Object.values(member.equipment || {}).filter(Boolean).length;
-    const tenure = Math.max(0, state.projectClears - (member.joinedAt || 0));
+  const profiles = sortedEmployees.map(member => {
+    const rank = member.isRepresentative ? { name: "대표", color: "#d6a12c" } : RANKS[member.rank];
     const activity = employeeActivity(member.id);
-    const education = trainingEligibility(member);
-    const potential = ACTIVITIES.growthLevel(member.growthPotential);
-    const protectedMember = member.isRepresentative || availableEmployees().length <= 3 || Boolean(activity);
-    const activityText = activity ? activityStatusText(activity) : "";
-    return `<article class="team-card hr-card ${member.isRepresentative ? "representative-card" : ""} ${activity ? "employee-away" : ""}">
-      <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
-      <div><h3>${escapeHtml(member.name)} ${member.isRepresentative ? `<span class="rank representative-rank">대표</span>` : ""}</h3>
-      <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
-      <p>실무 ${stats.work}　협업 ${stats.collaboration}　장비 ${equipped}개</p>
-      <p>${member.isRepresentative ? "대표 재직" : `성장성 <b style="color:${potential.color}">${potential.label}</b> · 교육 ${member.trainingCount || 0}/3`} · 근속 ${tenure}건</p>
-      ${activity ? `<p class="hr-activity-status">${escapeHtml(activityText)}</p>` : ""}</div>
-      <div class="hr-card-actions"><button class="${education.allowed ? "mustard" : "ink"}" data-train-member="${member.id}" aria-disabled="${!education.allowed}">교육 보내기</button><button class="${protectedMember ? "ink" : "red"}" data-end-contract="${member.id}" aria-disabled="${protectedMember}">계약 종료</button></div>
-    </article>`;
+    const activityLabel = activity?.type === "training" ? "교육" : activity ? "출장" : "";
+    return `<button class="hr-profile-tile ${member.id === selectedMember?.id ? "active" : ""} ${member.isRepresentative ? "representative" : ""} ${activity ? "away" : ""}" data-hr-member="${member.id}" style="--rank-color:${rank.color}" aria-label="${escapeHtml(member.name)} · ${rank.name}" aria-pressed="${member.id === selectedMember?.id}">
+      <i aria-hidden="true"></i><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face"></canvas>${activityLabel ? `<span>${activityLabel}</span>` : ""}
+    </button>`;
   }).join("");
+  const stats = selectedMember ? effectiveStats(selectedMember) : { work: 0, collaboration: 0 };
+  const equippedItems = selectedMember ? Object.values(selectedMember.equipment || {}).filter(Boolean) : [];
+  const tenure = selectedMember ? Math.max(0, state.projectClears - (selectedMember.joinedAt || 0)) : 0;
+  const activity = selectedMember ? employeeActivity(selectedMember.id) : null;
+  const education = trainingEligibility(selectedMember);
+  const potential = ACTIVITIES.growthLevel(selectedMember?.growthPotential);
+  const protectedMember = !selectedMember || selectedMember.isRepresentative || availableEmployees().length <= 3 || Boolean(activity);
+  const selectedRank = selectedMember?.isRepresentative ? { name: "대표", color: "#d6a12c" } : RANKS[selectedMember?.rank || 0];
+  const detail = selectedMember ? `<article class="hr-detail panel ${selectedMember.isRepresentative ? "representative" : ""}">
+    <div class="hr-detail-title"><small>EMPLOYEE FILE</small><h2>${escapeHtml(selectedMember.name)} <span style="background:${selectedRank.color}">${selectedRank.name}</span></h2><p>${DEPARTMENTS[selectedMember.department].name} · ${employeePosition(selectedMember)}</p></div>
+    <p class="hr-trait">${escapeHtml(selectedMember.trait)}</p>
+    <div class="hr-stat-grid"><span><small>실무</small><b>${stats.work}</b></span><span><small>협업</small><b>${stats.collaboration}</b></span><span><small>속도</small><b>${selectedMember.speed}</b></span></div>
+    <div class="hr-record-grid"><span><small>월급</small><b>${selectedMember.salary}만원</b></span><span><small>근속</small><b>${tenure}건</b></span><span><small>프로젝트 참여</small><b>${selectedMember.projectParticipation || 0}회</b></span><span><small>${selectedMember.isRepresentative ? "직책" : "성장성·교육"}</small><b>${selectedMember.isRepresentative ? "창업 대표" : `${potential.label} · ${selectedMember.trainingCount || 0}/3`}</b></span></div>
+    <div class="hr-equipment-line"><small>사용 장비 ${equippedItems.length}/3</small><span>${equippedItems.length ? escapeHtml(equippedItems.map(item => item.name).join(" · ")) : "장착한 장비 없음"}</span></div>
+    ${activity ? `<p class="hr-detail-activity">${escapeHtml(activityStatusText(activity))}</p>` : ""}
+    <div class="hr-detail-actions"><button class="${education.allowed ? "mustard" : "ink"}" data-train-member="${selectedMember.id}" aria-disabled="${!education.allowed}">교육 보내기</button><button class="${protectedMember ? "ink" : "red"}" data-end-contract="${selectedMember.id}" aria-disabled="${protectedMember}">계약 종료</button></div>
+  </article>` : "";
   const confirm = target ? contractTerminationConfirm(target) : "";
   const trainingSummary = state.training ? activityStatusText(state.training) : "교육 슬롯 사용 가능";
   const tripSummary = state.businessTrip
@@ -1531,11 +2033,26 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
   app.innerHTML = `${header("인사 관리", `${notice} · 월 급여 ${totalPayroll()}만원`)}<section class="screen hr-screen">
     <div class="hr-summary panel"><span><small>직원</small><strong>${state.employees.length}/${state.capacity}</strong></span><span><small>월 급여</small><strong>${totalPayroll()}만원</strong></span><span><small>다음 정산</small><strong>D-${projectsUntilPayroll()}</strong></span></div>
     <div class="hr-activity-summary panel"><span><small>장기 교육</small><strong>${escapeHtml(trainingSummary)}</strong></span><span><small>돌발 출장</small><strong>${escapeHtml(tripSummary)}</strong></span></div>
-    <div class="card-list">${cards}</div>
+    <div class="hr-sort" role="group" aria-label="직원 정렬">${Object.entries(sortLabels).map(([key, label]) => `<button class="${state.hrSortKey === key ? "active" : ""}" data-hr-sort="${key}" aria-pressed="${state.hrSortKey === key}">${label}</button>`).join("")}</div>
+    <div class="hr-directory"><div class="hr-profile-grid" aria-label="직원 프로필 목록">${profiles}</div>${detail}</div>
     <button class="ink" id="back-from-hr">← 사무실</button>
     ${confirm}
   </section>`;
   mountPortraits();
+  const profileGrid = document.querySelector(".hr-profile-grid");
+  if (profileGrid) profileGrid.scrollTop = hrProfileScrollTop;
+  document.querySelectorAll("[data-hr-member]").forEach(button => button.addEventListener("click", () => {
+    hrProfileScrollTop = profileGrid?.scrollTop || 0;
+    hrSelectedMemberId = button.dataset.hrMember;
+    hrTerminationTargetId = null;
+    renderHumanResources();
+  }));
+  document.querySelectorAll("[data-hr-sort]").forEach(button => button.addEventListener("click", () => {
+    state.hrSortKey = button.dataset.hrSort;
+    hrProfileScrollTop = 0;
+    saveGame();
+    renderHumanResources(`${button.textContent}으로 정렬했습니다.`);
+  }));
   document.querySelectorAll("[data-train-member]").forEach(button => button.addEventListener("click", () => tryOpenTraining(button.dataset.trainMember)));
   document.querySelectorAll("[data-end-contract]").forEach(button => button.addEventListener("click", () => requestContractTermination(button.dataset.endContract)));
   document.querySelector("#back-from-hr").addEventListener("click", () => renderOffice());
@@ -1559,6 +2076,7 @@ function requestContractTermination(memberId) {
   if (!member || member.isRepresentative) return showCenterNotice("대표의 계약은 종료할 수 없습니다.");
   if (isEmployeeUnavailable(member.id)) return showCenterNotice("교육이나 출장 중인 직원의 계약은 종료할 수 없습니다.");
   if (availableEmployees().length <= 3) return showCenterNotice("프로젝트 진행에 필요한 근무 직원 3명은 유지해야 합니다.");
+  hrSelectedMemberId = memberId;
   hrTerminationTargetId = memberId;
   renderHumanResources(`${member.name}의 계약 조건을 확인하세요.`);
 }
@@ -1577,6 +2095,7 @@ function confirmContractTermination() {
   if (state.cash < settlement) return showCenterNotice(`계약 종료 정산금 ${settlement}만원이 필요합니다.`);
   state.cash -= settlement;
   recordFinancialAmount("termination", settlement);
+  recordLaborRisk("termination");
   state.reputation = Math.max(0, state.reputation - 2);
   const returnedEquipment = removeEmployee(member);
   hrTerminationTargetId = null;
@@ -1607,13 +2126,143 @@ function maybeQueueTurnoverEvent() {
   return member;
 }
 
+function recordLaborRisk(source, occurrences = 1) {
+  state.laborCompliance = LABOR.recordRisk(state.laborCompliance, source, occurrences);
+  return state.laborCompliance;
+}
+
+function laborInspectionResponder() {
+  return availableEmployees().reduce((best, member) => {
+    const collaboration = effectiveStats(member).collaboration;
+    const specialist = member.department === "finance";
+    const priority = collaboration + (specialist ? 12 : member.department === "planning" || member.isRepresentative ? 5 : 0);
+    if (!best || priority > best.priority) return { member, collaboration, specialist, priority };
+    return best;
+  }, null);
+}
+
+function maybeQueueLaborInspection() {
+  const compliance = LABOR.normalizeCompliance(state.laborCompliance);
+  state.laborCompliance = compliance;
+  const options = {
+    companyLevel: state.companyLevel,
+    projectClears: state.projectClears,
+    pending: Boolean(state.pendingLaborInspection),
+    lastInspectionProject: compliance.lastInspectionProject,
+    score: compliance.score
+  };
+  if (!LABOR.shouldQueueInspection(options, Math.random())) return null;
+  const responder = laborInspectionResponder();
+  const inspection = LABOR.buildInspection({
+    compliance,
+    headcount: state.employees.length,
+    responderId: responder?.member.id,
+    responderName: responder?.member.name,
+    responderCollaboration: responder?.collaboration,
+    financeSpecialist: responder?.specialist
+  });
+  state.pendingLaborInspection = {
+    id: `labor-inspection-${nextId++}`,
+    projectClears: state.projectClears,
+    ...inspection,
+    result: null
+  };
+  state.laborCompliance.lastInspectionProject = state.projectClears;
+  state.laborCompliance.inspections += 1;
+  return state.pendingLaborInspection;
+}
+
 function processPayrollIfDue() {
   if (state.projectClears <= 0 || state.projectClears % PAYROLL_PROJECT_INTERVAL !== 0) return 0;
   const payroll = totalPayroll();
   state.cash -= payroll;
   recordFinancialAmount("payroll", payroll);
+  if (state.cash < 0) recordLaborRisk("payrollDeficit");
   state.payrollPayments += 1;
   return payroll;
+}
+
+function laborInspectionResultMarkup(event) {
+  const result = event.result;
+  const resultText = result.id === "pass"
+    ? result.strategy === "direct"
+      ? `${event.responderName}이(가) 자료를 정확히 소명했습니다. 회사의 관리 신뢰도가 높아졌습니다.`
+      : "노무사의 검토를 거쳐 지적 없이 조사를 마쳤습니다."
+    : result.id === "warning"
+      ? "부족한 기록을 즉시 정비했습니다. 비용과 평판 손실이 있었지만 과태료는 피했습니다."
+      : "직접 대응에 실패해 시정 명령과 과태료가 부과됐습니다.";
+  const reputationText = result.reputation >= 0 ? `+${result.reputation}` : String(result.reputation);
+  return `<article class="labor-result panel result-${result.id}">
+    <span class="labor-inspection-stamp">INSPECTION CLOSED</span>
+    <small>현장 조사 결과</small><h2>${escapeHtml(result.label)}</h2><p>${escapeHtml(resultText)}</p>
+    <div class="labor-result-grid"><span><small>대응 비용</small><b>-${result.cost}만원</b></span><span><small>평판</small><b>${reputationText}</b></span><span><small>노무 위험도</small><b>${event.riskAtVisit} → ${result.nextRisk}</b></span></div>
+  </article>`;
+}
+
+function renderLaborInspection(notice = "근로감독관이 예고 없이 방문했습니다. 대응 방법을 선택하세요.") {
+  currentView = "labor-inspection";
+  clearBattleTimer();
+  clearOfficeDialogue();
+  const event = state.pendingLaborInspection;
+  if (!event) return renderNextPending("근로감독 절차가 종료됐습니다.");
+  if (event.result) {
+    app.innerHTML = `${header("근로감독 결과", notice)}<section class="screen labor-inspection-screen">${laborInspectionResultMarkup(event)}<button class="mustard" id="close-labor-inspection">확인 · 다음 업무로</button></section>`;
+    document.querySelector("#close-labor-inspection").addEventListener("click", closeLaborInspection);
+    saveGame();
+    return;
+  }
+  const band = LABOR.riskBand(event.riskAtVisit);
+  const riskWidth = Math.max(4, event.riskAtVisit);
+  app.innerHTML = `${header("돌발 근로감독", notice)}<section class="screen labor-inspection-screen">
+    <article class="labor-inspection-card panel risk-${band.id}" style="--labor-tone:${band.color}">
+      <span class="labor-inspection-stamp">SURPRISE INSPECTION</span>
+      <div class="labor-inspector-icon" aria-hidden="true"><i>!</i><b>근로감독</b></div>
+      <small>고용노동 현장 조사</small><h2>근로감독관 방문</h2><p>최근 회사 운영 기록 중 두 항목을 집중 확인합니다.</p>
+      <div class="labor-risk-meter"><span><small>현재 노무 위험도</small><b>${event.riskAtVisit} · ${band.label}</b></span><i><em style="width:${riskWidth}%;background:${band.color}"></em></i></div>
+      <div class="labor-issue-list">${event.issues.map((issue, index) => `<span><i>${index + 1}</i><b>${escapeHtml(issue)}</b></span>`).join("")}</div>
+    </article>
+    <div class="labor-response-options">
+      <button class="teal" data-labor-response="direct"><strong>자료 직접 대응</strong><small>${escapeHtml(event.responderName)} 담당 · 성공 확률 ${event.directChance}% · 실패 시 ${event.fineCost}만원</small></button>
+      <button class="blue" data-labor-response="advisor"><strong>노무사 선임</strong><small>${event.advisorCost}만원 · 조사 적합 확정 · 평판 +1</small></button>
+      <button class="mustard" data-labor-response="correction"><strong>즉시 시정</strong><small>${event.correctionCost}만원 · 과태료 회피 · 평판 -2</small></button>
+    </div>
+  </section>`;
+  document.querySelectorAll("[data-labor-response]").forEach(button => button.addEventListener("click", () => resolveLaborInspection(button.dataset.laborResponse)));
+  saveGame();
+}
+
+function resolveLaborInspection(strategy) {
+  const event = state.pendingLaborInspection;
+  if (!event || event.result) return renderNextPending();
+  if (strategy === "advisor" && state.cash < event.advisorCost) return showCenterNotice("노무사 선임 비용이 부족합니다.");
+  if (strategy === "correction" && state.cash < event.correctionCost) return showCenterNotice("즉시 시정 비용이 부족합니다.");
+  const result = LABOR.resolveInspection(event, strategy, Math.random());
+  state.cash -= result.cost;
+  state.reputation = Math.max(0, state.reputation + result.reputation);
+  recordFinancialAmount("laborCompliance", result.cost);
+  state.laborCompliance = {
+    ...LABOR.normalizeCompliance(state.laborCompliance),
+    score: result.nextRisk,
+    sources: Object.fromEntries(Object.keys(LABOR.RISK_SOURCES).map(key => [key, 0])),
+    cleanProjects: 0
+  };
+  event.result = { ...result, strategy };
+  state.laborInspectionHistory = [...state.laborInspectionHistory.slice(-7), {
+    id: event.id,
+    projectClears: event.projectClears,
+    riskAtVisit: event.riskAtVisit,
+    issues: event.issues,
+    ...event.result
+  }];
+  saveGame();
+  renderLaborInspection(result.id === "fine" ? "조사 대응에 실패했습니다. 시정 명령 내용을 확인하세요." : "근로감독 대응을 마쳤습니다.");
+}
+
+function closeLaborInspection() {
+  const result = state.pendingLaborInspection?.result;
+  state.pendingLaborInspection = null;
+  saveGame();
+  renderNextPending(result?.id === "fine" ? "시정 명령을 반영하고 회사 운영을 재개합니다." : "근로감독을 마치고 정상 업무로 복귀했습니다.");
 }
 
 function renderTurnoverEvent(notice = "직원이 이직을 고민하고 있습니다. 대응 방법을 선택하세요.") {
@@ -1729,13 +2378,14 @@ function renderFinancialReport() {
         <p><span>사무실 확장 투자</span><b>-${report.expansion || 0}만원</b></p>
         <p><span>직원 교육비</span><b>-${report.training || 0}만원</b></p>
         <p><span>업무 오답 재작업</span><b>-${report.workErrors || 0}만원</b></p>
+        <p><span>노무 대응 비용</span><b>-${report.laborCompliance || 0}만원</b></p>
         <p class="profit"><span>영업이익</span><b class="${report.operatingProfit >= 0 ? "positive" : "negative"}">${profitSign}${report.operatingProfit}만원</b></p>
       </div>
       <div class="financial-balance"><span><small>기초 현금</small><strong>${report.startCash}만원</strong></span><i>→</i><span><small>기말 현금</small><strong>${report.endingCash}만원</strong></span></div>
       <div class="financial-company"><span>직원 <b>${report.headcount}명</b></span><span>평판 <b>${report.reputation}점</b></span><span>누적 성과 <b>${report.projectClears}건</b></span></div>
       <p class="financial-advice">${grade.description}</p>
     </article>
-    <button class="mustard" id="close-financial-report">${state.pendingTurnover ? "확인 · 이직 면담으로" : "확인 · 사무실로"}</button>
+    <button class="mustard" id="close-financial-report">${state.pendingLaborInspection ? "확인 · 근로감독 대응으로" : state.pendingTurnover ? "확인 · 이직 면담으로" : "확인 · 사무실로"}</button>
   </section>`;
   document.querySelector("#close-financial-report").addEventListener("click", closeFinancialReport);
 }
@@ -1749,6 +2399,7 @@ function renderNextPending(notice = "사무실로 돌아왔습니다.") {
   if (state.pendingActivityMiniGames.length) return renderActivityMiniGame();
   if (state.pendingActivityReports.length) return renderActivityReport();
   if (state.pendingFinancialReport) return renderFinancialReport();
+  if (state.pendingLaborInspection) return renderLaborInspection();
   if (state.pendingTurnover) return renderTurnoverEvent();
   if (state.pendingBusinessTripOffer) return renderBusinessTripOffer();
   return renderOffice(notice);
@@ -2172,17 +2823,21 @@ function projectCard(project, locked = false) {
   const ready = coverage.missing === 0;
   const riskLabel = project.riskLabel || (project.boss ? "장기" : "안정");
   const riskTone = project.riskTone || (project.boss ? "boss" : "stable");
+  const secretaryTeam = state.secretary && !locked
+    ? `<button class="blue secretary-team-button" data-secretary-team="${project.id}">비서 추천 팀</button>` : "";
+  const secretaryRun = state.secretary && state.companyLevel >= 2 && !project.boss && !locked && state.clearedProjectIds.includes(project.id)
+    ? `<button class="mustard secretary-run-button" data-secretary-run="${project.id}" data-secretary-risk="${project.riskTier || "stable"}">비서에게 맡기기 · 3배속</button>` : "";
   return `<article class="project-card panel ${project.boss ? "boss-project" : ""} risk-${riskTone} ${locked ? "locked" : ""}">
     <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><b class="project-risk-badge risk-${riskTone}">${escapeHtml(riskLabel)}</b><strong>${escapeHtml(project.name)}</strong><small>EP.${episode.chapter} ${escapeHtml(episode.name)}</small></div>
     <p>${escapeHtml(project.summary)}</p>
     <div class="project-affinity ${ready ? "team-ready" : "team-short"}"><b>추천 부서</b><span>${escapeHtml(recommended || "모든 부서")}</span><em>상성 +18% · 적합 ${coverage.matches}/${coverage.target}</em></div>
     <div class="project-spec"><span>업무량 ${project.max}</span><span>마감 ${project.deadline}턴</span></div>
     <div class="project-reward">${locked ? `일반 프로젝트 ${bossProjectProgress()}/4 완료` : escapeHtml(reward)}</div>
-    <button class="${project.boss || riskTone === "high" ? "red" : "teal"}" data-project-id="${project.id}" data-risk-tier="${project.riskTier || "stable"}" ${locked ? "disabled" : ""}>${locked ? "보스 계약 잠김" : project.boss ? "장기 프로젝트 도전" : `${riskLabel} 계약 선택`}</button>
+    <div class="project-card-actions"><button class="${project.boss || riskTone === "high" ? "red" : "teal"}" data-project-id="${project.id}" data-risk-tier="${project.riskTier || "stable"}" ${locked ? "disabled" : ""}>${locked ? "보스 계약 잠김" : project.boss ? "장기 프로젝트 도전" : `${riskLabel} 계약 선택`}</button>${secretaryTeam}${secretaryRun}</div>
   </article>`;
 }
 
-function renderProjectBoard() {
+function renderProjectBoard(notice = "") {
   currentView = "projects";
   clearBattleTimer();
   clearOfficeDialogue();
@@ -2192,20 +2847,23 @@ function renderProjectBoard() {
   const bossCard = boss ? projectCard(boss, !bossProjectReady()) : "";
   const industry = currentIndustry();
   const episode = PROJECT_EPISODES[currentProjectChapter() - 1];
-  const boardNotice = tutorialPending
+  const boardNotice = notice || (tutorialPending
     ? `${industry?.name || "회사"} 창립팀 첫 임무 · 전투 규칙을 배우고 면접을 해금하세요.`
-    : `${industry?.name || "회사"} · EP.${episode.chapter} ${episode.name} · ${episode.description}`;
+    : `${industry?.name || "회사"} · EP.${episode.chapter} ${episode.name} · ${episode.description}`);
   app.innerHTML = `${header(tutorialPending ? "첫 프로젝트" : "프로젝트 선택", boardNotice)}
     <section class="screen project-board">
       <div class="project-list">${regularCards}${bossCard}</div>
       <button class="ink" id="back-from-projects">← 사무실</button>
     </section>`;
   document.querySelectorAll("[data-project-id]:not(:disabled)").forEach(button => button.addEventListener("click", () => startBattle(button.dataset.projectId, button.dataset.riskTier)));
+  document.querySelectorAll("[data-secretary-team]").forEach(button => button.addEventListener("click", () => secretaryRecommendTeam(button.dataset.secretaryTeam)));
+  document.querySelectorAll("[data-secretary-run]").forEach(button => button.addEventListener("click", () => secretaryRunProject(button.dataset.secretaryRun, button.dataset.secretaryRisk)));
   document.querySelector("#back-from-projects").addEventListener("click", () => renderOffice());
 }
 
-function openEquipment(notice = "직원을 선택하고 장비를 장착하세요.") {
+function openEquipment(notice = "직원을 선택하고 장비를 장착하세요.", preserveSecretaryRecommendations = false) {
   currentView = "equipment";
+  if (!preserveSecretaryRecommendations) secretarySaleRecommendationsVisible = false;
   equipmentTargetId = state.employees.some(member => member.id === equipmentTargetId) ? equipmentTargetId : state.employees[0]?.id;
   renderEquipment(notice);
 }
@@ -2263,6 +2921,10 @@ function equipItem(itemId) {
   if (!target || index < 0) return renderEquipment("장착할 장비를 찾을 수 없습니다.");
   const item = state.equipment.splice(index, 1)[0];
   const replaced = target.equipment[item.slot];
+  if (replaced && secretaryEquipmentLocked(replaced.id)) {
+    state.equipment.splice(index, 0, item);
+    return renderEquipment("현재 장착 장비가 잠겨 있습니다. 먼저 잠금을 해제하세요.");
+  }
   if (replaced) state.equipment.push(replaced);
   target.equipment[item.slot] = item;
   renderEquipment(replaced ? `${EQUIPMENT_SLOTS[item.slot].name} 장비를 교체했습니다.` : `${item.name}을(를) 장착했습니다.`);
@@ -2272,6 +2934,7 @@ function unequipItem(itemId) {
   const target = state.employees.find(member => member.id === equipmentTargetId);
   const slot = Object.keys(target?.equipment || {}).find(key => target.equipment[key]?.id === itemId);
   if (!target || !slot) return renderEquipment("해제할 장비를 찾을 수 없습니다.");
+  if (secretaryEquipmentLocked(itemId)) return renderEquipment("잠긴 장비입니다. 먼저 잠금을 해제하세요.");
   state.equipment.push(target.equipment[slot]);
   target.equipment[slot] = null;
   renderEquipment("장비를 보관함으로 옮겼습니다.");
@@ -2279,6 +2942,7 @@ function unequipItem(itemId) {
 
 function requestEquipmentSale(itemId) {
   if (!state.equipment.some(item => item.id === itemId)) return renderEquipment("판매할 장비를 찾을 수 없습니다.");
+  if (secretaryEquipmentLocked(itemId)) return renderEquipment("잠긴 장비는 판매할 수 없습니다.");
   equipmentSaleTargetId = itemId;
   renderEquipment("판매 금액과 장비를 확인해 주세요.");
 }
@@ -2295,6 +2959,10 @@ function confirmEquipmentSale() {
     return renderEquipment("판매할 장비를 찾을 수 없습니다.");
   }
   const item = state.equipment[index];
+  if (secretaryEquipmentLocked(item.id)) {
+    equipmentSaleTargetId = null;
+    return renderEquipment("잠긴 장비는 판매할 수 없습니다.");
+  }
   const price = FEATURES.equipmentResalePrice(item);
   state.equipment.splice(index, 1);
   state.cash += price;
@@ -2418,7 +3086,11 @@ function hireCandidate(id) {
   state.cash -= candidate.signingCost;
   recordFinancialAmount("recruitment", candidate.signingCost);
   candidate.joinedAt = state.projectClears;
+  state.employeeJoinSequence += 1;
+  candidate.joinOrder = state.employeeJoinSequence;
+  candidate.projectParticipation = 0;
   state.employees.push(candidate);
+  repairOfficeSeats();
   if (recruitmentMode === "special") {
     state.specialRecruitmentTickets = Math.max(0, state.specialRecruitmentTickets - 1);
     specialCandidates = state.specialRecruitmentTickets > 0 ? generateCandidates(5, "special") : [];
@@ -2498,6 +3170,10 @@ function saveTeam() {
   renderOffice("프로젝트 팀 편성을 저장했습니다.");
 }
 
+function battleDelay(milliseconds) {
+  return battle?.secretaryManaged ? Math.max(90, Math.round(milliseconds / 3)) : milliseconds;
+}
+
 function startBattle(projectId, riskTier = "stable") {
   currentView = "battle";
   repairProjectTeam();
@@ -2510,20 +3186,25 @@ function startBattle(projectId, riskTier = "stable") {
   const project = tutorialMode || source.boss ? scaled : projectWithRisk(scaled, riskTier);
   const coverage = BALANCE.recommendedCoverage(orderedBattleTeam(), project);
   const pressure = BALANCE.eventProfile({ project, missingRecommended: coverage.missing });
+  const secretaryManaged = Boolean(secretaryStartPending);
+  secretaryStartPending = false;
   battle = {
     project, coverage, pressure,
     max: project.max, workload: project.max, action: 0, deadline: project.deadline, momentum: 0, requirements: false,
     result: null, rewardClaimed: false, log: "업무 분담을 시작합니다.", status: null,
     eventText: "", nextEventRound: tutorialMode ? Number.POSITIVE_INFINITY : project.eventEvery, eventCursor: randomInt(4), preparedRound: 0,
     directiveGauge: 50, awaitingDirective: false, directiveReason: "", directiveSelections: {}, directiveFocusId: null, directiveCooldowns: {},
+    nightShiftUses: 0, laborRiskSettled: false,
+    teamDisputeArmed: TEAM_DISPUTE.shouldArm({ tutorialMode, teamSize: currentTeam().length }, Math.random()), teamDispute: null, teamDisputeResolved: false,
     thresholdSeventy: false, thresholdForty: false, phase: 1, phaseAnnouncement: "",
     deadlineBonus: 0, automationDamage: 0, automationTurns: 0, automationSourceId: null, skillFx: null, confirmingLeave: false,
     memberStats: Object.fromEntries(orderedBattleTeam().map(member => [member.id, { actions: 0, directives: 0, normalDamage: 0, directiveDamage: 0, automationDamage: 0, totalDamage: 0 }])),
     negativeEvents: 0, positiveEvents: 0, comboCount: 0,
-    tutorialMode, tutorialPage: tutorialMode ? 0 : null, tutorialSkipped: false, tutorialDirectiveExplained: false, tutorialReplay: false, tutorialUnlock: false
+    tutorialMode, tutorialPage: tutorialMode ? 0 : null, tutorialSkipped: false, tutorialDirectiveExplained: false, tutorialReplay: false, tutorialUnlock: false,
+    secretaryManaged
   };
   renderBattle();
-  if (!tutorialMode) battleTimer = window.setTimeout(battleStep, 900);
+  if (!tutorialMode) battleTimer = window.setTimeout(battleStep, battleDelay(900));
 }
 
 function clearBattleTimer() {
@@ -2531,8 +3212,26 @@ function clearBattleTimer() {
   battleTimer = null;
 }
 
+function recordBattleParticipation() {
+  if (!battle || battle.participationRecorded) return;
+  const participantIds = new Set(Object.keys(battle.memberStats || {}));
+  state.employees.forEach(member => {
+    if (participantIds.has(member.id)) member.projectParticipation = (member.projectParticipation || 0) + 1;
+  });
+  battle.participationRecorded = true;
+}
+
+function settleBattleLaborRisk() {
+  if (!battle || battle.laborRiskSettled) return;
+  const nightShiftUses = Math.max(0, Number(battle.nightShiftUses) || 0);
+  state.laborCompliance = nightShiftUses
+    ? LABOR.recordRisk(state.laborCompliance, "nightShift", nightShiftUses)
+    : battle.result === "success" ? LABOR.recordCleanProject(state.laborCompliance) : LABOR.normalizeCompliance(state.laborCompliance);
+  battle.laborRiskSettled = true;
+}
+
 function battleStep() {
-  if (currentView !== "battle" || battle.result || battle.awaitingDirective || battle.skillFx || battle.tutorialPage !== null) return;
+  if (currentView !== "battle" || battle.result || battle.awaitingDirective || battle.teamDispute || battle.skillFx || battle.tutorialPage !== null) return;
   const team = orderedBattleTeam();
   const member = team[battle.action % team.length];
   const round = Math.floor(battle.action / team.length) + 1;
@@ -2556,8 +3255,9 @@ function battleStep() {
       if (battle.workload <= 0) return finishBattleSuccess();
     }
     if (round >= battle.nextEventRound) {
-      triggerBattleEvent();
+      const disputeOpened = triggerBattleEvent();
       battle.nextEventRound += battle.project.eventEvery;
+      if (disputeOpened) return renderBattle();
     }
     if (battle.directiveGauge >= 100) return openDirective();
   }
@@ -2613,15 +3313,17 @@ function battleStep() {
   if (round >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
     battle.log = "마감을 넘겼습니다. 팀을 재편성해 다시 도전하세요.";
+    recordBattleParticipation();
+    settleBattleLaborRisk();
     if (!battle.activityProgressed) {
       battle.activityProgressed = true;
       progressEmployeeActivities();
-      saveGame();
     }
-    battleTimer = window.setTimeout(renderBattle, 650);
+    saveGame();
+    battleTimer = window.setTimeout(renderBattle, battleDelay(650));
     return;
   }
-  battleTimer = window.setTimeout(battleStep, 950);
+  battleTimer = window.setTimeout(battleStep, battleDelay(950));
 }
 
 function finishBattleSuccess(scheduleRender = true) {
@@ -2629,10 +3331,16 @@ function finishBattleSuccess(scheduleRender = true) {
   battle.workload = 0;
   if (!battle.rewardClaimed) {
     battle.rewardClaimed = true;
+    recordBattleParticipation();
+    settleBattleLaborRisk();
     state.cash += battle.project.cash;
     recordFinancialAmount("revenue", battle.project.cash);
     state.reputation += battle.project.reputation;
     state.projectClears += 1;
+    state.clearedProjectIds = [...new Set([...(state.clearedProjectIds || []), battle.project.id])];
+    battle.secretaryUnlockNotice = !state.secretary && secretaryRoadmap().ready
+      ? "경영지원실 개설 준비 완료! 비서 후보 3명의 면접이 열렸습니다."
+      : "";
     if (!battle.activityProgressed) {
       battle.activityProgressed = true;
       progressEmployeeActivities();
@@ -2669,11 +3377,13 @@ function finishBattleSuccess(scheduleRender = true) {
     state.equipment.push(...battle.rewards);
     const financialReport = closeFinancialPeriodIfDue();
     battle.financialNotice = financialReport ? `${financialReport.number}분기 결산이 준비됐습니다.` : "";
+    const laborInspection = maybeQueueLaborInspection();
+    battle.laborInspectionNotice = laborInspection ? `돌발 근로감독 · 노무 위험도 ${laborInspection.riskAtVisit}` : "";
     const turnoverMember = maybeQueueTurnoverEvent();
     battle.turnoverNotice = turnoverMember ? `${turnoverMember.name}이(가) 이직 면담을 요청했습니다.` : "";
     saveGame();
   }
-  if (scheduleRender) battleTimer = window.setTimeout(renderBattle, 650);
+  if (scheduleRender) battleTimer = window.setTimeout(renderBattle, battleDelay(650));
 }
 
 function addDirectiveGauge(amount, reason) {
@@ -2720,6 +3430,32 @@ function openDirective() {
     battle.tutorialPage = 3;
   }
   renderBattle();
+  if (state.secretary && state.companyLevel >= 2 && (battle.secretaryManaged || state.secretary.autoDirective)) {
+    battleTimer = window.setTimeout(secretarySelectDirectivePlan, battleDelay(420));
+  }
+}
+
+function secretarySelectDirectivePlan() {
+  if (!battle?.awaitingDirective || battle.skillFx || currentView !== "battle") return;
+  const team = orderedBattleTeam();
+  team.forEach(member => {
+    const available = directiveSkillsFor(member.department).filter(skill => directiveCooldownFor(member.id, skill.id) === 0);
+    const ranked = available.map(skill => {
+      const preview = directiveSkillPreview(member, skill.id);
+      let score = preview.damageMax || preview.damage || 0;
+      if (battle.status?.tone === "bad" && ["client-persuasion", "cost-defense"].includes(skill.id)) score += 80;
+      const round = Math.floor(battle.action / Math.max(1, team.length)) + 1;
+      if (round >= battle.deadline - 2 && preview.deadline) score += 65;
+      if (["requirement-brief", "work-allocation", "automation-deploy"].includes(skill.id)) score += 10;
+      if (skill.id === "night-shift") score -= 8;
+      return { skill, score };
+    }).sort((left, right) => right.score - left.score);
+    if (ranked[0]) battle.directiveSelections[member.id] = ranked[0].skill.id;
+  });
+  battle.directiveFocusId = team[team.length - 1]?.id || team[0]?.id || null;
+  battle.log = `${secretaryCandidate()?.name || "비서"}가 긴급 지시 계획을 선택했습니다.`;
+  renderBattle();
+  battleTimer = window.setTimeout(executeDirective, battleDelay(380));
 }
 
 function directivePanel(team) {
@@ -2976,18 +3712,19 @@ function executeDirective() {
     const offset = (calculationTick * 7 + calculationTick * calculationTick * 3) % calculationSpan;
     readout.textContent = String(plan.min + offset);
     calculationTick += 1;
-  }, 95);
+  }, battleDelay(95));
   window.setTimeout(() => {
     window.clearInterval(calculationTicker);
     if (currentView !== "battle" || battle.skillFx?.phase !== "calculating") return;
     resolveDirective();
-  }, 1300);
+  }, battleDelay(1300));
 }
 
 function resolveDirective() {
   const team = orderedBattleTeam();
   const fxSteps = battle.skillFx?.steps || directiveFxSteps(team);
   const skills = Object.values(battle.directiveSelections);
+  battle.nightShiftUses = (battle.nightShiftUses || 0) + skills.filter(skill => skill === "night-shift").length;
   let total = 0;
   let cleared = false;
   const directiveParts = [];
@@ -3053,21 +3790,88 @@ function resolveDirective() {
   else if (Math.floor(battle.action / team.length) >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
     battle.log = "마감 직전 긴급 지시로도 업무를 끝내지 못했습니다.";
+    recordBattleParticipation();
+    settleBattleLaborRisk();
+    if (!battle.activityProgressed) {
+      battle.activityProgressed = true;
+      progressEmployeeActivities();
+    }
+    saveGame();
   }
   renderBattle();
-  window.setTimeout(() => spawnDamageNumber(actualTotal, { kind: outcome === "great" ? "critical" : "directive", label: combo || "긴급 지시" }), 70);
+  window.setTimeout(() => spawnDamageNumber(actualTotal, { kind: outcome === "great" ? "critical" : "directive", label: combo || "긴급 지시" }), battleDelay(70));
   window.setTimeout(() => {
     if (currentView !== "battle") return;
     battle.skillFx = null;
     renderBattle();
-    if (!battle.result) battleTimer = window.setTimeout(battleStep, 650);
-  }, 2100);
+    if (!battle.result) battleTimer = window.setTimeout(battleStep, battleDelay(650));
+  }, battleDelay(2100));
 }
 
 function advanceBattleStatus() {
   if (!battle.status) return;
   battle.status.turns -= 1;
   if (battle.status.turns <= 0) battle.status = null;
+}
+
+function openTeamDispute() {
+  if (!battle?.teamDisputeArmed || battle.teamDispute || battle.teamDisputeResolved) return false;
+  const dispute = TEAM_DISPUTE.buildDispute(orderedBattleTeam(), Math.random(), Math.random());
+  if (!dispute) return false;
+  clearBattleTimer();
+  battle.teamDisputeArmed = false;
+  battle.teamDispute = dispute;
+  battle.log = `${dispute.firstName}과 ${dispute.secondName}의 업무 의견이 충돌했습니다.`;
+  return true;
+}
+
+function teamDisputePanel() {
+  const dispute = battle?.teamDispute;
+  if (!dispute) return "";
+  return `<div class="team-dispute-backdrop" role="dialog" aria-modal="true" aria-labelledby="team-dispute-title"><article class="team-dispute-card panel">
+    <span class="team-dispute-stamp">TEAM FRICTION</span><small>PROJECT INCIDENT</small><h2 id="team-dispute-title">${escapeHtml(dispute.title)}</h2>
+    <div class="team-dispute-members">
+      <div><canvas width="24" height="24" data-portrait="${dispute.firstId}" data-portrait-crop="face" aria-hidden="true"></canvas><strong>${escapeHtml(dispute.firstName)}</strong><p>“${escapeHtml(dispute.firstLine)}”</p></div>
+      <i aria-hidden="true">VS</i>
+      <div><canvas width="24" height="24" data-portrait="${dispute.secondId}" data-portrait-crop="face" aria-hidden="true"></canvas><strong>${escapeHtml(dispute.secondName)}</strong><p>“${escapeHtml(dispute.secondLine)}”</p></div>
+    </div>
+    <p class="team-dispute-guide">이번 프로젝트의 진행 방식만 결정합니다. 직원 관계나 능력치에는 남지 않습니다.</p>
+    <div class="team-dispute-options">
+      <button class="red" data-dispute-choice="proceed"><strong>${escapeHtml(dispute.firstName)}의 진행 우선</strong><small>업무량 4% 즉시 처리 · 긴급 지시 +8</small></button>
+      <button class="blue" data-dispute-choice="review"><strong>${escapeHtml(dispute.secondName)}의 검토 우선</strong><small>업무량 2% 추가 · 현재 불리 상태 제거</small></button>
+      <button class="mustard" data-dispute-choice="compromise"><strong>대표가 절충안 제시</strong><small>불리 상태 1턴 단축 · 긴급 지시 +20</small></button>
+    </div>
+  </article></div>`;
+}
+
+function resolveTeamDispute(choice) {
+  const dispute = battle?.teamDispute;
+  if (!dispute) return;
+  const beforeWorkload = battle.workload;
+  const resolution = TEAM_DISPUTE.resolveChoice(choice, {
+    workload: battle.workload,
+    maxWorkload: battle.max,
+    directiveGauge: battle.directiveGauge,
+    status: battle.status
+  });
+  battle.workload = resolution.workload;
+  battle.directiveGauge = resolution.directiveGauge;
+  battle.status = resolution.status;
+  battle.teamDispute = null;
+  battle.teamDisputeResolved = true;
+  battle.log = `${resolution.label} 선택 · ${resolution.detail}`;
+  if (resolution.choice === "proceed" && beforeWorkload > battle.workload) {
+    const contribution = beforeWorkload - battle.workload;
+    const report = battle.memberStats?.[dispute.firstId];
+    if (report) {
+      report.normalDamage += contribution;
+      report.totalDamage += contribution;
+    }
+  }
+  if (battle.workload <= 0) return finishBattleSuccess();
+  if (battle.directiveGauge >= 100) return openDirective();
+  renderBattle();
+  battleTimer = window.setTimeout(battleStep, battleDelay(750));
 }
 
 function triggerBattleEvent() {
@@ -3097,6 +3901,7 @@ function triggerBattleEvent() {
     battle.eventText = `✓ 고객 승인! ${pressure.goodTurns}턴 동안 처리량 +${pressure.goodFlat}`;
     addDirectiveGauge(12, "고객 승인을 활용할 기회입니다.");
   }
+  return event !== 3 && openTeamDispute();
 }
 
 function equipmentRewardCard(reward) {
@@ -3168,7 +3973,7 @@ function closeBattleTutorial(skipped = false) {
   battle.tutorialPage = null;
   battle.tutorialReplay = false;
   renderBattle();
-  if (!battle.awaitingDirective && !battle.result && !battle.skillFx) battleTimer = window.setTimeout(battleStep, 650);
+  if (!battle.awaitingDirective && !battle.result && !battle.skillFx) battleTimer = window.setTimeout(battleStep, battleDelay(650));
 }
 
 function advanceBattleTutorial() {
@@ -3186,6 +3991,7 @@ function skipBattleTutorial() {
 }
 
 function openBattleHelp() {
+  if (battle.teamDispute) return;
   clearBattleTimer();
   battle.confirmingLeave = false;
   battle.tutorialReplay = true;
@@ -3194,6 +4000,7 @@ function openBattleHelp() {
 }
 
 function requestBattleLeave() {
+  if (battle.teamDispute) return;
   if (battle.skillFx?.phase === "calculating") return;
   if (battle.result) {
     return renderNextPending(battle.tutorialUnlock
@@ -3208,7 +4015,7 @@ function requestBattleLeave() {
 function cancelBattleLeave() {
   battle.confirmingLeave = false;
   renderBattle();
-  if (!battle.awaitingDirective && !battle.result && !battle.skillFx && battle.tutorialPage === null) battleTimer = window.setTimeout(battleStep, 650);
+  if (!battle.awaitingDirective && !battle.result && !battle.skillFx && battle.tutorialPage === null) battleTimer = window.setTimeout(battleStep, battleDelay(650));
 }
 
 function confirmBattleLeave() {
@@ -3225,7 +4032,7 @@ function renderBattle() {
     ? `<div class="reward-showcase best-rarity-${bestRewardRarity}" style="--rarity-color:${EQUIPMENT_RARITIES[bestRewardRarity].color}"><small class="reward-label">PROJECT REWARD</small><div class="reward-items">${rewards.map(equipmentRewardCard).join("")}</div><p>${escapeHtml(battle.dropNotice || "")}</p></div>`
     : battle.result === "success" ? `<div class="reward-showcase no-drop"><small class="reward-label">EQUIPMENT DROP</small><strong>이번에는 장비가 나오지 않았습니다.</strong><p>${escapeHtml(battle.dropNotice || "")}</p></div>` : "";
   const interviewUnlock = battle.tutorialUnlock ? `<div class="tutorial-unlock"><small>NEW FEATURE</small><strong>면접 기능 해금</strong><span>새로운 직원을 채용해 다음 팀을 구성할 수 있습니다.</span></div>` : "";
-  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${interviewUnlock}${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.financialNotice ? `<p class="reward-notice financial-notice">${escapeHtml(battle.financialNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>${battle.tutorialMode ? "능력치와 행동 순서를 확인한 뒤 첫 프로젝트에 다시 도전하세요." : "팀 편성과 부서 연계를 바꿔 다시 도전하세요."}</p></div>` : "";
+  const result = battle.result === "success" ? `<div class="battle-result"><h2>${battle.project.boss ? "BOSS PROJECT CLEAR" : "PROJECT CLEAR"}</h2><p>현금 +${battle.project.cash} · 평판 +${battle.project.reputation}</p>${interviewUnlock}${rewardShowcase}${battle.recruitmentNotice ? `<p class="reward-notice">${escapeHtml(battle.recruitmentNotice)}</p>` : ""}${battle.secretaryUnlockNotice ? `<p class="reward-notice secretary-unlock-notice">${escapeHtml(battle.secretaryUnlockNotice)}</p>` : ""}${battle.payrollNotice ? `<p class="reward-notice payroll-notice">${escapeHtml(battle.payrollNotice)}</p>` : ""}${battle.financialNotice ? `<p class="reward-notice financial-notice">${escapeHtml(battle.financialNotice)}</p>` : ""}${battle.turnoverNotice ? `<p class="reward-notice turnover-notice">${escapeHtml(battle.turnoverNotice)}</p>` : ""}</div>` : battle.result === "failure" ? `<div class="battle-result"><h2 style="color:#c84b3c">DEADLINE OVER</h2><p>${battle.tutorialMode ? "능력치와 행동 순서를 확인한 뒤 첫 프로젝트에 다시 도전하세요." : "팀 편성과 부서 연계를 바꿔 다시 도전하세요."}</p></div>` : "";
   const actingMemberId = battle.awaitingDirective ? battle.directiveFocusId : team[battle.action % Math.max(1, team.length)]?.id;
   const fighters = team.map((member, index) => {
     const damage = normalDamagePreview(member);
@@ -3260,13 +4067,22 @@ function renderBattle() {
   const arenaTheme = `arena-theme-${String(battle.project.art || battle.project.id).replace(/[^a-z0-9-]/gi, "")}`;
   const abortConfirm = battle.confirmingLeave ? `<div class="battle-abort-backdrop" role="dialog" aria-modal="true" aria-labelledby="abort-title"><div class="battle-abort-confirm panel"><small>PROJECT PAUSE</small><strong id="abort-title">프로젝트를 중단할까요?</strong><p>현재 전투 진행도는 저장되지 않으며 보상도 받을 수 없습니다.</p><div><button class="teal" id="cancel-battle-leave">계속 진행</button><button class="red" id="confirm-battle-leave">중단하기</button></div></div></div>` : "";
   const tutorialOverlay = battleTutorialOverlay(team);
-  app.innerHTML = `${header("프로젝트 돌입", battle.result ? "프로젝트 결과를 확인하세요." : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요." : "아군은 아래에서 위쪽의 프로젝트를 공략합니다.")}
+  const disputePanel = teamDisputePanel();
+  const battleNotice = battle.result ? "프로젝트 결과를 확인하세요."
+    : battle.teamDispute ? "자동 진행 일시 정지 · 두 직원의 의견을 직접 조율하세요."
+      : battle.secretaryManaged ? `${secretaryCandidate()?.name || "비서"}가 프로젝트를 3배속으로 진행하고 있습니다.`
+        : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요."
+          : "아군은 아래에서 위쪽의 프로젝트를 공략합니다.";
+  const secretaryBattleBadge = battle.secretaryManaged ? `<div class="secretary-battle-badge">${secretaryArt(state.secretary.candidateId, true)}<span><small>SECRETARY MODE</small><b>${escapeHtml(secretaryCandidate()?.name || "비서")} · 3배속 자동 진행</b></span></div>` : "";
+  app.innerHTML = `${header("프로젝트 돌입", battleNotice)}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
+      ${secretaryBattleBadge}
       <div class="boss-card panel ${battle.project.boss ? "boss-active" : ""}"><div class="boss-row"><div><span class="project-kicker">${battle.project.boss ? "BOSS PROJECT" : "PROJECT TARGET"}</span><strong>${escapeHtml(battle.project.name)}</strong><small>${escapeHtml(phaseText)}</small></div><span class="workload-count" id="workload-text">업무량 ${battle.workload}/${battle.max}</span></div><div class="bar" aria-label="남은 프로젝트 업무량"><i id="workload-bar" style="width:${workloadPercent}%"></i>${workloadPreview}</div><div class="battle-condition-grid"><span class="status-chip ${statusTone} ${preview?.target === "status" ? "preview-target" : ""}" id="status-chip"><small>현재 상태</small><b>${escapeHtml(statusName)}</b></span><span class="deadline ${preview?.target === "deadline" ? "preview-target" : ""}" id="deadline"><small>마감 턴</small><b>${round}/${battle.deadline}${preview?.deadline ? ` → ${round}/${battle.deadline + preview.deadline}` : ""}</b></span><span class="affinity-chip ${affinityCount ? "matched" : ""}"><small>추천 ${escapeHtml(recommendedDepartments || "전체")}</small><b>상성 ${affinityCount}/${team.length}</b></span></div><div class="directive-meter"><b>긴급 지시</b><div><i id="directive-gauge" style="width:${battle.directiveGauge}%"></i></div><span id="directive-text">${battle.awaitingDirective ? "READY" : battle.directiveGauge + "%"}</span></div></div>
       <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${team.length > 3 ? "expanded-team" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team team-size-${team.length}">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
-      <div class="battle-footer-actions ${battle.result ? "result-footer" : ""}">${battle.result || battle.skillFx ? "" : `<button class="battle-help-button teal" id="battle-help">? 전투 도움말</button>`}<button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingActivityMiniGames.length ? "중간 활동 확인" : state.pendingActivityReports.length ? "활동 결과 보기" : state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : state.pendingBusinessTripOffer ? "출장 요청 확인" : battle.tutorialUnlock ? "사무실 · 면접 확인" : "사무실로" : "프로젝트 중단"}</button></div>
+      <div class="battle-footer-actions ${battle.result ? "result-footer" : ""}">${battle.result || battle.skillFx ? "" : `<button class="battle-help-button teal" id="battle-help">? 전투 도움말</button>`}<button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingActivityMiniGames.length ? "중간 활동 확인" : state.pendingActivityReports.length ? "활동 결과 보기" : state.pendingFinancialReport ? "분기 결산 보기" : state.pendingLaborInspection ? "근로감독 대응" : state.pendingTurnover ? "이직 면담으로" : state.pendingBusinessTripOffer ? "출장 요청 확인" : battle.tutorialUnlock ? "사무실 · 면접 확인" : "사무실로" : "프로젝트 중단"}</button></div>
+      ${disputePanel}
       ${abortConfirm}
       ${tutorialOverlay}
     </section>`;
@@ -3276,6 +4092,7 @@ function renderBattle() {
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
   document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
   document.querySelector("#execute-directive")?.addEventListener("click", executeDirective);
+  document.querySelectorAll("[data-dispute-choice]").forEach(button => button.addEventListener("click", () => resolveTeamDispute(button.dataset.disputeChoice)));
   document.querySelector("#battle-help")?.addEventListener("click", openBattleHelp);
   document.querySelector("#leave-battle").addEventListener("click", requestBattleLeave);
   document.querySelector("#cancel-battle-leave")?.addEventListener("click", cancelBattleLeave);

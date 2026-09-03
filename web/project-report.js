@@ -20,6 +20,7 @@
       battle.recruitmentNotice,
       battle.payrollNotice,
       battle.financialNotice,
+      battle.laborInspectionNotice,
       battle.turnoverNotice
     ].filter(Boolean);
     return notices.length ? `<div class="project-report-notices">${notices.map(notice => `<p>${escapeHtml(notice)}</p>`).join("")}</div>` : "";
@@ -29,6 +30,7 @@
     if (state.pendingActivityMiniGames.length) return "보고서 확인 · 중간 활동으로";
     if (state.pendingActivityReports.length) return "보고서 확인 · 활동 결과로";
     if (state.pendingFinancialReport) return "보고서 확인 · 분기 결산으로";
+    if (state.pendingLaborInspection) return "보고서 확인 · 근로감독 대응으로";
     if (state.pendingTurnover) return "보고서 확인 · 이직 면담으로";
     if (state.pendingBusinessTripOffer) return "보고서 확인 · 출장 요청으로";
     if (battle.result !== "success") return "보고서 확인 · 사무실로";

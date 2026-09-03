@@ -60,8 +60,8 @@ assert.match(gameSource, /function renderActivityMiniGame\(\)/);
 assert.match(gameSource, /function renderBusinessTripOffer\(/);
 assert.match(gameSource, /availableEmployees\(\)\.length - 1 < projectTeamLimit\(\)/);
 assert.doesNotMatch(gameSource, /member\.rank !== 0.*신입 전용/);
-assert.match(gameSource, /data-train-member="\$\{member\.id\}" aria-disabled="\$\{!education\.allowed\}">교육 보내기/);
-assert.match(gameSource, /data-end-contract="\$\{member\.id\}" aria-disabled="\$\{protectedMember\}">계약 종료/);
+assert.match(gameSource, /data-train-member="\$\{selectedMember\.id\}" aria-disabled="\$\{!education\.allowed\}">교육 보내기/);
+assert.match(gameSource, /data-end-contract="\$\{selectedMember\.id\}" aria-disabled="\$\{protectedMember\}">계약 종료/);
 assert.match(gameSource, /function showCenterNotice\(message\)/);
 assert.ok(indexSource.indexOf("employee-activities.js") < indexSource.indexOf("game.js"));
 

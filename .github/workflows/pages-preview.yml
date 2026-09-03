@@ -33,6 +33,9 @@ jobs:
           node --check web/balance-rules.js
           node --check web/restored-features.js
           node --check web/employee-activities.js
+          node --check web/office-management.js
+          node --check web/labor-inspection.js
+          node --check web/team-dispute.js
           node --check web/project-report-rules.js
           node --check web/game.js
           node --check web/project-report.js
@@ -42,6 +45,9 @@ jobs:
           node web/balance-rules.test.js
           node web/restored-features.test.js
           node web/employee-activities.test.js
+          node web/office-management.test.js
+          node web/labor-inspection.test.js
+          node web/team-dispute.test.js
           node web/project-report-rules.test.js
           node web/project-report-layout.test.js
           node web/work-mail-layout.test.js

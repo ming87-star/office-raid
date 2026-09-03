@@ -31,7 +31,10 @@ const equipment = [
   { id: "5", slot: "work", rarity: 0, workBonus: 1, collaborationBonus: 1 }
 ];
 assert.deepEqual(secretary.saleRecommendationIds(equipment, ["5"]), ["4"]);
-assert.equal(secretary.normalizeSecretary({ candidateId: "b", battleSpeed: 3 }).battleSpeed, 3);
+const normalized = secretary.normalizeSecretary({ candidateId: "b", battleSpeed: 3, introSeen: true, hintKeys: ["projects", "projects", 3] });
+assert.equal(normalized.battleSpeed, 3);
+assert.equal(normalized.introSeen, true);
+assert.deepEqual(normalized.hintKeys, ["projects"]);
 assert.equal(secretary.normalizeSecretary({ candidateId: "unknown" }), null);
 
 console.log("Secretary system checks passed: candidates, roadmap, recommendations, and save normalization.");

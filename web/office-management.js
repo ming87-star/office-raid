@@ -6,7 +6,7 @@
   "use strict";
 
   const OFFICE_PAGE_SIZE = 6;
-  const EXECUTIVE_PAGE_STAFF_SIZE = 5;
+  const EXECUTIVE_PAGE_STAFF_SIZE = 3;
   const HR_SORT_KEYS = ["rank", "joined", "department", "participation"];
 
   function hasExecutiveSeat(companyLevel = 0) {

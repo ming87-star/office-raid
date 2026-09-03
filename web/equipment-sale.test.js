@@ -15,9 +15,10 @@ assert.equal(features.equipmentResalePrice({ rarity: 4, workBonus: 0, collaborat
 assert.equal(features.equipmentResalePrice({ rarity: 0, workBonus: 2, collaborationBonus: 1 }), 70);
 
 assert.match(canonical, /class="equipment-resale-price">예상 판매가 \$\{resale\}만원/);
-assert.match(canonical, /data-sell-equipment="\$\{item\.id\}"/);
+assert.match(canonical, /data-market-mode="sale"/);
+assert.match(canonical, /data-sale-select="\$\{item\.id\}"/);
+assert.match(canonical, /requestEquipmentSale\(saleIds\)/);
 assert.match(canonical, /id="confirm-equipment-sale"/);
-assert.match(canonical, /requestEquipmentSale\(button\.dataset\.sellEquipment\)/);
 assert.match(canonical, /function confirmTrade\(\)/, "Automatic equipment upgrade must remain available.");
 
 console.log("Equipment individual sale checks passed.");

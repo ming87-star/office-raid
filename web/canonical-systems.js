@@ -5,6 +5,8 @@
   let tradeIds = [];
   let tradeBaseId = null;
   let equipmentTab = "equip";
+  let marketMode = "upgrade";
+  let saleIds = [];
   let equipmentSortMode = "newest";
   let selectedMailId = null;
   const P = (id, typeLabel, department, subject, body, question, options, answerIndex, explanation) =>
@@ -112,7 +114,7 @@
       <h2>${escapeHtml(p.subject)}</h2><p class="work-mail-body">${escapeHtml(p.body)}\n\n${escapeHtml(tone(sender,mail.wrongAttempts?"retry":"request"))}</p>
       <div class="work-mail-question"><small>대표 검토 요청 · ${escapeHtml(p.typeLabel)}</small><strong>${escapeHtml(p.question)}</strong></div>${result}
       ${mail.completed?`<p class="work-mail-explanation">${escapeHtml(p.explanation)}</p>`:`<p class="work-mail-penalty">오답 시 오늘의 정확도 -20 · 정답을 찾을 때까지 다시 검토할 수 있습니다.</p>`}
-      </article><button class="ink" id="back-from-work-mail">← 사무실</button></section>`;
+      </article>${secretaryMailAssistMarkup(mail.id)}<button class="ink" id="back-from-work-mail">← 사무실</button></section>`;
     mountPortraits();
     document.querySelectorAll("[data-mail-id]").forEach(b=>b.addEventListener("click",()=>openWorkMail(b.dataset.mailId)));
     document.querySelectorAll("[data-mail-answer]").forEach(b=>b.addEventListener("click",()=>submitWorkMailAnswer(Number(b.dataset.mailAnswer))));
@@ -141,6 +143,7 @@
     equipmentTargetId = target.id;
 
     tradeIds = tradeIds.filter(id => state.equipment.some(item => item.id === id));
+    saleIds = saleIds.filter(id => state.equipment.some(item => item.id === id) && !secretaryEquipmentLocked(id));
     if (!tradeIds.includes(tradeBaseId)) tradeBaseId = tradeIds[0] || null;
     if (!Object.prototype.hasOwnProperty.call(state.financialPeriod, "equipmentTrade")) state.financialPeriod.equipmentTrade = 0;
 
@@ -148,7 +151,7 @@
     const stats = effectiveStats(target);
     const order = orderedBattleTeam().map(member => member.id);
     const sortedEquipment = OfficeRaidEquipmentSort.sortEquipment(state.equipment, equipmentSortMode);
-    const saleRecommendations = new Set(secretarySaleRecommendationsVisible ? secretarySaleRecommendationIds() : []);
+    const saleRecommendations = new Set(secretarySaleRecommendationsVisible && equipmentTab === "trade" && marketMode === "sale" ? secretarySaleRecommendationIds() : []);
     const sortControl = `<label class="equipment-sort"><span>정렬</span><select data-equipment-sort aria-label="보유 장비 정렬 기준">
       <option value="newest" ${equipmentSortMode === "newest" ? "selected" : ""}>최신 획득순</option>
       <option value="rarity" ${equipmentSortMode === "rarity" ? "selected" : ""}>희귀도 높은순</option>
@@ -176,23 +179,22 @@
       return `<article class="equipment-slot ${item ? "filled" : ""}">
         <span>${item ? equipmentIconMarkup(item) : info.icon}</span>
         <div><small>${info.name}</small><strong>${item ? escapeHtml(item.name) : "비어 있음"}</strong>${item ? `<em>${EQUIPMENT_RARITIES[item.rarity].name} · 실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em>` : ""}</div>
-        ${item ? `<div class="equipment-slot-actions"><button class="${locked ? "mustard" : "ink"}" data-equipment-lock="${item.id}">${locked ? "잠금됨" : "잠금"}</button><button class="ink" data-unequip="${item.id}" ${locked ? "disabled" : ""}>해제</button></div>` : ""}
+        ${item ? `<div class="equipment-slot-actions">${equipmentLockButton(item.id)}<button class="ink" data-unequip="${item.id}" ${locked ? "disabled" : ""}>해제</button></div>` : ""}
       </article>`;
     }).join("");
 
     const equipInventory = state.equipment.length ? sortedEquipment.map(item => {
-      const resale = FEATURES.equipmentResalePrice(item);
       const locked = secretaryEquipmentLocked(item.id);
-      const recommended = saleRecommendations.has(item.id);
-      return `<article class="equipment-item ${locked ? "equipment-locked" : ""} ${recommended ? "secretary-sale-recommended" : ""}">
+      return `<article class="equipment-item ${locked ? "equipment-locked" : ""}">
         <span>${equipmentIconMarkup(item)}</span>
-        <div><strong>${escapeHtml(item.name)}${recommended ? ` <i class="secretary-recommend-label">비서 추천</i>` : ""}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em><small class="equipment-resale-price">예상 판매가 ${resale}만원</small></div>
-        <div class="equipment-item-actions"><button class="${locked ? "mustard" : "ink"}" data-equipment-lock="${item.id}">${locked ? "잠금됨" : "잠금"}</button><button class="teal" data-equip="${item.id}">장착</button><button class="mustard" data-sell-equipment="${item.id}" ${locked ? "disabled" : ""}>판매</button></div>
+        <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
+        <div class="equipment-item-actions">${equipmentLockButton(item.id)}<button class="teal" data-equip="${item.id}">장착</button></div>
       </article>`;
     }).join("") : `<div class="empty-inventory">프로젝트에서 장비를 획득하면 여기에 표시됩니다.</div>`;
 
-    const saleItem = state.equipment.find(item => item.id === equipmentSaleTargetId);
-    const saleConfirm = saleItem ? `<div class="equipment-sale-backdrop" role="dialog" aria-modal="true" aria-labelledby="equipment-sale-title"><div class="equipment-sale-confirm panel"><small>USED EQUIPMENT MARKET</small><strong id="equipment-sale-title">${escapeHtml(saleItem.name)}을 판매할까요?</strong><p>예상 판매가 <b>${FEATURES.equipmentResalePrice(saleItem)}만원</b>을 받고 보관함에서 제거합니다. 판매 후에는 되돌릴 수 없습니다.</p><div><button class="ink" id="cancel-equipment-sale">취소</button><button class="mustard" id="confirm-equipment-sale">판매 확정</button></div></div></div>` : "";
+    const saleItems = state.equipment.filter(item => equipmentSaleTargetIds.includes(item.id));
+    const saleConfirmTotal = saleItems.reduce((sum, item) => sum + FEATURES.equipmentResalePrice(item), 0);
+    const saleConfirm = saleItems.length ? `<div class="equipment-sale-backdrop" role="dialog" aria-modal="true" aria-labelledby="equipment-sale-title"><div class="equipment-sale-confirm panel"><small>USED EQUIPMENT MARKET</small><strong id="equipment-sale-title">선택 장비 ${saleItems.length}개를 판매할까요?</strong><p>예상 판매가 <b>${saleConfirmTotal}만원</b>을 받고 보관함에서 제거합니다. 판매 후에는 되돌릴 수 없습니다.</p><div><button class="ink" id="cancel-equipment-sale">취소</button><button class="mustard" id="confirm-equipment-sale">판매 확정</button></div></div></div>` : "";
 
     const selected = tradeIds.map(id => state.equipment.find(item => item.id === id)).filter(Boolean);
     const first = selected[0];
@@ -207,42 +209,73 @@
       return `<article class="equipment-item ${chosen ? "trade-selected" : ""} ${locked ? "equipment-locked" : ""}">
         <span>${equipmentIconMarkup(item)}</span>
         <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
-        <button class="${chosen ? "red" : locked ? "ink" : "mustard"}" data-trade="${item.id}" ${selectable ? "" : "disabled"}>${locked ? "잠금됨" : chosen ? "선택 해제" : "거래 선택"}</button>
+        <div class="equipment-market-actions">${equipmentLockButton(item.id)}<button class="${chosen ? "red" : locked ? "ink" : "mustard"}" data-trade="${item.id}" ${selectable ? "" : "disabled"}>${locked ? "선택 불가" : chosen ? "선택 해제" : "거래 선택"}</button></div>
         ${chosen && !locked ? `<label class="trade-base-choice"><input type="radio" name="trade-base" data-trade-base="${item.id}" ${tradeBaseId === item.id ? "checked" : ""}> 받을 모델</label>` : ""}
       </article>`;
     }).join("") : `<div class="empty-inventory">거래할 보관 장비가 없습니다.</div>`;
+
+    const saleInventory = state.equipment.length ? sortedEquipment.map(item => {
+      const selectedForSale = saleIds.includes(item.id);
+      const locked = secretaryEquipmentLocked(item.id);
+      const recommended = saleRecommendations.has(item.id);
+      const resale = FEATURES.equipmentResalePrice(item);
+      return `<article class="equipment-item sale-market-item ${selectedForSale ? "sale-selected" : ""} ${locked ? "equipment-locked" : ""} ${recommended ? "secretary-sale-recommended" : ""}">
+        <span>${equipmentIconMarkup(item)}</span>
+        <div><strong>${escapeHtml(item.name)}${recommended ? ` <i class="secretary-recommend-label">비서 추천</i>` : ""}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em><small class="equipment-resale-price">예상 판매가 ${resale}만원</small></div>
+        <div class="equipment-market-actions">${equipmentLockButton(item.id)}<button class="${selectedForSale ? "red" : locked ? "ink" : "mustard"}" data-sale-select="${item.id}" ${locked ? "disabled" : ""}>${locked ? "선택 불가" : selectedForSale ? "선택 해제" : "판매 선택"}</button></div>
+      </article>`;
+    }).join("") : `<div class="empty-inventory">판매할 보관 장비가 없습니다.</div>`;
 
     const tradePanel = selected.length
       ? `<div class="equipment-trade-preview"><small>중고거래 ${selected.length}/3</small><strong>${ready ? `${escapeHtml(base.name)} · ${EQUIPMENT_RARITIES[base.rarity + 1].name}으로 교환` : "동일 부위·동일 등급 장비 3개를 선택하세요."}</strong><span>추가 비용 ${cost}만원 · 받을 모델 선택</span><button class="mustard" id="confirm-trade" ${ready && state.cash >= cost ? "" : "disabled"}>${ready && state.cash < cost ? "현금 부족" : "중고거래 성사"}</button><button class="ink" id="clear-trade">초기화</button></div>`
       : `<div class="equipment-trade-guide"><b>동일 부위·동일 등급 장비 3개</b><span>+ 추가 비용 → 선택 모델의 다음 등급 장비 1개</span><small>일반 50 · 고급 150 · 희귀 450 · 영웅 1200만원</small></div>`;
 
-    const equipView = `<div class="equipment-people">${people}</div>
+    const saleTotal = saleIds.map(id => state.equipment.find(item => item.id === id)).filter(Boolean).reduce((sum, item) => sum + FEATURES.equipmentResalePrice(item), 0);
+    const salePanel = `<div class="equipment-sale-selection panel"><div><small>선택 장비</small><strong>${saleIds.length}개 · 예상 ${saleTotal}만원</strong></div><button class="mustard" id="sell-selected-equipment" ${saleIds.length ? "" : "disabled"}>선택 장비 판매</button><button class="ink" id="clear-sale-selection" ${saleIds.length ? "" : "disabled"}>선택 해제</button></div>`;
+    const marketTabs = `<div class="equipment-market-tabs" role="tablist" aria-label="중고거래 방식"><button class="${marketMode === "upgrade" ? "active" : ""}" data-market-mode="upgrade" role="tab" aria-selected="${marketMode === "upgrade"}">승급 거래</button><button class="${marketMode === "sale" ? "active" : ""}" data-market-mode="sale" role="tab" aria-selected="${marketMode === "sale"}">개별 판매</button></div>`;
+    const secretaryEquipControl = state.secretary ? `<div class="secretary-inline-controls panel"><div><small>비서 장비 지원</small><strong>프로젝트 팀 장비를 자동 배치합니다.</strong></div><button class="blue" id="secretary-auto-equip">비서 자동 장착</button></div>` : "";
+    const recommendationIds = state.secretary ? secretarySaleRecommendationIds() : [];
+    const secretaryMarketControl = state.secretary && marketMode === "sale" ? `<div class="secretary-inline-controls panel"><div><small>비서 중고거래 지원</small><strong>판매 후보 ${recommendationIds.length}개를 검토했습니다.</strong></div><button class="${secretarySaleRecommendationsVisible ? "teal" : "blue"}" id="secretary-market-recommend" aria-pressed="${secretarySaleRecommendationsVisible}">${secretarySaleRecommendationsVisible ? "추천 선택 해제" : "비서 판매 추천"}</button></div>` : "";
+
+    const equipView = `${secretaryEquipControl}<div class="equipment-people">${people}</div>
       <div class="equipment-slots panel">${slots}</div>
-      <div class="equipment-market-summary panel"><div><small>장비 개별 판매</small><strong>누적 판매 수익 +${state.equipmentTradeRevenue || 0}만원</strong></div><span>보관 장비만 판매</span></div>
       <div class="equipment-inventory-head"><p class="section-label">보관함 · ${state.equipment.length}</p>${sortControl}</div>
       <div class="equipment-inventory">${equipInventory}</div>`;
 
-    const tradeView = `<div class="equipment-market-summary panel"><div><small>장비 중고거래</small><strong>누적 ${state.equipmentTradeCount || 0}건 · 비용 ${state.equipmentTradeSpend || 0}만원</strong></div><span>보관 장비만 거래</span></div>
-      ${tradePanel}
-      <div class="equipment-inventory-head"><p class="section-label">거래할 장비 · ${state.equipment.length}</p>${sortControl}</div>
-      <div class="equipment-inventory trade-inventory">${tradeInventory}</div>`;
+    const tradeView = `<div class="equipment-market-summary panel"><div><small>장비 중고거래</small><strong>승급 ${state.equipmentTradeCount || 0}건 · 판매 ${state.equipmentSaleCount || 0}개 · 수익 +${state.equipmentTradeRevenue || 0}만원</strong></div><span>잠금 장비 제외</span></div>
+      ${marketTabs}
+      ${marketMode === "upgrade" ? tradePanel : `${secretaryMarketControl}${salePanel}`}
+      <div class="equipment-inventory-head"><p class="section-label">${marketMode === "upgrade" ? "거래할" : "판매할"} 장비 · ${state.equipment.length}</p>${sortControl}</div>
+      <div class="equipment-inventory trade-inventory ${marketMode === "sale" ? "sale-inventory" : ""}">${marketMode === "upgrade" ? tradeInventory : saleInventory}</div>`;
 
     const headerNotice = equipmentTab === "equip"
       ? `${target.name} · 실무 ${stats.work} · 협업 ${stats.collaboration} · ${notice}`
       : `보관 장비 ${state.equipment.length}개 · ${notice}`;
+    const secretaryAssist = equipmentTab === "equip"
+      ? secretaryAssistMarkup("equipment", state.secretary ? "자동 장착은 잠근 장비를 그대로 두고 프로젝트 팀에 맞춰 정리합니다." : "")
+      : secretaryAssistMarkup("market", state.secretary && marketMode === "sale" ? "판매 추천은 후보만 선택합니다. 최종 판매는 대표님이 확인해야 해요." : "");
 
     app.innerHTML = `${header("장비 관리", headerNotice)}<section class="screen equipment-screen">
       ${tabs}
       <div class="equipment-tab-panel" role="tabpanel">${equipmentTab === "equip" ? equipView : tradeView}</div>
       <button class="ink" id="back-from-equipment">← 사무실</button>
+      ${secretaryAssist}
     </section>${saleConfirm}`;
 
     mountPortraits();
     mountEquipmentIcons();
+    mountSecretaryAssist();
 
     document.querySelectorAll("[data-equipment-tab]").forEach(button => button.addEventListener("click", () => {
       equipmentTab = button.dataset.equipmentTab;
-      renderEquipment(equipmentTab === "equip" ? "직원과 장착 장비를 관리하세요." : "교환할 보관 장비를 선택하세요.");
+      secretarySaleRecommendationsVisible = false;
+      renderEquipment(equipmentTab === "equip" ? "직원과 장착 장비를 관리하세요." : "승급 거래와 개별 판매를 이용하세요.");
+    }));
+    document.querySelectorAll("[data-market-mode]").forEach(button => button.addEventListener("click", () => {
+      marketMode = button.dataset.marketMode;
+      secretarySaleRecommendationsVisible = false;
+      saleIds = [];
+      renderEquipment(marketMode === "upgrade" ? "승급할 장비를 선택하세요." : "판매할 장비와 예상 판매가를 확인하세요.");
     }));
     document.querySelector("[data-equipment-sort]")?.addEventListener("change", event => {
       equipmentSortMode = event.currentTarget.value;
@@ -255,7 +288,27 @@
     document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
     document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
     document.querySelectorAll("[data-equipment-lock]").forEach(button => button.addEventListener("click", () => toggleEquipmentLock(button.dataset.equipmentLock)));
-    document.querySelectorAll("[data-sell-equipment]").forEach(button => button.addEventListener("click", () => requestEquipmentSale(button.dataset.sellEquipment)));
+    document.querySelector("#secretary-auto-equip")?.addEventListener("click", () => secretaryAutoEquipTeam());
+    document.querySelectorAll("[data-sale-select]").forEach(button => button.addEventListener("click", () => {
+      const id = button.dataset.saleSelect;
+      if (secretaryEquipmentLocked(id)) return renderEquipment("잠긴 장비는 판매할 수 없습니다.");
+      saleIds = saleIds.includes(id) ? saleIds.filter(itemId => itemId !== id) : [...saleIds, id];
+      renderEquipment(`${saleIds.length}개 장비를 판매 대상으로 선택했습니다.`);
+    }));
+    document.querySelector("#sell-selected-equipment")?.addEventListener("click", () => requestEquipmentSale(saleIds));
+    document.querySelector("#clear-sale-selection")?.addEventListener("click", () => {
+      saleIds = [];
+      secretarySaleRecommendationsVisible = false;
+      renderEquipment("판매 선택을 해제했습니다.");
+    });
+    document.querySelector("#secretary-market-recommend")?.addEventListener("click", () => {
+      secretarySaleRecommendationsVisible = !secretarySaleRecommendationsVisible;
+      saleIds = secretarySaleRecommendationsVisible ? recommendationIds : [];
+      queueSecretaryAssist("market", secretarySaleRecommendationsVisible
+        ? recommendationIds.length ? `${secretaryCandidate()?.saleLine || "판매 후보를 골랐습니다."} · 예상 총액 ${saleIds.map(id => state.equipment.find(item => item.id === id)).filter(Boolean).reduce((sum, item) => sum + FEATURES.equipmentResalePrice(item), 0)}만원` : "현재 판매를 추천할 장비가 없습니다."
+        : "추천 선택을 모두 해제했습니다.", secretarySaleRecommendationsVisible && recommendationIds.length ? "smile" : "neutral");
+      renderEquipment("비서의 판매 추천 결과를 확인하세요.");
+    });
     document.querySelector("#cancel-equipment-sale")?.addEventListener("click", cancelEquipmentSale);
     document.querySelector("#confirm-equipment-sale")?.addEventListener("click", confirmEquipmentSale);
     document.querySelectorAll("[data-trade]").forEach(button => button.addEventListener("click", () => toggleTrade(button.dataset.trade)));

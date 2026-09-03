@@ -11,7 +11,9 @@
       greeting: "대표님, 반복되는 일은 제가 차근차근 정리해둘게요.",
       teamLine: "추천 부서와 직원 상태를 함께 확인해 팀을 정리했습니다.",
       equipmentLine: "지금 팀에 가장 도움이 되는 장비부터 배치했습니다.",
-      saleLine: "당장 쓰지 않을 장비만 조심스럽게 골라두었습니다."
+      saleLine: "당장 쓰지 않을 장비만 조심스럽게 골라두었습니다.",
+      hrLine: "성장 여지가 크고 지금 교육을 보낼 수 있는 직원을 먼저 살펴봤어요.",
+      mailLine: "죄송해요, 이 메일은 대표님이 직접 판단하셔야 해요. 옆에서 응원할게요."
     },
     {
       id: "b",
@@ -22,7 +24,9 @@
       greeting: "대표님! 반복 업무는 저한테 맡기고 중요한 결정만 해주세요.",
       teamLine: "프로젝트에 딱 맞는 조합으로 빠르게 편성했어요!",
       equipmentLine: "장비 조합 완료! 지금 팀의 강점을 더 살렸어요.",
-      saleLine: "안 쓰는 장비 후보를 찾았어요. 확인 후 정리해볼까요?"
+      saleLine: "안 쓰는 장비 후보를 찾았어요. 확인 후 정리해볼까요?",
+      hrLine: "교육 효과를 가장 크게 볼 수 있는 직원을 찾아봤어요! 결정은 대표님 몫이에요.",
+      mailLine: "앗, 이 메일은 제가 대신 답할 수 없어요. 대표님 판단을 믿고 기다릴게요!"
     },
     {
       id: "c",
@@ -33,7 +37,9 @@
       greeting: "대표님, 필요한 선택지만 정리해두었습니다.",
       teamLine: "부서 상성과 처리 효율을 기준으로 최적안을 구성했습니다.",
       equipmentLine: "현재 프로젝트 기준으로 장비 효율을 최적화했습니다.",
-      saleLine: "활용 가능성이 낮은 장비만 판매 후보로 분류했습니다."
+      saleLine: "활용 가능성이 낮은 장비만 판매 후보로 분류했습니다.",
+      hrLine: "성장 가능성과 현재 공백 위험을 함께 검토했습니다. 추천 대상만 표시하겠습니다.",
+      mailLine: "이 요청은 대표 권한에 해당합니다. 도움을 드리지 못해 죄송합니다."
     }
   ];
 
@@ -79,7 +85,9 @@
       candidateId: value.candidateId,
       hiredAt: Math.max(0, Number(value.hiredAt) || 0),
       autoDirective: Boolean(value.autoDirective),
-      battleSpeed: value.battleSpeed === 3 ? 3 : 1
+      battleSpeed: value.battleSpeed === 3 ? 3 : 1,
+      introSeen: Boolean(value.introSeen),
+      hintKeys: Array.isArray(value.hintKeys) ? [...new Set(value.hintKeys.filter(key => typeof key === "string"))] : []
     };
   }
 

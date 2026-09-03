@@ -15,10 +15,11 @@ const employees = [representative, ...staff];
 
 assert.equal(management.hasExecutiveSeat(0), false);
 assert.equal(management.hasExecutiveSeat(1), true);
+assert.equal(management.EXECUTIVE_PAGE_STAFF_SIZE, 3);
 assert.equal(management.generalSeatCapacity(9, 1), 8);
-assert.deepEqual(management.officeSeatIndicesForPage(0, 1), [0, 1, 2, 3, 4]);
-assert.deepEqual(management.officeSeatIndicesForPage(1, 1), [5, 6, 7, 8, 9, 10]);
-assert.equal(management.maximumOfficePages(12, 2), 2);
+assert.deepEqual(management.officeSeatIndicesForPage(0, 1), [0, 1, 2]);
+assert.deepEqual(management.officeSeatIndicesForPage(1, 1), [3, 4, 5, 6, 7, 8]);
+assert.equal(management.maximumOfficePages(12, 2), 3);
 assert.equal(management.occupiedOfficePages(["employee-2", null, null, null, null, "employee-3"], 1), 2);
 
 const startupSeats = management.normalizeOfficeSeats(employees, [], 6, 0);

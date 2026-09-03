@@ -362,6 +362,7 @@ let companyLaunchTimer = null;
 let hrTerminationTargetId = null;
 let activityMiniGamePicks = [];
 let activityMiniGameKey = null;
+let centerNoticeTimer = null;
 
 function createInitialState() {
   return {
@@ -629,6 +630,26 @@ function hasProjectAffinity(member, project) {
 
 function header(title, notice) {
   return `<header class="header"><img class="header-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID"><p class="eyebrow">LIVE PREVIEW</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(notice)}</p></header>`;
+}
+
+function showCenterNotice(message) {
+  const shell = document.querySelector("#game-shell");
+  if (!shell || !message) return;
+  let notice = document.querySelector("#center-notice");
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.id = "center-notice";
+    notice.className = "center-notice";
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "assertive");
+    shell.appendChild(notice);
+  }
+  window.clearTimeout(centerNoticeTimer);
+  notice.textContent = message;
+  notice.classList.remove("show");
+  void notice.offsetWidth;
+  notice.classList.add("show");
+  centerNoticeTimer = window.setTimeout(() => notice.classList.remove("show"), 1900);
 }
 
 const PRELOAD_ASSETS = [
@@ -1495,9 +1516,9 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
       <div><h3>${escapeHtml(member.name)} ${member.isRepresentative ? `<span class="rank representative-rank">대표</span>` : ""}</h3>
       <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
       <p>실무 ${stats.work}　협업 ${stats.collaboration}　장비 ${equipped}개</p>
-      <p>${member.isRepresentative ? "대표 재직" : member.rank === 0 ? `성장성 <b style="color:${potential.color}">${potential.label}</b> · 교육 ${member.trainingCount || 0}/3` : "즉시 전력"} · 근속 ${tenure}건</p>
+      <p>${member.isRepresentative ? "대표 재직" : `성장성 <b style="color:${potential.color}">${potential.label}</b> · 교육 ${member.trainingCount || 0}/3`} · 근속 ${tenure}건</p>
       ${activity ? `<p class="hr-activity-status">${escapeHtml(activityText)}</p>` : ""}</div>
-      <div class="hr-card-actions"><button class="${education.allowed ? "mustard" : "ink"}" data-train-member="${member.id}" ${education.allowed ? "" : "disabled"}>${education.reason}</button><button class="${protectedMember ? "ink" : "red"}" data-end-contract="${member.id}" ${protectedMember ? "disabled" : ""}>${member.isRepresentative ? "대표" : activity ? "활동 중" : availableEmployees().length <= 3 ? "최소 인원" : "계약 종료"}</button></div>
+      <div class="hr-card-actions"><button class="${education.allowed ? "mustard" : "ink"}" data-train-member="${member.id}" aria-disabled="${!education.allowed}">교육 보내기</button><button class="${protectedMember ? "ink" : "red"}" data-end-contract="${member.id}" aria-disabled="${protectedMember}">계약 종료</button></div>
     </article>`;
   }).join("");
   const confirm = target ? contractTerminationConfirm(target) : "";
@@ -1515,8 +1536,8 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
     ${confirm}
   </section>`;
   mountPortraits();
-  document.querySelectorAll("[data-train-member]:not(:disabled)").forEach(button => button.addEventListener("click", () => renderTrainingCourses(button.dataset.trainMember)));
-  document.querySelectorAll("[data-end-contract]:not(:disabled)").forEach(button => button.addEventListener("click", () => requestContractTermination(button.dataset.endContract)));
+  document.querySelectorAll("[data-train-member]").forEach(button => button.addEventListener("click", () => tryOpenTraining(button.dataset.trainMember)));
+  document.querySelectorAll("[data-end-contract]").forEach(button => button.addEventListener("click", () => requestContractTermination(button.dataset.endContract)));
   document.querySelector("#back-from-hr").addEventListener("click", () => renderOffice());
   document.querySelector("#cancel-contract-termination")?.addEventListener("click", cancelContractTermination);
   document.querySelector("#confirm-contract-termination")?.addEventListener("click", confirmContractTermination);
@@ -1529,16 +1550,15 @@ function contractTerminationConfirm(member) {
   return `<div class="hr-confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="contract-end-title"><div class="hr-confirm panel">
     <small>CONTRACT REVIEW</small><strong id="contract-end-title">${escapeHtml(member.name)}의 계약을 종료할까요?</strong>
     <p>계약 종료 정산금 <b>${settlement}만원</b>이 지급되고 평판이 2 감소합니다.${equipmentNames.length ? `<br>장비 ${escapeHtml(equipmentNames.join(" · "))}은 보관함으로 회수됩니다.` : ""}</p>
-    ${canAfford ? "" : `<em>정산금이 부족합니다. 현재 현금 ${state.cash}만원</em>`}
-    <div><button class="teal" id="cancel-contract-termination">계속 근무</button><button class="red" id="confirm-contract-termination" ${canAfford ? "" : "disabled"}>계약 종료</button></div>
+    <div><button class="teal" id="cancel-contract-termination">계속 근무</button><button class="${canAfford ? "red" : "ink"}" id="confirm-contract-termination" aria-disabled="${!canAfford}">계약 종료</button></div>
   </div></div>`;
 }
 
 function requestContractTermination(memberId) {
   const member = state.employees.find(employeeItem => employeeItem.id === memberId);
-  if (!member || member.isRepresentative) return renderHumanResources("대표의 계약은 종료할 수 없습니다.");
-  if (isEmployeeUnavailable(member.id)) return renderHumanResources("교육이나 출장 중인 직원의 계약은 종료할 수 없습니다.");
-  if (availableEmployees().length <= 3) return renderHumanResources("프로젝트 진행에 필요한 근무 직원 3명은 유지해야 합니다.");
+  if (!member || member.isRepresentative) return showCenterNotice("대표의 계약은 종료할 수 없습니다.");
+  if (isEmployeeUnavailable(member.id)) return showCenterNotice("교육이나 출장 중인 직원의 계약은 종료할 수 없습니다.");
+  if (availableEmployees().length <= 3) return showCenterNotice("프로젝트 진행에 필요한 근무 직원 3명은 유지해야 합니다.");
   hrTerminationTargetId = memberId;
   renderHumanResources(`${member.name}의 계약 조건을 확인하세요.`);
 }
@@ -1554,7 +1574,7 @@ function confirmContractTermination() {
   if (isEmployeeUnavailable(member.id)) return renderHumanResources("교육이나 출장 중인 직원의 계약은 종료할 수 없습니다.");
   if (availableEmployees().length <= 3) return renderHumanResources("프로젝트 진행에 필요한 근무 직원 3명은 유지해야 합니다.");
   const settlement = contractSettlement(member);
-  if (state.cash < settlement) return renderHumanResources("계약 종료 정산금이 부족합니다.");
+  if (state.cash < settlement) return showCenterNotice(`계약 종료 정산금 ${settlement}만원이 필요합니다.`);
   state.cash -= settlement;
   recordFinancialAmount("termination", settlement);
   state.reputation = Math.max(0, state.reputation - 2);
@@ -1742,13 +1762,20 @@ function activityStatusText(activity) {
 }
 
 function trainingEligibility(member) {
-  if (!member || member.isRepresentative) return { allowed: false, reason: "대표" };
-  if (member.rank !== 0) return { allowed: false, reason: "신입 전용" };
-  if ((member.trainingCount || 0) >= 3) return { allowed: false, reason: "교육 완료" };
-  if (isEmployeeUnavailable(member.id)) return { allowed: false, reason: "자리 비움" };
-  if (state.training) return { allowed: false, reason: "교육 슬롯 사용 중" };
-  if (availableEmployees().length - 1 < 3) return { allowed: false, reason: "최소 근무 인원" };
-  return { allowed: true, reason: "교육 가능" };
+  if (!member) return { allowed: false, reason: "교육 대상을 찾을 수 없습니다." };
+  if (member.isRepresentative) return { allowed: false, reason: "대표는 장기 교육으로 자리를 비울 수 없습니다." };
+  if ((member.trainingCount || 0) >= 3) return { allowed: false, reason: `${member.name} 직원은 장기 교육 3회를 모두 수료했습니다.` };
+  if (isEmployeeUnavailable(member.id)) return { allowed: false, reason: `${member.name} 직원은 현재 교육이나 출장 중입니다.` };
+  if (state.training) return { allowed: false, reason: "다른 직원이 교육 중입니다. 복귀한 뒤 다시 보내주세요." };
+  if (availableEmployees().length - 1 < 3) return { allowed: false, reason: "프로젝트 진행에 필요한 근무 직원 3명은 남아 있어야 합니다." };
+  return { allowed: true, reason: "" };
+}
+
+function tryOpenTraining(memberId) {
+  const member = state.employees.find(item => item.id === memberId);
+  const eligibility = trainingEligibility(member);
+  if (!eligibility.allowed) return showCenterNotice(eligibility.reason);
+  renderTrainingCourses(memberId);
 }
 
 function renderTrainingCourses(memberId, notice = "3프로젝트 동안 진행할 교육을 선택하세요.") {
@@ -1762,11 +1789,12 @@ function renderTrainingCourses(memberId, notice = "3프로젝트 동안 진행�
     const baseScore = ACTIVITIES.trainingBaseScore(member, course.id);
     const expectedLow = ACTIVITIES.resultForScore(baseScore - 10);
     const expectedHigh = ACTIVITIES.resultForScore(baseScore + 15);
-    const gainText = course.id === "speed" ? "보통·성공 +1 · 대성공 +2" : "보통 +1 · 성공 +2 · 대성공 +3";
+    const gains = ["normal", "success", "great"].map(result => ACTIVITIES.trainingGain(course.id, result, member.rank));
+    const gainText = `보통 +${gains[0]} · 성공 +${gains[1]} · 대성공 +${gains[2]}`;
     return `<article class="training-course panel">
       <div><small>3 PROJECT COURSE</small><strong>${escapeHtml(course.name)}</strong><span>${escapeHtml(course.statLabel)} 성장 · ${gainText}</span></div>
-      <p>예상 성과 <b>${expectedLow.label}${expectedLow.id !== expectedHigh.id ? `~${expectedHigh.label}` : ""}</b><small>성장성 ${potential.label} · 기본 ${baseScore}점</small></p>
-      <button class="${state.cash >= course.cost ? "mustard" : "ink"}" data-start-training="${course.id}" ${state.cash >= course.cost ? "" : "disabled"}>${state.cash >= course.cost ? `${course.cost}만원 · 교육 시작` : `${course.cost}만원 · 현금 부족`}</button>
+      <p>예상 성과 <b>${expectedLow.label}${expectedLow.id !== expectedHigh.id ? `~${expectedHigh.label}` : ""}</b><small>성장성 ${potential.label} · 기본 ${baseScore}점 · 교육비 ${course.cost}만원</small></p>
+      <button class="${state.cash >= course.cost ? "mustard" : "ink"}" data-start-training="${course.id}" aria-disabled="${state.cash < course.cost}">교육 시작</button>
     </article>`;
   }).join("");
   app.innerHTML = `${header("장기 교육", `${member.name} · 성장성 ${potential.label} · ${notice}`)}<section class="screen training-screen">
@@ -1783,8 +1811,8 @@ function startTraining(memberId, courseId) {
   const member = state.employees.find(item => item.id === memberId);
   const eligibility = trainingEligibility(member);
   const course = ACTIVITIES.TRAINING_COURSES[courseId];
-  if (!member || !eligibility.allowed || !course) return renderHumanResources(member ? `${member.name}: ${eligibility.reason}` : "교육 대상을 찾을 수 없습니다.");
-  if (state.cash < course.cost) return renderTrainingCourses(memberId, "교육비가 부족합니다.");
+  if (!member || !eligibility.allowed || !course) return showCenterNotice(eligibility.reason || "교육 과정을 찾을 수 없습니다.");
+  if (state.cash < course.cost) return showCenterNotice(`교육비 ${course.cost}만원이 필요합니다.`);
   state.cash -= course.cost;
   recordFinancialAmount("training", course.cost);
   state.training = {
@@ -1990,7 +2018,7 @@ function finalizeTraining(activity) {
   const score = ACTIVITIES.finalScore(activity.baseScore, activity.miniGameModifier || 0, variance);
   const outcome = ACTIVITIES.resultForScore(score);
   const course = ACTIVITIES.TRAINING_COURSES[activity.courseId];
-  const gain = ACTIVITIES.trainingGain(activity.courseId, outcome.id);
+  const gain = ACTIVITIES.trainingGain(activity.courseId, outcome.id, member.rank);
   member[course.stat] += gain;
   member.focus = Math.round((member.work + member.collaboration) / 2);
   member.trainingCount = (member.trainingCount || 0) + 1;
@@ -2360,7 +2388,7 @@ function renderInterview(notice) {
       <div><h3>${escapeHtml(candidate.name)} <span class="rank" style="background:${rank.color}">${rank.name}</span></h3>
       <p class="dept">${department.name} · ${employeePosition(candidate)} · ${escapeHtml(candidate.trait)}</p>
       <p>실무 ${candidate.work}　협업 ${candidate.collaboration}　속도 ${candidate.speed}</p>
-      <p>${candidate.rank === 0 ? `성장성 <b style="color:${potential.color}">${potential.label}</b> · 장기 교육 가능` : "즉시 전력 · 장기 교육 대상 아님"}</p>
+      <p>성장성 <b style="color:${potential.color}">${potential.label}</b> · 전 직급 장기 교육 가능</p>
       <p>계약금 ${candidate.signingCost} · 월급 ${candidate.salary}</p></div>
       <button class="teal" data-hire="${candidate.id}">채용</button>
     </article>`;

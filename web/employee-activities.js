@@ -132,12 +132,13 @@
     return clamp(Math.round((Number(baseScore) || 0) + (Number(modifier) || 0) + clamp(Number(variance) || 0, -5, 5)), 0, 100);
   }
 
-  function trainingGain(courseId, resultId) {
+  function trainingGain(courseId, resultId, rank = 0) {
     if (resultId === "failure") return 0;
-    if (courseId === "speed") return resultId === "great" ? 2 : 1;
-    if (resultId === "normal") return 1;
-    if (resultId === "success") return 2;
-    return 3;
+    const baseGain = courseId === "speed"
+      ? resultId === "great" ? 2 : 1
+      : resultId === "normal" ? 1 : resultId === "success" ? 2 : 3;
+    const experiencePenalty = clamp(Math.floor(Math.max(0, Number(rank) || 0) / 2), 0, 2);
+    return Math.max(0, baseGain - experiencePenalty);
   }
 
   function tripPayout(expected, resultId) {

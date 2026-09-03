@@ -90,6 +90,32 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
   box-shadow: 0 0 48px rgba(0, 0, 0, .45);
 }
 
+.center-notice {
+  position: absolute;
+  z-index: 95;
+  top: 50%;
+  left: 50%;
+  width: min(82%, 310px);
+  padding: 14px 16px;
+  border: 3px solid var(--ink);
+  background: rgba(255,250,240,.97);
+  box-shadow: 5px 5px 0 rgba(23,54,74,.9);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 1000;
+  line-height: 1.5;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -42%) scale(.96);
+}
+.center-notice.show { animation: center-notice 1.9s ease both; }
+@keyframes center-notice {
+  0% { opacity: 0; transform: translate(-50%, -42%) scale(.96); }
+  10%, 78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -55%) scale(.98); }
+}
+
 #app {
   width: 100%;
   height: 100%;
@@ -1442,6 +1468,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .employee-away>canvas{opacity:.7}
 .hr-card-actions{display:grid;gap:4px}
 .hr-card-actions button{width:60px;min-height:38px}
+.hr-card-actions button[aria-disabled="true"],.training-course button[aria-disabled="true"],#confirm-contract-termination[aria-disabled="true"]{filter:grayscale(.45);opacity:.72}
 .hr-activity-status{color:var(--red);font-weight:1000}
 .hr-activity-summary{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px}
 .hr-activity-summary span{min-width:0;padding:5px 7px;border:1px solid rgba(23,54,74,.35);background:rgba(255,255,255,.55)}

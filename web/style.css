@@ -462,7 +462,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .executive-desk .desk-identity > small { background: #8a6100; }
 .secretary-office-desk { z-index: 3; }
 .secretary-office-workspace { position: relative; width: min(88%,108px); aspect-ratio: 1; margin: 0 auto; }
-.secretary-office-workspace .secretary-art-slot { position: absolute; z-index: 1; top: -5%; left: 50%; width: 60%; height: 70%; translate: -50% 0; }
+.secretary-office-workspace .secretary-art-slot { position: absolute; z-index: 1; top: 1%; left: 50%; width: 42%; height: 70%; translate: -50% 0; }
 .secretary-office-workspace .office-desk-base { top: 44%; }
 .secretary-office-workspace .office-monitor-back { top: 48%; }
 .secretary-office-desk .desk-identity { border-color: var(--teal); background: #e6f3ed; }

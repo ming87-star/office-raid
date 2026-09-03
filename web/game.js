@@ -1521,7 +1521,7 @@ function secretaryArt(candidateId, variant = "face", expression = "neutral") {
       : variant === "office"
         ? `${candidate.id}-office.webp`
         : `${candidate.id}-face-${safeExpression}.webp`;
-  return `<span class="secretary-art-slot secretary-${candidate.id} variant-${variant} expression-${safeExpression}" data-secretary-art="${candidate.id}-${variant}-${safeExpression}" aria-label="${escapeHtml(candidate.name)} ${variant === "resume" ? "증명사진" : variant === "fullbody" ? "전신" : variant === "office" ? "사무실 캐릭터" : "표정"}"><img src="assets/secretary/${filename}?v=20260903-secretary-art-v1" alt="" decoding="async"></span>`;
+  return `<span class="secretary-art-slot secretary-${candidate.id} variant-${variant} expression-${safeExpression}" data-secretary-art="${candidate.id}-${variant}-${safeExpression}" aria-label="${escapeHtml(candidate.name)} ${variant === "resume" ? "증명사진" : variant === "fullbody" ? "전신" : variant === "office" ? "사무실 캐릭터" : "표정"}"><img src="assets/secretary/${filename}?v=20260903-secretary-art-v2" alt="" decoding="async"></span>`;
 }
 
 function preloadSecretaryCandidateAssets(candidateId, complete = false) {
@@ -1533,7 +1533,7 @@ function preloadSecretaryCandidateAssets(candidateId, complete = false) {
     ["neutral", "smile", "confident", "worried", "surprised", "sorry"].forEach(expression => filenames.push(`${candidate.id}-face-${expression}.webp`));
   }
   filenames.forEach(filename => {
-    const source = `assets/secretary/${filename}?v=20260903-secretary-art-v1`;
+    const source = `assets/secretary/${filename}?v=20260903-secretary-art-v2`;
     if (preloadedSecretarySources.has(source)) return;
     preloadedSecretarySources.add(source);
     const image = new Image();

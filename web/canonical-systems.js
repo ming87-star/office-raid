@@ -50,7 +50,7 @@
     return (copy[key]||copy.realist)[phase==="request"?0:phase==="retry"?1:2];
   }
   function senderFor(problem, previous, seed) {
-    const staff=state.employees.filter(m=>!m.isRepresentative);
+    const staff=state.employees.filter(m=>!m.isRepresentative&&!isEmployeeUnavailable(m.id));
     let pool=staff.filter(m=>m.department===problem.department);
     if(!pool.length)pool=staff;
     const other=pool.filter(m=>m.id!==previous); if(other.length)pool=other;
@@ -136,8 +136,9 @@
   };
 
   renderEquipment = function(notice) {
-    const target = state.employees.find(member => member.id === equipmentTargetId) || state.employees[0];
+    const target = state.employees.find(member => member.id === equipmentTargetId && !isEmployeeUnavailable(member.id)) || availableEmployees()[0];
     if (!target) return renderOffice("장비를 사용할 직원이 없습니다.");
+    equipmentTargetId = target.id;
 
     tradeIds = tradeIds.filter(id => state.equipment.some(item => item.id === id));
     if (!tradeIds.includes(tradeBaseId)) tradeBaseId = tradeIds[0] || null;
@@ -161,9 +162,10 @@
     const people = state.employees.map(member => {
       const department = DEPARTMENTS[member.department];
       const actionOrder = order.indexOf(member.id);
-      return `<button class="equipment-person ${member.id === target.id ? "active" : ""} ${actionOrder >= 0 ? "project-member" : ""}" data-equipment-target="${member.id}" style="--department-color:${department.color}">
+      const away = isEmployeeUnavailable(member.id);
+      return `<button class="equipment-person ${member.id === target.id ? "active" : ""} ${actionOrder >= 0 ? "project-member" : ""} ${away ? "employee-away" : ""}" data-equipment-target="${member.id}" style="--department-color:${department.color}" ${away ? "disabled" : ""}>
         <span class="equipment-person-portrait"><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face"></canvas></span>
-        <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong><em class="equipment-team-badge ${actionOrder < 0 ? "off-team" : ""}">${actionOrder >= 0 ? `<b>프로젝트 팀</b> · 행동 ${actionOrder + 1}` : "대기 직원"}</em></span>
+        <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong><em class="equipment-team-badge ${actionOrder < 0 ? "off-team" : ""}">${away ? escapeHtml(activityStatusText(employeeActivity(member.id))) : actionOrder >= 0 ? `<b>프로젝트 팀</b> · 행동 ${actionOrder + 1}` : "대기 직원"}</em></span>
       </button>`;
     }).join("");
 
@@ -176,13 +178,17 @@
       </article>`;
     }).join("");
 
-    const equipInventory = state.equipment.length ? sortedEquipment.map(item =>
-      `<article class="equipment-item">
+    const equipInventory = state.equipment.length ? sortedEquipment.map(item => {
+      const resale = FEATURES.equipmentResalePrice(item);
+      return `<article class="equipment-item">
         <span>${equipmentIconMarkup(item)}</span>
-        <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em></div>
-        <button class="teal" data-equip="${item.id}">장착</button>
-      </article>`
-    ).join("") : `<div class="empty-inventory">프로젝트에서 장비를 획득하면 여기에 표시됩니다.</div>`;
+        <div><strong>${escapeHtml(item.name)}</strong><small>${EQUIPMENT_RARITIES[item.rarity].name} ${EQUIPMENT_SLOTS[item.slot].name}</small><em>실무 +${item.workBonus} · 협업 +${item.collaborationBonus}</em><small class="equipment-resale-price">예상 판매가 ${resale}만원</small></div>
+        <div class="equipment-item-actions"><button class="teal" data-equip="${item.id}">장착</button><button class="mustard" data-sell-equipment="${item.id}">판매</button></div>
+      </article>`;
+    }).join("") : `<div class="empty-inventory">프로젝트에서 장비를 획득하면 여기에 표시됩니다.</div>`;
+
+    const saleItem = state.equipment.find(item => item.id === equipmentSaleTargetId);
+    const saleConfirm = saleItem ? `<div class="equipment-sale-backdrop" role="dialog" aria-modal="true" aria-labelledby="equipment-sale-title"><div class="equipment-sale-confirm panel"><small>USED EQUIPMENT MARKET</small><strong id="equipment-sale-title">${escapeHtml(saleItem.name)}을 판매할까요?</strong><p>예상 판매가 <b>${FEATURES.equipmentResalePrice(saleItem)}만원</b>을 받고 보관함에서 제거합니다. 판매 후에는 되돌릴 수 없습니다.</p><div><button class="ink" id="cancel-equipment-sale">취소</button><button class="mustard" id="confirm-equipment-sale">판매 확정</button></div></div></div>` : "";
 
     const selected = tradeIds.map(id => state.equipment.find(item => item.id === id)).filter(Boolean);
     const first = selected[0];
@@ -207,6 +213,7 @@
 
     const equipView = `<div class="equipment-people">${people}</div>
       <div class="equipment-slots panel">${slots}</div>
+      <div class="equipment-market-summary panel"><div><small>장비 개별 판매</small><strong>누적 판매 수익 +${state.equipmentTradeRevenue || 0}만원</strong></div><span>보관 장비만 판매</span></div>
       <div class="equipment-inventory-head"><p class="section-label">보관함 · ${state.equipment.length}</p>${sortControl}</div>
       <div class="equipment-inventory">${equipInventory}</div>`;
 
@@ -223,7 +230,7 @@
       ${tabs}
       <div class="equipment-tab-panel" role="tabpanel">${equipmentTab === "equip" ? equipView : tradeView}</div>
       <button class="ink" id="back-from-equipment">← 사무실</button>
-    </section>`;
+    </section>${saleConfirm}`;
 
     mountPortraits();
     mountEquipmentIcons();
@@ -242,6 +249,9 @@
     }));
     document.querySelectorAll("[data-equip]").forEach(button => button.addEventListener("click", () => equipItem(button.dataset.equip)));
     document.querySelectorAll("[data-unequip]").forEach(button => button.addEventListener("click", () => unequipItem(button.dataset.unequip)));
+    document.querySelectorAll("[data-sell-equipment]").forEach(button => button.addEventListener("click", () => requestEquipmentSale(button.dataset.sellEquipment)));
+    document.querySelector("#cancel-equipment-sale")?.addEventListener("click", cancelEquipmentSale);
+    document.querySelector("#confirm-equipment-sale")?.addEventListener("click", confirmEquipmentSale);
     document.querySelectorAll("[data-trade]").forEach(button => button.addEventListener("click", () => toggleTrade(button.dataset.trade)));
     document.querySelectorAll("[data-trade-base]").forEach(button => button.addEventListener("change", () => {
       tradeBaseId = button.dataset.tradeBase;

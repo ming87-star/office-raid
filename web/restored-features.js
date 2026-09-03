@@ -6,7 +6,7 @@
   if (root) root.OfficeRaidFeatures = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function createOfficeRaidFeatures() {
   const DROP_RATES = [0.40];
-  const RESALE_BASE = [80, 160, 320, 620, 1200];
+  const RESALE_BASE = [50, 100, 200, 400, 800];
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));

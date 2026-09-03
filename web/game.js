@@ -330,8 +330,10 @@ const SAVE_KEY = "office-raid-save";
 const SAVE_VERSION = 1;
 const FEATURES = window.OfficeRaidFeatures;
 const BALANCE = window.OfficeRaidBalance;
+const ACTIVITIES = window.OfficeRaidActivities;
 if (!FEATURES) throw new Error("restored-features.js must load before game.js");
 if (!BALANCE) throw new Error("balance-rules.js must load before game.js");
+if (!ACTIVITIES) throw new Error("employee-activities.js must load before game.js");
 const COMPANY_LEVELS = [
   { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
   { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
@@ -358,6 +360,8 @@ let officeDialogueTimer = null;
 let recentOfficeDialogueIds = [];
 let companyLaunchTimer = null;
 let hrTerminationTargetId = null;
+let activityMiniGamePicks = [];
+let activityMiniGameKey = null;
 
 function createInitialState() {
   return {
@@ -384,11 +388,19 @@ function createInitialState() {
     turnoverEvents: 0,
     pendingTurnover: null,
     pendingFinancialReport: null,
+    training: null,
+    businessTrip: null,
+    pendingBusinessTripOffer: null,
+    pendingActivityMiniGames: [],
+    pendingActivityReports: [],
+    activityCycles: 0,
+    nextBusinessTripCycle: 5,
+    activityHistory: [],
     financialHistory: [],
     financialPeriod: {
       number: 1, startCash: 1200, revenue: 0, payroll: 0,
       recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0,
-      equipmentSales: 0, workErrors: 0
+      equipmentSales: 0, workErrors: 0, training: 0, tripRevenue: 0
     }
   };
 }
@@ -420,6 +432,8 @@ function normalizeSavedMember(member) {
   if (!member || typeof member !== "object" || typeof member.id !== "string") return null;
   return {
     ...member,
+    growthPotential: Math.max(0, Math.min(2, Number.isInteger(member.growthPotential) ? member.growthPotential : 1)),
+    trainingCount: Math.max(0, Number(member.trainingCount) || 0),
     equipment: { work: null, support: null, personal: null, ...(member.equipment || {}) },
     appearance: { ...appearance(0), ...(member.appearance || {}) }
   };
@@ -452,6 +466,14 @@ function normalizeSavedState(savedState) {
     equipmentTradeRevenue: Math.max(0, Number(savedState.equipmentTradeRevenue) || 0),
     workMail: savedState.workMail && typeof savedState.workMail === "object" ? savedState.workMail : null,
     workMailStats: { ...initial.workMailStats, ...(savedState.workMailStats || {}) },
+    training: savedState.training && typeof savedState.training === "object" ? savedState.training : null,
+    businessTrip: savedState.businessTrip && typeof savedState.businessTrip === "object" ? savedState.businessTrip : null,
+    pendingBusinessTripOffer: savedState.pendingBusinessTripOffer && typeof savedState.pendingBusinessTripOffer === "object" ? savedState.pendingBusinessTripOffer : null,
+    pendingActivityMiniGames: Array.isArray(savedState.pendingActivityMiniGames) ? savedState.pendingActivityMiniGames : [],
+    pendingActivityReports: Array.isArray(savedState.pendingActivityReports) ? savedState.pendingActivityReports : [],
+    activityCycles: Math.max(0, Number(savedState.activityCycles) || 0),
+    nextBusinessTripCycle: Math.max(5, Number(savedState.nextBusinessTripCycle) || 5),
+    activityHistory: Array.isArray(savedState.activityHistory) ? savedState.activityHistory.slice(-8) : [],
     tutorialBattleCompleted: typeof savedState.tutorialBattleCompleted === "boolean"
       ? savedState.tutorialBattleCompleted
       : Number(savedState.projectClears || 0) > 0 || employees.length > 3,
@@ -521,6 +543,14 @@ function applySavedGame(payload) {
   officePage = 0;
   recentOfficeDialogueIds = [];
   hrTerminationTargetId = null;
+  activityMiniGamePicks = [];
+  activityMiniGameKey = null;
+  if (state.training && !state.employees.some(member => member.id === state.training.employeeId)) state.training = null;
+  if (state.businessTrip && !state.employees.some(member => member.id === state.businessTrip.employeeId)) state.businessTrip = null;
+  if (state.pendingBusinessTripOffer && !state.employees.some(member => member.id === state.pendingBusinessTripOffer.employeeId)) state.pendingBusinessTripOffer = null;
+  const activityIds = new Set([state.training?.id, state.businessTrip?.id].filter(Boolean));
+  state.pendingActivityMiniGames = state.pendingActivityMiniGames.filter(item => activityIds.has(item.activityId));
+  repairProjectTeam();
 }
 
 function resetGameState() {
@@ -543,6 +573,8 @@ function resetGameState() {
   officePage = 0;
   recentOfficeDialogueIds = [];
   hrTerminationTargetId = null;
+  activityMiniGamePicks = [];
+  activityMiniGameKey = null;
   window.localStorage.removeItem(SAVE_KEY);
 }
 
@@ -569,6 +601,8 @@ function employee(name, department, trait, work, collaboration, speed, look, ran
     focus: Math.round((work + collaboration) / 2),
     salary: 120 + rank * 72,
     rank, isRepresentative: false, joinedAt: 0, retentionCount: 0,
+    growthPotential: Math.floor(Math.abs(Number(look) || 0) / 31) % 3,
+    trainingCount: 0,
     equipment: { work: null, support: null, personal: null },
     appearance: appearance(look)
   };
@@ -717,9 +751,7 @@ function continueSavedGame() {
   if (!savedGame) return renderTitle();
   applySavedGame(savedGame);
   app.classList.remove("title-mode");
-  if (state.pendingFinancialReport) return renderFinancialReport();
-  if (state.pendingTurnover) return renderTurnoverEvent();
-  renderOffice("저장된 회사에서 업무를 이어갑니다.");
+  renderNextPending("저장된 회사에서 업무를 이어갑니다.");
 }
 
 function renderOpening() {
@@ -938,7 +970,23 @@ function enterOfficeFromLaunch() {
   }, 260);
 }
 
-function currentTeam() { return state.teamIds.map(id => state.employees.find(member => member.id === id)).filter(Boolean); }
+function employeeActivity(memberId) {
+  if (state.training?.employeeId === memberId) return { ...state.training, type: "training" };
+  if (state.businessTrip?.employeeId === memberId) return { ...state.businessTrip, type: "trip" };
+  return null;
+}
+
+function isEmployeeUnavailable(memberId) {
+  return Boolean(employeeActivity(memberId));
+}
+
+function availableEmployees() {
+  return state.employees.filter(member => !isEmployeeUnavailable(member.id));
+}
+
+function currentTeam() {
+  return state.teamIds.map(id => state.employees.find(member => member.id === id)).filter(member => member && !isEmployeeUnavailable(member.id));
+}
 
 function currentCompanyLevel() {
   return COMPANY_LEVELS[Math.min(COMPANY_LEVELS.length - 1, Math.max(0, state.companyLevel || 0))];
@@ -1035,7 +1083,7 @@ function pickOfficeDialogue() {
 
 function runOfficeDialogue() {
   if (currentView !== "office") return;
-  const members = state.employees;
+  const members = availableEmployees();
   if (members.length < 2) return;
   const speakerIndex = randomInt(members.length);
   const listenerIndex = (speakerIndex + 1 + randomInt(members.length - 1)) % members.length;
@@ -1103,7 +1151,7 @@ function recordFinancialAmount(category, amount) {
 }
 
 function financialExpenseTotal(period) {
-  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.equipmentTrade || 0) + (period.workErrors || 0);
+  return period.payroll + period.recruitment + period.posting + period.retention + period.termination + (period.expansion || 0) + (period.equipmentTrade || 0) + (period.workErrors || 0) + (period.training || 0);
 }
 
 function closeFinancialPeriodIfDue() {
@@ -1124,7 +1172,7 @@ function closeFinancialPeriodIfDue() {
   state.financialPeriod = {
     number: period.number + 1, startCash: state.cash, revenue: 0, payroll: 0,
     recruitment: 0, posting: 0, retention: 0, termination: 0, expansion: 0,
-    equipmentSales: 0, workErrors: 0
+    equipmentSales: 0, workErrors: 0, training: 0, tripRevenue: 0
   };
   return report;
 }
@@ -1143,9 +1191,10 @@ function returnMemberEquipment(member) {
 }
 
 function repairProjectTeam() {
-  const validIds = new Set(state.employees.map(member => member.id));
+  const available = availableEmployees();
+  const validIds = new Set(available.map(member => member.id));
   state.teamIds = state.teamIds.filter(id => validIds.has(id)).slice(0, projectTeamLimit());
-  state.employees.forEach(member => {
+  available.forEach(member => {
     if (state.teamIds.length < 3 && !state.teamIds.includes(member.id)) state.teamIds.push(member.id);
   });
 }
@@ -1186,7 +1235,7 @@ function ensureWorkMail() {
   if (!state.tutorialBattleCompleted) return null;
   const date = FEATURES.todayKey(new Date());
   if (state.workMail?.date === date) return state.workMail;
-  const availableSenders = state.employees.filter(member => !member.isRepresentative);
+  const availableSenders = state.employees.filter(member => !member.isRepresentative && !isEmployeeUnavailable(member.id));
   const seed = `${date}|${state.companyName}|${state.projectClears}`;
   const sender = availableSenders[FEATURES.hashString(seed) % Math.max(1, availableSenders.length)] || state.employees[0];
   state.workMail = {
@@ -1289,9 +1338,10 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
     ? `이용권 ${state.specialRecruitmentTickets}장 보유`
     : specialRecruitmentProgress();
   const officePageSize = 6;
-  const officePageCount = Math.max(1, Math.ceil(state.employees.length / officePageSize));
+  const workingEmployees = availableEmployees();
+  const officePageCount = Math.max(1, Math.ceil(workingEmployees.length / officePageSize));
   officePage = Math.min(officePage, officePageCount - 1);
-  const officeMembers = state.employees.slice(officePage * officePageSize, (officePage + 1) * officePageSize);
+  const officeMembers = workingEmployees.slice(officePage * officePageSize, (officePage + 1) * officePageSize);
   const equippedCount = equippedEquipmentCount();
   const activeMail = state.workMail;
   const dailyMail = state.dailyMissions;
@@ -1307,11 +1357,17 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
   const expansionReady = nextCompany && state.projectClears >= nextCompany.requiredClears && state.cash >= nextCompany.cost;
+  const activeActivities = [state.training, state.businessTrip].filter(Boolean);
+  const activityMarkup = activeActivities.length ? `<div class="office-activities panel">${activeActivities.map(activity => {
+    const member = state.employees.find(item => item.id === activity.employeeId);
+    return `<span class="${activity.type}"><small>${activity.type === "training" ? "교육 중" : "출장 중"}</small><strong>${escapeHtml(member?.name || "직원")}</strong><em>${escapeHtml(activityStatusText(activity))}</em></span>`;
+  }).join("")}</div>` : "";
   const officeZone = `<div class="office-zone"><span>${company.grade} · 근무 구역 ${officePage + 1}/${officePageCount}</span>${officePageCount > 1 ? `<button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button>` : ""}</div>`;
-  const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></div>`).join("");
+  const desks = officeMembers.map(member => `<div class="desk" data-office-worker="${member.id}" role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 사용 장비 확인"><span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<span class="desk-identity"><strong>${escapeHtml(member.name)}</strong><small>${DEPARTMENTS[member.department].short} · ${employeePosition(member)}</small></span></div>`).join("");
   app.innerHTML = `${header(company.name, officeNotice)}
     <section class="screen">
       <div class="office-room panel company-level-${company.id} staff-${officeMembers.length}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 직원 ${officeMembers.length}명">${officeZone}${desks}</div>
+      ${activityMarkup}
       ${mailMarkup}
       <div class="company-card panel">
         <div class="company-card-head"><div><small>COMPANY FILE · ${company.grade}</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</b></div>
@@ -1429,24 +1485,37 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
     const stats = effectiveStats(member);
     const equipped = Object.values(member.equipment || {}).filter(Boolean).length;
     const tenure = Math.max(0, state.projectClears - (member.joinedAt || 0));
-    const protectedMember = member.isRepresentative || state.employees.length <= 3;
-    return `<article class="team-card hr-card ${member.isRepresentative ? "representative-card" : ""}">
+    const activity = employeeActivity(member.id);
+    const education = trainingEligibility(member);
+    const potential = ACTIVITIES.growthLevel(member.growthPotential);
+    const protectedMember = member.isRepresentative || availableEmployees().length <= 3 || Boolean(activity);
+    const activityText = activity ? activityStatusText(activity) : "";
+    return `<article class="team-card hr-card ${member.isRepresentative ? "representative-card" : ""} ${activity ? "employee-away" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
       <div><h3>${escapeHtml(member.name)} ${member.isRepresentative ? `<span class="rank representative-rank">대표</span>` : ""}</h3>
       <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
       <p>실무 ${stats.work}　협업 ${stats.collaboration}　장비 ${equipped}개</p>
-      <p>월급 ${member.salary}만원 · 근속 프로젝트 ${tenure}건</p></div>
-      <button class="${protectedMember ? "ink" : "red"}" data-end-contract="${member.id}" ${protectedMember ? "disabled" : ""}>${member.isRepresentative ? "대표" : state.employees.length <= 3 ? "최소 인원" : "계약 종료"}</button>
+      <p>${member.isRepresentative ? "대표 재직" : member.rank === 0 ? `성장성 <b style="color:${potential.color}">${potential.label}</b> · 교육 ${member.trainingCount || 0}/3` : "즉시 전력"} · 근속 ${tenure}건</p>
+      ${activity ? `<p class="hr-activity-status">${escapeHtml(activityText)}</p>` : ""}</div>
+      <div class="hr-card-actions"><button class="${education.allowed ? "mustard" : "ink"}" data-train-member="${member.id}" ${education.allowed ? "" : "disabled"}>${education.reason}</button><button class="${protectedMember ? "ink" : "red"}" data-end-contract="${member.id}" ${protectedMember ? "disabled" : ""}>${member.isRepresentative ? "대표" : activity ? "활동 중" : availableEmployees().length <= 3 ? "최소 인원" : "계약 종료"}</button></div>
     </article>`;
   }).join("");
   const confirm = target ? contractTerminationConfirm(target) : "";
+  const trainingSummary = state.training ? activityStatusText(state.training) : "교육 슬롯 사용 가능";
+  const tripSummary = state.businessTrip
+    ? activityStatusText(state.businessTrip)
+    : availableEmployees().length <= projectTeamLimit()
+      ? `근무자 ${projectTeamLimit() + 1}명부터 발생`
+      : `다음 출장 검토 D-${Math.max(0, state.nextBusinessTripCycle - state.activityCycles)}`;
   app.innerHTML = `${header("인사 관리", `${notice} · 월 급여 ${totalPayroll()}만원`)}<section class="screen hr-screen">
     <div class="hr-summary panel"><span><small>직원</small><strong>${state.employees.length}/${state.capacity}</strong></span><span><small>월 급여</small><strong>${totalPayroll()}만원</strong></span><span><small>다음 정산</small><strong>D-${projectsUntilPayroll()}</strong></span></div>
+    <div class="hr-activity-summary panel"><span><small>장기 교육</small><strong>${escapeHtml(trainingSummary)}</strong></span><span><small>돌발 출장</small><strong>${escapeHtml(tripSummary)}</strong></span></div>
     <div class="card-list">${cards}</div>
     <button class="ink" id="back-from-hr">← 사무실</button>
     ${confirm}
   </section>`;
   mountPortraits();
+  document.querySelectorAll("[data-train-member]:not(:disabled)").forEach(button => button.addEventListener("click", () => renderTrainingCourses(button.dataset.trainMember)));
   document.querySelectorAll("[data-end-contract]:not(:disabled)").forEach(button => button.addEventListener("click", () => requestContractTermination(button.dataset.endContract)));
   document.querySelector("#back-from-hr").addEventListener("click", () => renderOffice());
   document.querySelector("#cancel-contract-termination")?.addEventListener("click", cancelContractTermination);
@@ -1468,7 +1537,8 @@ function contractTerminationConfirm(member) {
 function requestContractTermination(memberId) {
   const member = state.employees.find(employeeItem => employeeItem.id === memberId);
   if (!member || member.isRepresentative) return renderHumanResources("대표의 계약은 종료할 수 없습니다.");
-  if (state.employees.length <= 3) return renderHumanResources("프로젝트 진행에 필요한 최소 직원 3명은 유지해야 합니다.");
+  if (isEmployeeUnavailable(member.id)) return renderHumanResources("교육이나 출장 중인 직원의 계약은 종료할 수 없습니다.");
+  if (availableEmployees().length <= 3) return renderHumanResources("프로젝트 진행에 필요한 근무 직원 3명은 유지해야 합니다.");
   hrTerminationTargetId = memberId;
   renderHumanResources(`${member.name}의 계약 조건을 확인하세요.`);
 }
@@ -1481,7 +1551,8 @@ function cancelContractTermination() {
 function confirmContractTermination() {
   const member = state.employees.find(employeeItem => employeeItem.id === hrTerminationTargetId);
   if (!member || member.isRepresentative) return renderHumanResources("계약 종료 대상을 찾을 수 없습니다.");
-  if (state.employees.length <= 3) return renderHumanResources("프로젝트 진행에 필요한 최소 직원 3명은 유지해야 합니다.");
+  if (isEmployeeUnavailable(member.id)) return renderHumanResources("교육이나 출장 중인 직원의 계약은 종료할 수 없습니다.");
+  if (availableEmployees().length <= 3) return renderHumanResources("프로젝트 진행에 필요한 근무 직원 3명은 유지해야 합니다.");
   const settlement = contractSettlement(member);
   if (state.cash < settlement) return renderHumanResources("계약 종료 정산금이 부족합니다.");
   state.cash -= settlement;
@@ -1502,8 +1573,8 @@ function turnoverReason(member) {
 }
 
 function maybeQueueTurnoverEvent() {
-  if (state.pendingTurnover || state.employees.length <= 3 || state.projectClears < TURNOVER_PROJECT_INTERVAL || state.projectClears % TURNOVER_PROJECT_INTERVAL !== 0) return null;
-  const eligible = state.employees.filter(member => !member.isRepresentative && state.projectClears - (member.joinedAt || 0) >= 3 && (member.turnoverShieldUntil || 0) <= state.projectClears);
+  if (state.pendingTurnover || availableEmployees().length <= 3 || state.projectClears < TURNOVER_PROJECT_INTERVAL || state.projectClears % TURNOVER_PROJECT_INTERVAL !== 0) return null;
+  const eligible = state.employees.filter(member => !member.isRepresentative && !isEmployeeUnavailable(member.id) && state.pendingBusinessTripOffer?.employeeId !== member.id && state.projectClears - (member.joinedAt || 0) >= 3 && (member.turnoverShieldUntil || 0) <= state.projectClears);
   if (!eligible.length) return null;
   const bench = eligible.filter(member => !state.teamIds.includes(member.id));
   const pool = bench.length ? bench : eligible;
@@ -1532,7 +1603,7 @@ function renderTurnoverEvent(notice = "직원이 이직을 고민하고 있습�
   const member = state.employees.find(employeeItem => employeeItem.id === event?.employeeId);
   if (!event || !member) {
     state.pendingTurnover = null;
-    return renderOffice("인사 면담이 종료됐습니다.");
+    return renderNextPending("인사 면담이 종료됐습니다.");
   }
   saveGame();
   const rank = RANKS[member.rank];
@@ -1570,7 +1641,7 @@ function retainEmployeeWithPay() {
   member.turnoverShieldUntil = state.projectClears + 10;
   state.turnoverEvents += 1;
   state.pendingTurnover = null;
-  renderOffice(`${member.name}과 처우 개선에 합의했습니다. 당분간 이직을 고민하지 않습니다.`);
+  renderNextPending(`${member.name}과 처우 개선에 합의했습니다. 당분간 이직을 고민하지 않습니다.`);
 }
 
 function retainEmployeeWithTalk() {
@@ -1584,11 +1655,11 @@ function retainEmployeeWithTalk() {
     member.retentionCount = (member.retentionCount || 0) + 1;
     member.turnoverShieldUntil = state.projectClears + 7;
     state.pendingTurnover = null;
-    return renderOffice(`${member.name}을 설득했습니다. 역할과 성장 방향을 다시 약속했습니다.`);
+    return renderNextPending(`${member.name}을 설득했습니다. 역할과 성장 방향을 다시 약속했습니다.`);
   }
   const returnedEquipment = removeEmployee(member);
   state.pendingTurnover = null;
-  renderOffice(`${member.name}을 설득하지 못해 퇴사했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
+  renderNextPending(`${member.name}을 설득하지 못해 퇴사했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
 }
 
 function acceptEmployeeTurnover() {
@@ -1598,7 +1669,7 @@ function acceptEmployeeTurnover() {
   const returnedEquipment = removeEmployee(member);
   state.turnoverEvents += 1;
   state.pendingTurnover = null;
-  renderOffice(`${member.name}의 새로운 도전을 응원하며 퇴사를 수락했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
+  renderNextPending(`${member.name}의 새로운 도전을 응원하며 퇴사를 수락했습니다.${returnedEquipment.length ? ` 장비 ${returnedEquipment.length}개를 회수했습니다.` : ""}`);
 }
 
 function financialGrade(report) {
@@ -1611,12 +1682,13 @@ function renderFinancialReport() {
   currentView = "financial-report";
   clearBattleTimer();
   const report = state.pendingFinancialReport;
-  if (!report) return state.pendingTurnover ? renderTurnoverEvent() : renderOffice("확인할 결산 보고서가 없습니다.");
+  if (!report) return renderNextPending("확인할 결산 보고서가 없습니다.");
   const grade = financialGrade(report);
   const maxValue = Math.max(1, report.revenue, report.expenses);
   const revenueWidth = Math.max(4, Math.round(report.revenue / maxValue * 100));
   const expenseWidth = Math.max(4, Math.round(report.expenses / maxValue * 100));
   const profitSign = report.operatingProfit >= 0 ? "+" : "";
+  const projectRevenue = Math.max(0, report.revenue - (report.equipmentSales || 0) - (report.tripRevenue || 0));
   app.innerHTML = `${header("분기 결산", `${state.companyName} · 제${report.number}분기 재무 보고서`)}<section class="screen financial-screen">
     <article class="financial-report panel ${grade.tone}">
       <div class="financial-title"><div><small>QUARTERLY REPORT</small><h2>제${report.number}분기 손익 요약</h2></div><span>${grade.label}</span></div>
@@ -1625,7 +1697,9 @@ function renderFinancialReport() {
         <div class="expense"><b>총비용</b><i><em style="width:${expenseWidth}%"></em></i><strong>-${report.expenses}</strong></div>
       </div>
       <div class="financial-statement">
-        <p><span>프로젝트 매출</span><b class="positive">+${report.revenue}만원</b></p>
+        <p><span>프로젝트 매출</span><b class="positive">+${projectRevenue}만원</b></p>
+        <p><span>장비 판매 수익</span><b class="positive">+${report.equipmentSales || 0}만원</b></p>
+        <p><span>출장 수익</span><b class="positive">+${report.tripRevenue || 0}만원</b></p>
         <p><span>장비 중고거래 비용</span><b>-${report.equipmentTrade || 0}만원</b></p>
         <p><span>급여</span><b>-${report.payroll}만원</b></p>
         <p><span>채용 계약금</span><b>-${report.recruitment}만원</b></p>
@@ -1633,6 +1707,7 @@ function renderFinancialReport() {
         <p><span>직원 유지 비용</span><b>-${report.retention}만원</b></p>
         <p><span>계약 종료 정산금</span><b>-${report.termination}만원</b></p>
         <p><span>사무실 확장 투자</span><b>-${report.expansion || 0}만원</b></p>
+        <p><span>직원 교육비</span><b>-${report.training || 0}만원</b></p>
         <p><span>업무 오답 재작업</span><b>-${report.workErrors || 0}만원</b></p>
         <p class="profit"><span>영업이익</span><b class="${report.operatingProfit >= 0 ? "positive" : "negative"}">${profitSign}${report.operatingProfit}만원</b></p>
       </div>
@@ -1647,8 +1722,358 @@ function renderFinancialReport() {
 
 function closeFinancialReport() {
   state.pendingFinancialReport = null;
+  renderNextPending("분기 결산을 완료했습니다. 다음 분기 운영을 시작합니다.");
+}
+
+function renderNextPending(notice = "사무실로 돌아왔습니다.") {
+  if (state.pendingActivityMiniGames.length) return renderActivityMiniGame();
+  if (state.pendingActivityReports.length) return renderActivityReport();
+  if (state.pendingFinancialReport) return renderFinancialReport();
   if (state.pendingTurnover) return renderTurnoverEvent();
-  renderOffice("분기 결산을 완료했습니다. 다음 분기 운영을 시작합니다.");
+  if (state.pendingBusinessTripOffer) return renderBusinessTripOffer();
+  return renderOffice(notice);
+}
+
+function activityStatusText(activity) {
+  if (!activity) return "";
+  const remaining = Math.max(0, ACTIVITIES.DURATION - (activity.progress || 0));
+  if (activity.type === "training") return `${ACTIVITIES.TRAINING_COURSES[activity.courseId]?.name || "직원 교육"} · D-${remaining}`;
+  return `${activity.title || "장기 출장"} · D-${remaining}`;
+}
+
+function trainingEligibility(member) {
+  if (!member || member.isRepresentative) return { allowed: false, reason: "대표" };
+  if (member.rank !== 0) return { allowed: false, reason: "신입 전용" };
+  if ((member.trainingCount || 0) >= 3) return { allowed: false, reason: "교육 완료" };
+  if (isEmployeeUnavailable(member.id)) return { allowed: false, reason: "자리 비움" };
+  if (state.training) return { allowed: false, reason: "교육 슬롯 사용 중" };
+  if (availableEmployees().length - 1 < 3) return { allowed: false, reason: "최소 근무 인원" };
+  return { allowed: true, reason: "교육 가능" };
+}
+
+function renderTrainingCourses(memberId, notice = "3프로젝트 동안 진행할 교육을 선택하세요.") {
+  currentView = "training";
+  clearOfficeDialogue();
+  const member = state.employees.find(item => item.id === memberId);
+  const eligibility = trainingEligibility(member);
+  if (!member || !eligibility.allowed) return renderHumanResources(member ? `${member.name}: ${eligibility.reason}` : "교육 대상을 찾을 수 없습니다.");
+  const potential = ACTIVITIES.growthLevel(member.growthPotential);
+  const courses = Object.values(ACTIVITIES.TRAINING_COURSES).map(course => {
+    const baseScore = ACTIVITIES.trainingBaseScore(member, course.id);
+    const expectedLow = ACTIVITIES.resultForScore(baseScore - 10);
+    const expectedHigh = ACTIVITIES.resultForScore(baseScore + 15);
+    const gainText = course.id === "speed" ? "보통·성공 +1 · 대성공 +2" : "보통 +1 · 성공 +2 · 대성공 +3";
+    return `<article class="training-course panel">
+      <div><small>3 PROJECT COURSE</small><strong>${escapeHtml(course.name)}</strong><span>${escapeHtml(course.statLabel)} 성장 · ${gainText}</span></div>
+      <p>예상 성과 <b>${expectedLow.label}${expectedLow.id !== expectedHigh.id ? `~${expectedHigh.label}` : ""}</b><small>성장성 ${potential.label} · 기본 ${baseScore}점</small></p>
+      <button class="${state.cash >= course.cost ? "mustard" : "ink"}" data-start-training="${course.id}" ${state.cash >= course.cost ? "" : "disabled"}>${state.cash >= course.cost ? `${course.cost}만원 · 교육 시작` : `${course.cost}만원 · 현금 부족`}</button>
+    </article>`;
+  }).join("");
+  app.innerHTML = `${header("장기 교육", `${member.name} · 성장성 ${potential.label} · ${notice}`)}<section class="screen training-screen">
+    <article class="training-member panel"><canvas width="24" height="24" data-portrait="${member.id}"></canvas><div><small>TRAINING CANDIDATE</small><strong>${escapeHtml(member.name)}</strong><span>${DEPARTMENTS[member.department].name} · 실무 ${member.work} · 협업 ${member.collaboration} · 속도 ${member.speed}</span></div></article>
+    <div class="training-course-list">${courses}</div>
+    <button class="ink" id="back-from-training">← 인사 관리</button>
+  </section>`;
+  mountPortraits();
+  document.querySelectorAll("[data-start-training]").forEach(button => button.addEventListener("click", () => startTraining(member.id, button.dataset.startTraining)));
+  document.querySelector("#back-from-training").addEventListener("click", () => renderHumanResources());
+}
+
+function startTraining(memberId, courseId) {
+  const member = state.employees.find(item => item.id === memberId);
+  const eligibility = trainingEligibility(member);
+  const course = ACTIVITIES.TRAINING_COURSES[courseId];
+  if (!member || !eligibility.allowed || !course) return renderHumanResources(member ? `${member.name}: ${eligibility.reason}` : "교육 대상을 찾을 수 없습니다.");
+  if (state.cash < course.cost) return renderTrainingCourses(memberId, "교육비가 부족합니다.");
+  state.cash -= course.cost;
+  recordFinancialAmount("training", course.cost);
+  state.training = {
+    id: `training-${nextId++}`,
+    type: "training",
+    employeeId: member.id,
+    courseId: course.id,
+    progress: 0,
+    baseScore: ACTIVITIES.trainingBaseScore(member, course.id),
+    miniGameModifier: null,
+    startedCycle: state.activityCycles
+  };
+  repairProjectTeam();
+  saveGame();
+  renderHumanResources(`${member.name}이(가) ${course.name}을 시작했습니다. 프로젝트 결과 3회 후 복귀합니다.`);
+}
+
+function tripCandidates() {
+  return availableEmployees().filter(member => {
+    if (member.isRepresentative) return false;
+    const primary = ACTIVITIES.tripPrimaryStat(member, effectiveStats(member));
+    return primary >= 18;
+  });
+}
+
+function maybeQueueBusinessTripOffer() {
+  if (!state.tutorialBattleCompleted) return null;
+  const allowed = ACTIVITIES.canOfferTrip({
+    availableCount: availableEmployees().length,
+    teamLimit: projectTeamLimit(),
+    cycle: state.activityCycles,
+    nextCycle: state.nextBusinessTripCycle,
+    hasTrip: Boolean(state.businessTrip),
+    hasOffer: Boolean(state.pendingBusinessTripOffer)
+  });
+  if (!allowed) return null;
+  const candidates = tripCandidates().sort((left, right) => ACTIVITIES.tripPrimaryStat(right, effectiveStats(right)) - ACTIVITIES.tripPrimaryStat(left, effectiveStats(left)));
+  if (!candidates.length) return null;
+  const pool = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
+  const member = pool[randomInt(pool.length)];
+  const definition = ACTIVITIES.tripDefinition(member.department);
+  const expected = ACTIVITIES.expectedTripPayout(member, effectiveStats(member));
+  state.pendingBusinessTripOffer = {
+    id: `trip-offer-${nextId++}`,
+    employeeId: member.id,
+    title: definition.name,
+    tripType: definition.type,
+    baseScore: ACTIVITIES.tripBaseScore(member, effectiveStats(member)),
+    expectedPayout: expected
+  };
+  return state.pendingBusinessTripOffer;
+}
+
+function renderBusinessTripOffer(notice = "외부에서 특정 직원을 지명한 장기 출장 요청이 도착했습니다.") {
+  currentView = "business-trip-offer";
+  clearBattleTimer();
+  clearOfficeDialogue();
+  const offer = state.pendingBusinessTripOffer;
+  const member = state.employees.find(item => item.id === offer?.employeeId);
+  if (!offer || !member || isEmployeeUnavailable(member.id)) {
+    state.pendingBusinessTripOffer = null;
+    return renderNextPending("출장 요청을 진행할 수 없어 취소했습니다.");
+  }
+  const baseResult = ACTIVITIES.resultForScore(offer.baseScore);
+  const minimum = offer.baseScore - 10 < 50 ? 0 : Math.round(offer.expectedPayout * .7 / 10) * 10;
+  const maximum = Math.round(offer.expectedPayout * 1.4 / 10) * 10;
+  const canRefuse = state.reputation >= ACTIVITIES.TRIP_REFUSAL_REPUTATION;
+  app.innerHTML = `${header("돌발 출장 요청", notice)}<section class="screen trip-offer-screen">
+    <article class="trip-offer panel">
+      <span class="trip-stamp">DESIGNATED</span>
+      <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
+      <small>${DEPARTMENTS[member.department].name} 지명 요청</small>
+      <h2>${escapeHtml(offer.title)}</h2>
+      <strong>${escapeHtml(member.name)} ${escapeHtml(employeePosition(member))}</strong>
+      <p>출장 기간 <b>프로젝트 결과 3회</b><br>예상 성과 <b>${baseResult.label}</b> · 예상 수익 <b>${minimum}~${maximum}만원</b></p>
+      <em>대상 직원은 변경할 수 없습니다. 출장 중에는 프로젝트와 장비 관리에서 제외됩니다.</em>
+    </article>
+    <div class="trip-offer-actions">
+      <button class="mustard" id="accept-business-trip"><strong>출장 승인</strong><small>3프로젝트 동안 전력에서 제외</small></button>
+      <button class="red" id="refuse-business-trip" ${canRefuse ? "" : "disabled"}><strong>출장 거절</strong><small>${canRefuse ? `평판 -${ACTIVITIES.TRIP_REFUSAL_REPUTATION}` : `평판 ${ACTIVITIES.TRIP_REFUSAL_REPUTATION} 필요`}</small></button>
+    </div>
+  </section>`;
+  mountPortraits();
+  document.querySelector("#accept-business-trip").addEventListener("click", acceptBusinessTrip);
+  document.querySelector("#refuse-business-trip")?.addEventListener("click", refuseBusinessTrip);
+  saveGame();
+}
+
+function acceptBusinessTrip() {
+  const offer = state.pendingBusinessTripOffer;
+  const member = state.employees.find(item => item.id === offer?.employeeId);
+  if (!offer || !member || availableEmployees().length - 1 < projectTeamLimit()) {
+    state.pendingBusinessTripOffer = null;
+    return renderNextPending("근무 인원이 부족해 출장 요청이 취소됐습니다.");
+  }
+  state.businessTrip = {
+    ...offer,
+    id: `trip-${nextId++}`,
+    type: "trip",
+    progress: 0,
+    miniGameModifier: null,
+    startedCycle: state.activityCycles
+  };
+  state.pendingBusinessTripOffer = null;
+  state.nextBusinessTripCycle = ACTIVITIES.nextTripCycle(state.activityCycles, Math.random());
+  repairProjectTeam();
+  saveGame();
+  renderNextPending(`${member.name}이(가) ${offer.title} 출장을 시작했습니다.`);
+}
+
+function refuseBusinessTrip() {
+  const offer = state.pendingBusinessTripOffer;
+  if (!offer) return renderNextPending();
+  if (state.reputation < ACTIVITIES.TRIP_REFUSAL_REPUTATION) return renderBusinessTripOffer("출장을 거절할 만큼 회사 평판이 충분하지 않습니다.");
+  const member = state.employees.find(item => item.id === offer.employeeId);
+  state.reputation -= ACTIVITIES.TRIP_REFUSAL_REPUTATION;
+  state.pendingBusinessTripOffer = null;
+  state.nextBusinessTripCycle = ACTIVITIES.nextTripCycle(state.activityCycles, Math.random());
+  saveGame();
+  renderNextPending(`${member?.name || "직원"}의 출장 요청을 거절했습니다. 회사 평판이 ${ACTIVITIES.TRIP_REFUSAL_REPUTATION} 감소했습니다.`);
+}
+
+function activeActivityById(id) {
+  return [state.training, state.businessTrip].find(activity => activity?.id === id) || null;
+}
+
+function renderActivityMiniGame() {
+  currentView = "activity-mini-game";
+  clearBattleTimer();
+  clearOfficeDialogue();
+  const pending = state.pendingActivityMiniGames[0];
+  const activity = activeActivityById(pending?.activityId);
+  const member = state.employees.find(item => item.id === activity?.employeeId);
+  if (!pending || !activity || !member) {
+    state.pendingActivityMiniGames.shift();
+    return renderNextPending();
+  }
+  if (activityMiniGameKey !== activity.id) {
+    activityMiniGameKey = activity.id;
+    activityMiniGamePicks = [];
+  }
+  const problem = ACTIVITIES.createMiniGame(activity);
+  const picked = new Set(activityMiniGamePicks);
+  const complete = activityMiniGamePicks.length === problem.answerIds.length;
+  const grade = complete ? ACTIVITIES.gradeMiniGamePicks(problem, activityMiniGamePicks) : null;
+  const selected = activityMiniGamePicks.map((id, index) => {
+    const option = problem.options.find(item => item.id === id);
+    return `<span><i>${index + 1}</i>${escapeHtml(option?.label || "-")}</span>`;
+  }).join("") || `<em>아래 카드를 순서대로 선택하세요.</em>`;
+  const options = problem.options.map(option => `<button data-activity-step="${option.id}" ${picked.has(option.id) || complete ? "disabled" : ""}>${picked.has(option.id) ? "✓ " : ""}${escapeHtml(option.label)}</button>`).join("");
+  const modifierText = grade ? `${grade.modifier >= 0 ? "+" : ""}${grade.modifier}점` : "최대 +10점";
+  app.innerHTML = `${header(activity.type === "training" ? "교육 중간 과제" : "출장 현장 지원", `${member.name} · 결과에 최대 한 단계만 영향을 줍니다.`)}<section class="screen activity-game-screen">
+    <article class="activity-game panel">
+      <small>${activity.type === "training" ? "TRAINING CHECK" : "FIELD SUPPORT"} · 2/3</small>
+      <h2>${escapeHtml(problem.title)}</h2>
+      <p>${escapeHtml(problem.prompt)}</p>
+      <div class="activity-picked">${selected}</div>
+      <div class="activity-step-grid">${options}</div>
+      ${grade ? `<div class="activity-game-result"><strong>${grade.correct}/${grade.total}단계 정확</strong><span>성과 보정 ${modifierText}</span></div>` : `<div class="activity-game-hint">미니게임 보정 ${modifierText} · 기본 성과가 결과의 대부분을 결정합니다.</div>`}
+    </article>
+    <div class="activity-game-actions">${complete ? `<button class="mustard" id="apply-activity-game">결과 반영</button>` : `<button class="ink" id="skip-activity-game">자동 진행 · 보정 없음</button>`}</div>
+  </section>`;
+  document.querySelectorAll("[data-activity-step]:not(:disabled)").forEach(button => button.addEventListener("click", () => {
+    activityMiniGamePicks.push(button.dataset.activityStep);
+    renderActivityMiniGame();
+  }));
+  document.querySelector("#apply-activity-game")?.addEventListener("click", applyActivityMiniGame);
+  document.querySelector("#skip-activity-game")?.addEventListener("click", skipActivityMiniGame);
+}
+
+function finishActivityMiniGame(modifier, correct = null) {
+  const pending = state.pendingActivityMiniGames[0];
+  const activity = activeActivityById(pending?.activityId);
+  if (activity) {
+    activity.miniGameModifier = modifier;
+    activity.miniGameCorrect = correct;
+  }
+  state.pendingActivityMiniGames.shift();
+  activityMiniGamePicks = [];
+  activityMiniGameKey = null;
+  saveGame();
+  renderNextPending(modifier > 0 ? "중간 과제를 잘 해결해 성과가 상승했습니다." : modifier < 0 ? "중간 과제에서 실수가 있었지만 최종 결과는 아직 남았습니다." : "중간 과제를 자동으로 진행했습니다.");
+}
+
+function applyActivityMiniGame() {
+  const pending = state.pendingActivityMiniGames[0];
+  const activity = activeActivityById(pending?.activityId);
+  if (!activity) return finishActivityMiniGame(0);
+  const problem = ACTIVITIES.createMiniGame(activity);
+  if (activityMiniGamePicks.length !== problem.answerIds.length) return renderActivityMiniGame();
+  const grade = ACTIVITIES.gradeMiniGamePicks(problem, activityMiniGamePicks);
+  finishActivityMiniGame(grade.modifier, grade.correct);
+}
+
+function skipActivityMiniGame() {
+  finishActivityMiniGame(0, null);
+}
+
+function finalizeTraining(activity) {
+  const member = state.employees.find(item => item.id === activity.employeeId);
+  if (!member) { state.training = null; return; }
+  const variance = randomInt(11) - 5;
+  const score = ACTIVITIES.finalScore(activity.baseScore, activity.miniGameModifier || 0, variance);
+  const outcome = ACTIVITIES.resultForScore(score);
+  const course = ACTIVITIES.TRAINING_COURSES[activity.courseId];
+  const gain = ACTIVITIES.trainingGain(activity.courseId, outcome.id);
+  member[course.stat] += gain;
+  member.focus = Math.round((member.work + member.collaboration) / 2);
+  member.trainingCount = (member.trainingCount || 0) + 1;
+  const report = {
+    id: `activity-report-${nextId++}`,
+    type: "training", employeeId: member.id, employeeName: member.name,
+    title: course.name, baseScore: activity.baseScore, modifier: activity.miniGameModifier || 0,
+    variance, score, outcome, detail: `${course.statLabel} +${gain}`, reward: gain
+  };
+  state.training = null;
+  state.pendingActivityReports.push(report);
+  state.activityHistory = [...state.activityHistory.slice(-7), report];
+}
+
+function finalizeBusinessTrip(activity) {
+  const member = state.employees.find(item => item.id === activity.employeeId);
+  if (!member) { state.businessTrip = null; return; }
+  const variance = randomInt(11) - 5;
+  const score = ACTIVITIES.finalScore(activity.baseScore, activity.miniGameModifier || 0, variance);
+  const outcome = ACTIVITIES.resultForScore(score);
+  const payout = ACTIVITIES.tripPayout(activity.expectedPayout, outcome.id);
+  state.cash += payout;
+  recordFinancialAmount("revenue", payout);
+  recordFinancialAmount("tripRevenue", payout);
+  const report = {
+    id: `activity-report-${nextId++}`,
+    type: "trip", employeeId: member.id, employeeName: member.name,
+    title: activity.title, baseScore: activity.baseScore, modifier: activity.miniGameModifier || 0,
+    variance, score, outcome, detail: `출장 수익 +${payout}만원`, reward: payout
+  };
+  state.businessTrip = null;
+  state.pendingActivityReports.push(report);
+  state.activityHistory = [...state.activityHistory.slice(-7), report];
+}
+
+function progressEmployeeActivities() {
+  state.activityCycles += 1;
+  [state.training, state.businessTrip].filter(Boolean).forEach(activity => {
+    activity.progress = Math.min(ACTIVITIES.DURATION, (activity.progress || 0) + 1);
+    if (activity.progress === 2 && activity.miniGameModifier === null && !state.pendingActivityMiniGames.some(item => item.activityId === activity.id)) {
+      state.pendingActivityMiniGames.push({ activityId: activity.id, type: activity.type });
+    }
+  });
+  if (state.training?.progress >= ACTIVITIES.DURATION) {
+    if (state.training.miniGameModifier === null) state.training.miniGameModifier = 0;
+    finalizeTraining(state.training);
+  }
+  if (state.businessTrip?.progress >= ACTIVITIES.DURATION) {
+    if (state.businessTrip.miniGameModifier === null) state.businessTrip.miniGameModifier = 0;
+    finalizeBusinessTrip(state.businessTrip);
+  }
+  repairProjectTeam();
+  maybeQueueBusinessTripOffer();
+}
+
+function renderActivityReport() {
+  currentView = "activity-report";
+  clearBattleTimer();
+  clearOfficeDialogue();
+  const report = state.pendingActivityReports[0];
+  if (!report) return renderNextPending();
+  const member = state.employees.find(item => item.id === report.employeeId);
+  const modifier = report.modifier >= 0 ? `+${report.modifier}` : String(report.modifier);
+  const variance = report.variance >= 0 ? `+${report.variance}` : String(report.variance);
+  app.innerHTML = `${header(report.type === "training" ? "교육 결과 보고서" : "출장 결과 보고서", `${report.employeeName} · 프로젝트 결과 3회 동안의 성과입니다.`)}<section class="screen activity-report-screen">
+    <article class="activity-report panel ${report.outcome.tone}">
+      <span class="activity-result-stamp">${escapeHtml(report.outcome.label)}</span>
+      ${member ? `<canvas width="24" height="24" data-portrait="${member.id}"></canvas>` : ""}
+      <small>${report.type === "training" ? "TRAINING COMPLETE" : "BUSINESS TRIP COMPLETE"}</small>
+      <h2>${escapeHtml(report.title)}</h2>
+      <strong>${escapeHtml(report.employeeName)}</strong>
+      <div class="activity-score"><span><small>기본 성과</small><b>${report.baseScore}</b></span><i>+</i><span><small>미니게임</small><b>${modifier}</b></span><i>+</i><span><small>현장 변수</small><b>${variance}</b></span></div>
+      <div class="activity-final-score"><small>최종 성과</small><strong>${report.score}점 · ${escapeHtml(report.outcome.label)}</strong><span>${escapeHtml(report.detail)}</span></div>
+    </article>
+    <button class="mustard" id="close-activity-report">확인 · 다음 업무로</button>
+  </section>`;
+  mountPortraits();
+  document.querySelector("#close-activity-report").addEventListener("click", () => {
+    state.pendingActivityReports.shift();
+    saveGame();
+    renderNextPending(`${report.employeeName}이(가) 업무에 복귀했습니다.`);
+  });
+  saveGame();
 }
 
 function generateEquipmentReward(minimumRarity = 0) {
@@ -1929,11 +2354,13 @@ function renderInterview(notice) {
   const cards = candidates.map(candidate => {
     const department = DEPARTMENTS[candidate.department];
     const rank = RANKS[candidate.rank];
+    const potential = ACTIVITIES.growthLevel(candidate.growthPotential);
     return `<article class="candidate">
       <canvas width="24" height="24" data-candidate="${candidate.id}"></canvas>
       <div><h3>${escapeHtml(candidate.name)} <span class="rank" style="background:${rank.color}">${rank.name}</span></h3>
       <p class="dept">${department.name} · ${employeePosition(candidate)} · ${escapeHtml(candidate.trait)}</p>
       <p>실무 ${candidate.work}　협업 ${candidate.collaboration}　속도 ${candidate.speed}</p>
+      <p>${candidate.rank === 0 ? `성장성 <b style="color:${potential.color}">${potential.label}</b> · 장기 교육 가능` : "즉시 전력 · 장기 교육 대상 아님"}</p>
       <p>계약금 ${candidate.signingCost} · 월급 ${candidate.salary}</p></div>
       <button class="teal" data-hire="${candidate.id}">채용</button>
     </article>`;
@@ -1987,6 +2414,7 @@ function refreshJobPosting() {
 
 function openTeam() {
   currentView = "team";
+  repairProjectTeam();
   teamDraft = [...state.teamIds];
   renderTeam(`참가할 직원 3~${projectTeamLimit()}명을 선택하세요. 속도가 높은 직원부터 행동합니다.`);
 }
@@ -2000,16 +2428,18 @@ function renderTeam(notice) {
     ? actionOrder.map((member, index) => `<span><i>${index + 1}</i><b>${escapeHtml(member.name)}</b><small>속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></span>`).join("")
     : `<em>직원을 선택하면 예상 행동 순서가 표시됩니다.</em>`;
   const cards = state.employees.map(member => {
+    const activity = employeeActivity(member.id);
     const selectedIndex = teamDraft.indexOf(member.id);
     const actionIndex = actionOrderIds.indexOf(member.id);
     const stats = effectiveStats(member);
-    return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""}">
+    const unavailableText = activity?.type === "training" ? `교육 중 · D-${ACTIVITIES.DURATION - activity.progress}` : activity ? `출장 중 · D-${ACTIVITIES.DURATION - activity.progress}` : "";
+    return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""} ${activity ? "employee-away" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
       <div><h3>${actionIndex >= 0 ? `<span class="order">${actionIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
       <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
       <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${member.speed}</p>
-      <p class="team-speed-effect">${actionIndex >= 0 ? `행동 ${actionIndex + 1}순위 · 긴급 지시 +${directiveChargeFor(member)}` : `긴급 지시 +${directiveChargeFor(member)}`}</p></div>
-      <button class="${selectedIndex >= 0 ? "red" : "teal"}" data-toggle="${member.id}">${selectedIndex >= 0 ? "제외" : "선택"}</button>
+      <p class="team-speed-effect">${activity ? unavailableText : actionIndex >= 0 ? `행동 ${actionIndex + 1}순위 · 긴급 지시 +${directiveChargeFor(member)}` : `긴급 지시 +${directiveChargeFor(member)}`}</p></div>
+      <button class="${selectedIndex >= 0 ? "red" : activity ? "ink" : "teal"}" data-toggle="${member.id}" ${activity ? "disabled" : ""}>${activity ? "자리 비움" : selectedIndex >= 0 ? "제외" : "선택"}</button>
     </article>`;
   }).join("");
   app.innerHTML = `${header("프로젝트 팀 편성", `선택 ${teamDraft.length}/${teamLimit} · ${notice}`)}<section class="screen">
@@ -2024,6 +2454,7 @@ function renderTeam(notice) {
 }
 
 function toggleTeam(id) {
+  if (isEmployeeUnavailable(id)) return renderTeam("교육이나 출장 중인 직원은 프로젝트에 참가할 수 없습니다.");
   const teamLimit = projectTeamLimit();
   const index = teamDraft.indexOf(id);
   if (index >= 0) teamDraft.splice(index, 1);
@@ -2041,6 +2472,8 @@ function saveTeam() {
 
 function startBattle(projectId, riskTier = "stable") {
   currentView = "battle";
+  repairProjectTeam();
+  if (currentTeam().length < 3) return renderOffice("프로젝트를 진행할 근무 직원이 3명 이상 필요합니다.");
   const tutorialMode = !state.tutorialBattleCompleted;
   const selectedSource = [...PROJECTS, ...BOSS_PROJECTS].find(project => project.id === projectId) || PROJECTS[0];
   const source = tutorialMode ? tutorialProjectSource() : selectedSource;
@@ -2152,6 +2585,11 @@ function battleStep() {
   if (round >= battle.deadline && battle.action % team.length === 0) {
     battle.result = "failure";
     battle.log = "마감을 넘겼습니다. 팀을 재편성해 다시 도전하세요.";
+    if (!battle.activityProgressed) {
+      battle.activityProgressed = true;
+      progressEmployeeActivities();
+      saveGame();
+    }
     battleTimer = window.setTimeout(renderBattle, 650);
     return;
   }
@@ -2167,6 +2605,10 @@ function finishBattleSuccess(scheduleRender = true) {
     recordFinancialAmount("revenue", battle.project.cash);
     state.reputation += battle.project.reputation;
     state.projectClears += 1;
+    if (!battle.activityProgressed) {
+      battle.activityProgressed = true;
+      progressEmployeeActivities();
+    }
     if (battle.project.boss) state.bossClears += 1;
     if (battle.tutorialMode && !state.tutorialBattleCompleted) {
       state.tutorialBattleCompleted = true;
@@ -2726,9 +3168,7 @@ function openBattleHelp() {
 function requestBattleLeave() {
   if (battle.skillFx?.phase === "calculating") return;
   if (battle.result) {
-    if (battle.result === "success" && state.pendingFinancialReport) return renderFinancialReport();
-    if (battle.result === "success" && state.pendingTurnover) return renderTurnoverEvent();
-    return renderOffice(battle.tutorialUnlock
+    return renderNextPending(battle.tutorialUnlock
       ? "첫 프로젝트를 완료했습니다. 면접 기능이 열렸습니다!"
       : battle.result === "success" ? "프로젝트 보상을 획득했습니다." : "사무실로 돌아왔습니다.");
   }
@@ -2798,7 +3238,7 @@ function renderBattle() {
       <div class="arena panel ${arenaTheme} ${battle.project.boss ? "boss-arena" : ""} ${team.length > 3 ? "expanded-team" : ""} ${preview ? `preview-${preview.target}` : ""}" id="arena"><div class="battle-lanes" aria-hidden="true"><i></i><i></i><i></i></div><canvas id="boss-canvas" width="64" height="64" aria-label="${escapeHtml(battle.project.name)}"></canvas><div class="battle-team team-size-${team.length}">${fighters}</div>${arenaPreview}${skillFx}</div>
       ${directive}
       <div class="battle-log panel" id="battle-log">${result || escapeHtml(battle.log)}</div>
-      <div class="battle-footer-actions ${battle.result ? "result-footer" : ""}">${battle.result || battle.skillFx ? "" : `<button class="battle-help-button teal" id="battle-help">? 전투 도움말</button>`}<button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : battle.tutorialUnlock ? "사무실 · 면접 확인" : "사무실로" : "프로젝트 중단"}</button></div>
+      <div class="battle-footer-actions ${battle.result ? "result-footer" : ""}">${battle.result || battle.skillFx ? "" : `<button class="battle-help-button teal" id="battle-help">? 전투 도움말</button>`}<button class="battle-exit-button ${battle.result ? "result-exit mustard" : "ink"}" id="leave-battle" ${skillFxPhase === "calculating" ? "disabled" : ""}>${skillFxPhase === "calculating" ? "계획 분석 중…" : battle.result ? state.pendingActivityMiniGames.length ? "중간 활동 확인" : state.pendingActivityReports.length ? "활동 결과 보기" : state.pendingFinancialReport ? "분기 결산 보기" : state.pendingTurnover ? "이직 면담으로" : state.pendingBusinessTripOffer ? "출장 요청 확인" : battle.tutorialUnlock ? "사무실 · 면접 확인" : "사무실로" : "프로젝트 중단"}</button></div>
       ${abortConfirm}
       ${tutorialOverlay}
     </section>`;

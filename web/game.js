@@ -2296,7 +2296,7 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
     const rank = member.isRepresentative ? { name: "대표", color: "#d6a12c" } : RANKS[member.rank];
     const activity = employeeActivity(member.id);
     const activityLabel = activity?.type === "training" ? "교육" : activity ? "출장" : "";
-    return `<button class="hr-profile-tile ${member.id === selectedMember?.id ? "active" : ""} ${member.isRepresentative ? "representative" : ""} ${activity ? "away" : ""}" data-hr-member="${member.id}" style="--rank-color:${rank.color}" aria-label="${escapeHtml(member.name)} · ${rank.name}" aria-pressed="${member.id === selectedMember?.id}">
+    return `<button class="hr-profile-tile ${member.id === selectedMember?.id ? "active" : ""} ${member.isRepresentative ? "is-representative" : ""} ${activity ? "away" : ""}" data-hr-member="${member.id}" style="--rank-color:${rank.color}" aria-label="${escapeHtml(member.name)} · ${rank.name}" aria-pressed="${member.id === selectedMember?.id}">
       <i aria-hidden="true"></i><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face"></canvas>${activityLabel ? `<span>${activityLabel}</span>` : ""}
     </button>`;
   }).join("");
@@ -2308,7 +2308,7 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
   const potential = ACTIVITIES.growthLevel(selectedMember?.growthPotential);
   const protectedMember = !selectedMember || selectedMember.isRepresentative || availableEmployees().length <= 3 || Boolean(activity);
   const selectedRank = selectedMember?.isRepresentative ? { name: "대표", color: "#d6a12c" } : RANKS[selectedMember?.rank || 0];
-  const detail = selectedMember ? `<article class="hr-detail panel ${selectedMember.isRepresentative ? "representative" : ""}">
+  const detail = selectedMember ? `<article class="hr-detail panel ${selectedMember.isRepresentative ? "is-representative" : ""}">
     <div class="hr-detail-title"><small>EMPLOYEE FILE</small><h2>${escapeHtml(selectedMember.name)} <span style="background:${selectedRank.color}">${selectedRank.name}</span></h2><p>${DEPARTMENTS[selectedMember.department].name} · ${employeePosition(selectedMember)}</p></div>
     <p class="hr-trait">${escapeHtml(selectedMember.trait)}</p>
     <div class="hr-stat-grid"><span><small>실무</small><b>${stats.work}</b></span><span><small>협업</small><b>${stats.collaboration}</b></span><span><small>속도</small><b>${selectedMember.speed}</b></span></div>
@@ -3432,7 +3432,7 @@ function renderTeam(notice) {
   const actionOrder = orderedBattleTeam(selectedMembers, teamDraft);
   const actionOrderIds = actionOrder.map(member => member.id);
   const actionOrderSummary = actionOrder.length
-    ? actionOrder.map((member, index) => `<span><i>${index + 1}</i><b>${escapeHtml(member.name)}</b><small>속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></span>`).join("")
+    ? actionOrder.map((member, index) => `<figure class="team-order-member"><i>${index + 1}</i><canvas width="24" height="24" data-portrait="${member.id}" aria-hidden="true"></canvas><figcaption><b>${escapeHtml(member.name)}</b><small>속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></figcaption></figure>`).join("")
     : `<em>직원을 선택하면 예상 행동 순서가 표시됩니다.</em>`;
   const cards = state.employees.map(member => {
     const activity = employeeActivity(member.id);

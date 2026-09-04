@@ -169,7 +169,7 @@
       const away = isEmployeeUnavailable(member.id);
       return `<button class="equipment-person ${member.id === target.id ? "active" : ""} ${actionOrder >= 0 ? "project-member" : ""} ${away ? "employee-away" : ""}" data-equipment-target="${member.id}" style="--department-color:${department.color}" ${away ? "disabled" : ""}>
         <span class="equipment-person-portrait"><canvas width="24" height="24" data-portrait="${member.id}" data-portrait-crop="face"></canvas></span>
-        <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong><em class="equipment-team-badge ${actionOrder < 0 ? "off-team" : ""}">${away ? escapeHtml(activityStatusText(employeeActivity(member.id))) : actionOrder >= 0 ? `<b>프로젝트 팀</b> · 행동 ${actionOrder + 1}` : "대기 직원"}</em></span>
+        <span class="equipment-person-copy"><small>${department.name}</small><strong>${escapeHtml(member.name)}</strong><em class="equipment-team-badge ${actionOrder < 0 ? "off-team" : ""}">${away ? "현재 부재 중 · 인사 확인" : actionOrder >= 0 ? `<b>프로젝트 팀</b> · 행동 ${actionOrder + 1}` : "대기 직원"}</em></span>
       </button>`;
     }).join("");
 

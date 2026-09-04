@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const game = fs.readFileSync(path.join(__dirname, "game.js"), "utf8");
 const style = fs.readFileSync(path.join(__dirname, "style.css"), "utf8");
+const canonical = fs.readFileSync(path.join(__dirname, "canonical-systems.js"), "utf8");
 const officeStart = game.indexOf("function renderOffice(");
 const officeEnd = game.indexOf("function positionOfficeDragGhost", officeStart);
 const office = game.slice(officeStart, officeEnd);
@@ -27,12 +28,21 @@ for (const icon of ["hire", "team", "equipment", "hr", "project", "mail", "expan
   assert.ok(fs.existsSync(path.join(__dirname, "assets", "ui", `office-nav-${icon}.webp`)), `${icon} icon must exist`);
 }
 assert.match(office, /handleOfficeEmployeeTap/);
+assert.match(office, /mountOfficePageSwipe\(officePageCount\)/);
+assert.match(office, /class="office-company-title"/);
+assert.match(game, /data-office-away-type/);
+assert.doesNotMatch(office, /office-activity-toast/);
 assert.doesNotMatch(office, /company-card panel/);
 assert.doesNotMatch(office, /toggleLoadout/);
 assert.doesNotMatch(game.slice(game.indexOf("function officeEquipmentMarkup"), game.indexOf("function ensureWorkMail")), /office-loadout-popover/);
 assert.match(style, /\.office-stage\s*\{[^}]*flex:\s*1 1 auto/s);
 assert.match(style, /\.office-dock\s*\{[^}]*grid-template-columns:\s*repeat\(5/s);
-assert.match(style, /\.office-screen-a \.office-equipment-prop\s*\{[^}]*scale:\s*1\.18/s);
+assert.match(style, /\.office-screen-a \.office-equipment-prop\s*\{[^}]*scale:\s*1\s*;/s);
+assert.match(style, /\.office-monitor-back\s*\{[^}]*top:\s*60%/s);
+assert.match(style, /\.prop-laptop\s*\{[^}]*top:\s*43%[^}]*left:\s*18%/s);
+assert.match(style, /\.hr-profile-tile\s*\{[^}]*aspect-ratio:\s*1/s);
+assert.match(style, /data-equipment-rarity="4"\]\s*\{[^}]*background:\s*#ffedac/s);
+assert.doesNotMatch(canonical, /away \? escapeHtml\(activityStatusText/);
 assert.match(style, /\.secretary-welcome::before\s*\{[^}]*office-background\.webp/s);
 
 console.log("Office A layout checks passed: full-height room, compact HUD, mail icon, dock, dialogue taps, and visible equipment.");

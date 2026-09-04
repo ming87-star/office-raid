@@ -61,6 +61,16 @@
     return 1 + Math.ceil((highest - EXECUTIVE_PAGE_STAFF_SIZE + 1) / OFFICE_PAGE_SIZE);
   }
 
+  function officePageAfterSwipe(page = 0, pageCount = 1, deltaX = 0, deltaY = 0, threshold = 48) {
+    const safeCount = Math.max(1, Math.round(Number(pageCount) || 1));
+    const safePage = Math.max(0, Math.min(safeCount - 1, Math.round(Number(page) || 0)));
+    const horizontal = Number(deltaX) || 0;
+    const vertical = Number(deltaY) || 0;
+    const minimum = Math.max(24, Number(threshold) || 48);
+    if (Math.abs(horizontal) < minimum || Math.abs(horizontal) <= Math.abs(vertical) * 1.15) return safePage;
+    return Math.max(0, Math.min(safeCount - 1, safePage + (horizontal < 0 ? 1 : -1)));
+  }
+
   function sortEmployees(employees = [], sortKey = "rank", departmentOrder = []) {
     const key = HR_SORT_KEYS.includes(sortKey) ? sortKey : "rank";
     const departments = new Map(departmentOrder.map((id, index) => [id, index]));
@@ -93,6 +103,7 @@
     officeSeatIndicesForPage,
     maximumOfficePages,
     occupiedOfficePages,
+    officePageAfterSwipe,
     sortEmployees
   };
 });

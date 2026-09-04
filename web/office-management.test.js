@@ -21,6 +21,12 @@ assert.deepEqual(management.officeSeatIndicesForPage(0, 1), [0, 1, 2]);
 assert.deepEqual(management.officeSeatIndicesForPage(1, 1), [3, 4, 5, 6, 7, 8]);
 assert.equal(management.maximumOfficePages(12, 2), 3);
 assert.equal(management.occupiedOfficePages(["employee-2", null, null, null, null, "employee-3"], 1), 2);
+assert.equal(management.officePageAfterSwipe(0, 3, -72, 8), 1);
+assert.equal(management.officePageAfterSwipe(1, 3, 72, 8), 0);
+assert.equal(management.officePageAfterSwipe(1, 3, 30, 2), 1);
+assert.equal(management.officePageAfterSwipe(1, 3, -72, 80), 1);
+assert.equal(management.officePageAfterSwipe(0, 3, 72, 2), 0);
+assert.equal(management.officePageAfterSwipe(2, 3, -72, 2), 2);
 
 const startupSeats = management.normalizeOfficeSeats(employees, [], 6, 0);
 assert.deepEqual(startupSeats.slice(0, 4), employees.map(member => member.id));
@@ -37,7 +43,8 @@ assert.deepEqual(management.sortEmployees(employees, "participation").map(member
 const gameSource = fs.readFileSync(path.join(__dirname, "game.js"), "utf8");
 assert.match(gameSource, /function recordBattleParticipation\(\)/);
 assert.match(gameSource, /function mountOfficeSeatInteractions\(\)/);
-assert.match(gameSource, /reserved \? ` data-office-worker="\$\{reservedMember\.id\}"`/);
+assert.match(gameSource, /function mountOfficePageSwipe\(pageCount\)/);
+assert.match(gameSource, /data-office-away-type=/);
 assert.doesNotMatch(gameSource, /data-seat-locked=/);
 assert.match(gameSource, /data-hr-sort=/);
 assert.match(gameSource, /class="hr-directory"/);

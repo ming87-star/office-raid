@@ -97,13 +97,15 @@ const EQUIPMENT_RARITIES = [
   { name: "전설", color: "#d6a12c" }
 ];
 const EQUIPMENT_CATALOG = [
-  ["집중형 노트북", "work", "laptop", ["it"]], ["기획자의 태블릿", "work", "tablet", ["commerce", "it"]],
-  ["정밀 측정 키트", "work", "calculator", ["manufacturing"]], ["재고 스캐너", "work", "tablet", ["commerce"]],
-  ["디버깅 키보드", "work", "laptop", ["it"]], ["협업 헤드셋", "support", "headset", ["commerce", "it"]],
-  ["라인 체크리스트", "support", "planner", ["manufacturing"]], ["정리의 다이어리", "support", "planner"],
-  ["황금 명함지갑", "support", "wallet", ["commerce"]], ["마감 수호 텀블러", "personal", "tumbler"],
+  ["집중형 노트북", "work", "laptop", ["it"]], ["기획자의 태블릿", "work", "planning-tablet", ["commerce", "it"]],
+  ["정밀 측정 키트", "work", "measuring-kit", ["manufacturing"]], ["재고 스캐너", "work", "inventory-scanner", ["commerce"]],
+  ["디버깅 키보드", "work", "debug-keyboard", ["it"]], ["협업 헤드셋", "support", "headset", ["commerce", "it"]],
+  ["라인 체크리스트", "support", "line-checklist", ["manufacturing"]], ["정리의 다이어리", "support", "organizer-diary"],
+  ["황금 명함지갑", "support", "card-wallet", ["commerce"]], ["마감 수호 텀블러", "personal", "tumbler"],
   ["새벽의 커피", "personal", "coffee"], ["행운의 부적", "personal", "charm"]
 ];
+const EQUIPMENT_ART_KEYS = new Set(EQUIPMENT_CATALOG.map(([, , art]) => art));
+const EQUIPMENT_ART_VERSION = "20260904-rounded-v1";
 
 const DIRECTIVE_SKILLS = {
   sales: [
@@ -448,6 +450,7 @@ let centerNoticeTimer = null;
 let hrSelectedMemberId = null;
 let hrProfileScrollTop = 0;
 let officeDragState = null;
+let officePageSwipeState = null;
 let officeSuppressClickUntil = 0;
 let secretaryStartPending = false;
 let secretarySaleRecommendationsVisible = false;
@@ -797,7 +800,11 @@ const PRELOAD_ASSETS = [
   "assets/office-monitor-back.webp?v=20260831",
   "assets/battle-background-normal.webp?v=20260901-battle-art-v1",
   "assets/battle-background-boss.webp?v=20260901-battle-art-v1",
-  "assets/perfect-workflow-vfx.webp?v=20260901-workflow-v2"
+  "assets/perfect-workflow-vfx.webp?v=20260901-workflow-v2",
+  ...[...EQUIPMENT_ART_KEYS].flatMap(art => [
+    `assets/equipment/representative/${art}.png?v=${EQUIPMENT_ART_VERSION}`,
+    `assets/equipment/office/${art}.png?v=${EQUIPMENT_ART_VERSION}`
+  ])
 ];
 const preloadedImages = [];
 const preloadedSecretarySources = new Set();
@@ -1341,22 +1348,19 @@ function handleOfficeEmployeeTap(memberId) {
 }
 
 function equipmentArtFor(item) {
-  if (item.art) return item.art;
-  return EQUIPMENT_CATALOG.find(([name]) => name === item.name)?.[2] || item.slot || "personal";
+  return EQUIPMENT_CATALOG.find(([name]) => name === item.name)?.[2] || item.art || item.slot || "personal";
 }
 
 function equipmentIconMarkup(item, className = "") {
-  return `<canvas class="equipment-icon ${className}" width="24" height="24" data-equipment-icon="${escapeHtml(equipmentArtFor(item))}" data-equipment-rarity="${item.rarity}" aria-label="${escapeHtml(item.name)} 아이콘"></canvas>`;
+  return `<canvas class="equipment-icon ${className}" width="64" height="64" data-equipment-icon="${escapeHtml(equipmentArtFor(item))}" data-equipment-rarity="${item.rarity}" aria-label="${escapeHtml(item.name)} 아이콘"></canvas>`;
 }
 
 function officeEquipmentUsage(item) {
   const art = equipmentArtFor(item);
   if (art === "headset") return "머리에 착용 중";
-  if (["laptop", "tablet"].includes(art)) return "모니터 앞에서 사용 중";
-  if (art === "calculator") return "사용자 가까운 책상 쪽에서 사용 중";
-  if (art === "planner") return "사용자 가까운 책상 왼쪽에서 사용 중";
-  if (art === "wallet") return "책상 왼쪽에 보관 중";
-  if (["coffee", "tumbler"].includes(art)) return "사용자 가까운 책상 오른쪽에서 사용 중";
+  if (["laptop", "planning-tablet", "measuring-kit", "inventory-scanner", "debug-keyboard"].includes(art)) return "키보드 옆 업무 공간에서 사용 중";
+  if (["line-checklist", "organizer-diary", "card-wallet"].includes(art)) return "직원 가까운 책상 왼쪽에서 사용 중";
+  if (["coffee", "tumbler"].includes(art)) return "직원 가까운 책상 오른쪽에서 사용 중";
   return "모니터 모서리에 걸어둠";
 }
 
@@ -1365,8 +1369,8 @@ function officeEquipmentPlacement(item) {
   if (art === "headset") return "wearable";
   if (art === "charm") return "monitor-mounted";
   if (["coffee", "tumbler"].includes(art)) return "desk-right";
-  if (["planner", "wallet"].includes(art)) return "desk-left";
-  return "desk-center";
+  if (["line-checklist", "organizer-diary", "card-wallet"].includes(art)) return "desk-left";
+  return "desk-work";
 }
 
 function equippedEquipmentCount() {
@@ -1470,7 +1474,7 @@ function officeEquipmentMarkup(member) {
   const props = equipped.map(item => {
     const art = equipmentArtFor(item);
     const rarity = EQUIPMENT_RARITIES[item.rarity];
-    return `<canvas class="office-equipment-prop placement-${officeEquipmentPlacement(item)} prop-${escapeHtml(art)} rarity-${item.rarity}" width="24" height="24" data-equipment-icon="${escapeHtml(art)}" data-equipment-rarity="${item.rarity}" style="--rarity-color:${rarity.color}" aria-label="${escapeHtml(item.name)} · ${officeEquipmentUsage(item)}"></canvas>`;
+    return `<canvas class="office-equipment-prop placement-${officeEquipmentPlacement(item)} prop-${escapeHtml(art)} rarity-${item.rarity}" width="64" height="64" data-equipment-icon="${escapeHtml(art)}" data-equipment-rarity="${item.rarity}" style="--rarity-color:${rarity.color}" aria-label="${escapeHtml(item.name)} · ${officeEquipmentUsage(item)}"></canvas>`;
   }).join("");
   return `<div class="office-workspace" aria-hidden="true">
     <div class="office-character"><canvas class="office-portrait" width="24" height="24" data-portrait="${member.id}"></canvas>${props}</div>
@@ -1577,10 +1581,13 @@ function officeDeskMarkup(member, seatIndex = null, { executive = false, reserve
   const seatAttribute = Number.isInteger(seatIndex) ? ` data-office-seat-index="${seatIndex}"` : "";
   if (!member) {
     const reserved = Boolean(reservedMember);
-    const label = reserved ? `${reservedMember.name}의 자리 · 현재 자리 비움` : "빈자리";
-    return `<div class="desk office-empty-desk ${reserved ? "reserved-desk" : ""}"${reserved ? ` data-office-worker="${reservedMember.id}"` : ""}${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(label)}">
+    const activity = reserved ? employeeActivity(reservedMember.id) : null;
+    const awayLabel = activity?.type === "training" ? "교육 중" : activity ? "출장 중" : "자리 비움";
+    const label = reserved ? `${reservedMember.name}의 자리 · ${awayLabel}` : "빈자리";
+    const awayAttributes = reserved ? ` data-office-worker="${reservedMember.id}" data-office-away-name="${escapeHtml(reservedMember.name)}" data-office-away-type="${activity?.type || "away"}"` : "";
+    return `<div class="desk office-empty-desk ${reserved ? `reserved-desk activity-${activity?.type || "away"}` : ""}"${awayAttributes}${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(label)}">
       <div class="office-workspace empty-workspace" aria-hidden="true"><img class="office-desk-base" src="assets/office-desk-base.webp?v=20260831" alt=""><img class="office-monitor-back" src="assets/office-monitor-back.webp?v=20260831" alt=""></div>
-      <span class="empty-seat-marker">${reserved ? "자리 비움" : "빈 자리"}</span>
+      <span class="empty-seat-marker">${reserved ? `<strong>${escapeHtml(reservedMember.name)}</strong><small>${awayLabel}</small>` : "빈 자리"}</span>
     </div>`;
   }
   return `<div class="desk ${executive ? "executive-desk" : ""}" data-office-worker="${member.id}"${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(member.name)}에게 말 걸기${executive ? "" : ", 길게 눌러 자리 이동"}">
@@ -1883,6 +1890,7 @@ function renderSecretaryWelcome(step = 0) {
 }
 
 function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트 팀을 편성하세요.", animateEntry = false) {
+  cancelOfficePageSwipe();
   const enteringOffice = currentView !== "office";
   currentView = "office";
   if (enteringOffice) resetOfficeTapDialogueState();
@@ -1914,11 +1922,6 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
   const expansionReady = nextCompany && state.projectClears >= nextCompany.requiredClears && state.cash >= nextCompany.cost;
-  const activeActivities = [state.training, state.businessTrip].filter(Boolean);
-  const activityMarkup = activeActivities.length ? `<div class="office-activity-toast">${activeActivities.map(activity => {
-    const member = state.employees.find(item => item.id === activity.employeeId);
-    return `<span class="${activity.type}"><small>${activity.type === "training" ? "교육 중" : "출장 중"}</small><strong>${escapeHtml(member?.name || "직원")}</strong><em>${escapeHtml(activityStatusText(activity))}</em></span>`;
-  }).join("")}</div>` : "";
   const roadmap = secretaryRoadmap();
   const secretaryGoal = state.secretary
     ? ""
@@ -1926,13 +1929,13 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
       ? `<button class="secretary-goal-note ready" id="secretary-goal"><b>경영지원실 준비 완료</b><span>비서 후보 3명 면접 가능</span></button>`
       : `<button class="secretary-goal-note" id="secretary-goal"><b>비서 채용 목표 ${roadmap.completed}/${roadmap.total}</b><span>${escapeHtml(roadmap.current.label)} ${roadmap.current.value}/${roadmap.current.target}</span></button>`;
   const secretaryAssist = secretaryAssistMarkup("office");
-  const officeZone = `<div class="office-zone"><span>${company.grade} · 근무 구역 ${officePage + 1}/${officePageCount}</span><em>길게 눌러 자리 이동</em>${officePageCount > 1 ? `<button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button>` : ""}</div>`;
+  const officeZone = officePageCount > 1 ? `<div class="office-zone"><button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button></div>` : "";
   const desks = officePageDesks(officePage);
   app.innerHTML = `<section class="screen office-screen-a">
       <div class="office-stage">
         <div class="office-hud" aria-label="회사 현황">
           <button class="office-company-chip ${expansionReady ? "expansion-ready" : ""}" id="expand" ${tutorialPending ? "disabled" : ""} aria-label="${escapeHtml(state.companyName)}, ${company.name}${nextCompany ? ", 회사 확장 확인" : ", 확장 완료"}">
-            <img class="office-expand-icon" src="assets/ui/office-nav-expand.webp?v=20260904-nav-v1" alt=""><span><strong>${escapeHtml(state.companyName)}</strong><small>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</small></span>
+            <img class="office-expand-icon" src="assets/ui/office-nav-expand.webp?v=20260904-nav-v1" alt=""><span><span class="office-company-title"><strong>${escapeHtml(state.companyName)}</strong><em>${company.grade}</em></span><small>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1} · 근무 ${officePage + 1}/${officePageCount}</small></span>
           </button>
           <div class="office-hud-resources">
             <span><small>현금</small><b>${state.cash}<i>만</i></b></span><span><small>평판</small><b>${state.reputation}</b></span><span><small>직원</small><b>${state.employees.length}<i>/${state.capacity}</i></b></span>
@@ -1941,7 +1944,6 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
         </div>
         <div class="office-room company-level-${company.id} staff-${assignedMemberCount} ${MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? "has-executive-seat" : ""}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 배정 직원 ${assignedMemberCount}명">${officeZone}${desks}</div>
         <div class="office-status-toast" role="status">${escapeHtml(officeNotice)}</div>
-      ${activityMarkup}
         ${secretaryGoal}
         ${secretaryAssist}
       </div>
@@ -1978,9 +1980,13 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
     });
   });
   document.querySelectorAll(".office-empty-desk").forEach(desk => desk.addEventListener("click", () => {
-    showCenterNotice(desk.classList.contains("reserved-desk") ? "교육이나 출장 중인 직원의 자리입니다." : "옮길 직원을 길게 누른 뒤 이 자리로 끌어 놓으세요.");
+    if (Date.now() < officeSuppressClickUntil) return;
+    if (!desk.classList.contains("reserved-desk")) return showCenterNotice("옮길 직원을 길게 누른 뒤 이 자리로 끌어 놓으세요.");
+    const awayLabel = desk.dataset.officeAwayType === "training" ? "교육 중" : desk.dataset.officeAwayType === "trip" ? "출장 중" : "자리 비움";
+    showCenterNotice(`${desk.dataset.officeAwayName || "직원"} 직원은 현재 ${awayLabel}입니다. 자세한 내용은 인사 관리에서 확인하세요.`);
   }));
   mountOfficeSeatInteractions();
+  mountOfficePageSwipe(officePageCount);
   if (!officeDragState?.active) scheduleOfficeDialogue();
 }
 
@@ -2129,6 +2135,73 @@ function mountOfficeSeatInteractions() {
       window.addEventListener("pointerup", drag.onEnd, { passive: false });
       window.addEventListener("pointercancel", drag.onEnd, { passive: false });
     });
+  });
+}
+
+function cancelOfficePageSwipe() {
+  if (!officePageSwipeState) return;
+  window.removeEventListener("pointermove", officePageSwipeState.onMove);
+  window.removeEventListener("pointerup", officePageSwipeState.onEnd);
+  window.removeEventListener("pointercancel", officePageSwipeState.onCancel);
+  const room = officePageSwipeState.room;
+  room?.classList.remove("office-page-swiping");
+  room?.style.removeProperty("--office-page-drag");
+  officePageSwipeState = null;
+}
+
+function finishOfficePageSwipe(event) {
+  if (!officePageSwipeState || event.pointerId !== officePageSwipeState.pointerId) return;
+  const swipe = officePageSwipeState;
+  if (swipe.active) event.preventDefault();
+  const nextPage = MANAGEMENT.officePageAfterSwipe(officePage, swipe.pageCount, swipe.lastX - swipe.startX, swipe.lastY - swipe.startY);
+  const moved = nextPage !== officePage;
+  cancelOfficePageSwipe();
+  if (!moved) return;
+  officeSuppressClickUntil = Date.now() + 400;
+  officePage = nextPage;
+  renderOffice(`근무 구역 ${officePage + 1}/${swipe.pageCount}으로 이동했습니다.`);
+}
+
+function mountOfficePageSwipe(pageCount) {
+  const room = document.querySelector(".office-room");
+  if (!room || pageCount <= 1) return;
+  room.addEventListener("pointerdown", event => {
+    if (officePageSwipeState || officeDragState || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
+    if (event.target.closest?.(".desk,button,.office-speech")) return;
+    const swipe = {
+      room,
+      pageCount,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      active: false,
+      onMove: null,
+      onEnd: null,
+      onCancel: null
+    };
+    swipe.onMove = moveEvent => {
+      if (!officePageSwipeState || moveEvent.pointerId !== swipe.pointerId) return;
+      swipe.lastX = moveEvent.clientX;
+      swipe.lastY = moveEvent.clientY;
+      const deltaX = swipe.lastX - swipe.startX;
+      const deltaY = swipe.lastY - swipe.startY;
+      if (!swipe.active && Math.abs(deltaY) > 12 && Math.abs(deltaY) >= Math.abs(deltaX)) return cancelOfficePageSwipe();
+      if (!swipe.active && Math.abs(deltaX) < 10) return;
+      swipe.active = true;
+      moveEvent.preventDefault();
+      const againstEdge = deltaX > 0 && officePage === 0 || deltaX < 0 && officePage >= pageCount - 1;
+      const visualOffset = Math.max(-86, Math.min(86, deltaX * (againstEdge ? .24 : .72)));
+      room.classList.add("office-page-swiping");
+      room.style.setProperty("--office-page-drag", `${Math.round(visualOffset)}px`);
+    };
+    swipe.onEnd = finishOfficePageSwipe;
+    swipe.onCancel = cancelOfficePageSwipe;
+    officePageSwipeState = swipe;
+    window.addEventListener("pointermove", swipe.onMove, { passive: false });
+    window.addEventListener("pointerup", swipe.onEnd, { passive: false });
+    window.addEventListener("pointercancel", swipe.onCancel, { passive: false });
   });
 }
 
@@ -3366,7 +3439,7 @@ function renderTeam(notice) {
     const selectedIndex = teamDraft.indexOf(member.id);
     const actionIndex = actionOrderIds.indexOf(member.id);
     const stats = effectiveStats(member);
-    const unavailableText = activity?.type === "training" ? `교육 중 · D-${ACTIVITIES.DURATION - activity.progress}` : activity ? `출장 중 · D-${ACTIVITIES.DURATION - activity.progress}` : "";
+    const unavailableText = activity ? "현재 부재 중 · 인사 관리에서 확인" : "";
     return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""} ${activity ? "employee-away" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
       <div><h3>${actionIndex >= 0 ? `<span class="order">${actionIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
@@ -4422,6 +4495,19 @@ function mountEquipmentIcons() {
 
 function drawEquipmentIcon(canvas, art, rarity = 0) {
   if (!canvas) return;
+  if (EQUIPMENT_ART_KEYS.has(art)) {
+    const context = canvas.getContext("2d");
+    const image = new Image();
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    image.onload = () => {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    };
+    image.src = `assets/equipment/${canvas.classList.contains("office-equipment-prop") ? "office" : "representative"}/${art}.png?v=${EQUIPMENT_ART_VERSION}`;
+    return;
+  }
   const context = pixelContext(canvas);
   const pixel = (color, x, y, width, height) => {
     context.fillStyle = color;

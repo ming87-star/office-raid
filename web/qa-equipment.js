@@ -28,13 +28,13 @@ auditMembers[0].equipment = {
   personal: auditEquipment("마감 수호 텀블러", "personal", "tumbler", 1)
 };
 auditMembers[1].equipment = {
-  work: auditEquipment("기획자의 태블릿", "work", "tablet", 1),
-  support: auditEquipment("정리의 다이어리", "support", "planner", 2),
+  work: auditEquipment("기획자의 태블릿", "work", "planning-tablet", 1),
+  support: auditEquipment("정리의 다이어리", "support", "organizer-diary", 2),
   personal: auditEquipment("새벽의 커피", "personal", "coffee", 3)
 };
 auditMembers[2].equipment = {
-  work: auditEquipment("정밀 측정 키트", "work", "calculator", 3),
-  support: auditEquipment("황금 명함지갑", "support", "wallet", 4),
+  work: auditEquipment("정밀 측정 키트", "work", "measuring-kit", 3),
+  support: auditEquipment("황금 명함지갑", "support", "card-wallet", 4),
   personal: auditEquipment("행운의 부적", "personal", "charm", 2)
 };
 

@@ -63,6 +63,11 @@ assert.doesNotMatch(gameSource, /member\.rank !== 0.*신입 전용/);
 assert.match(gameSource, /data-train-member="\$\{selectedMember\.id\}" aria-disabled="\$\{!education\.allowed\}">교육 보내기/);
 assert.match(gameSource, /data-end-contract="\$\{selectedMember\.id\}" aria-disabled="\$\{protectedMember\}">계약 종료/);
 assert.match(gameSource, /function showCenterNotice\(message\)/);
+assert.match(gameSource, /function returnMemberEquipment\(member\)[\s\S]*return returned;/);
+assert.match(gameSource, /function startTraining[\s\S]*returnMemberEquipment\(member\)/);
+assert.match(gameSource, /function acceptBusinessTrip[\s\S]*returnMemberEquipment\(member\)/);
+assert.match(gameSource, /function maybeQueueBusinessTripOffer[\s\S]*effectiveStatsWithoutEquipment\(member\)/);
 assert.ok(indexSource.indexOf("employee-activities.js") < indexSource.indexOf("game.js"));
+assert.ok(indexSource.indexOf("recruitment-rules.js") < indexSource.indexOf("game.js"));
 
 console.log("Employee activity checks passed: three-project training, designated trips, graded mini-game influence.");

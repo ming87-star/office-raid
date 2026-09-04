@@ -72,7 +72,7 @@
     const analysis = success
       ? `<p class="project-report-evaluation"><small>대표 평가</small><strong>${escapeHtml(grade.description)}</strong><span>${battle.comboCount ? `긴급 지시 연계 ${battle.comboCount}회를 완성했습니다.` : "다음에는 긴급 지시 연계로 S등급을 노릴 수 있습니다."}</span></p>`
       : `<section class="project-report-card project-report-failure-analysis"><div class="project-report-section-title"><div><small>FAILURE ANALYSIS</small><h3>다음 도전 제안</h3></div><span>진행률 ${progress}%</span></div><p>${escapeHtml(failureAdvice)}</p></section>`;
-    const unlock = battle.tutorialUnlock ? `<div class="project-report-unlock"><small>NEW FEATURE</small><strong>면접 기능 해금</strong><span>새로운 직원을 채용해 다음 팀을 구성할 수 있습니다.</span></div>` : "";
+    const unlock = battle.tutorialUnlock ? `<div class="project-report-unlock"><small>NEW FEATURE</small><strong>채용 기능 해금</strong><span>새로운 직원을 채용해 다음 팀을 구성할 수 있습니다.</span></div>` : "";
 
     app.innerHTML = `${header("프로젝트 결과 보고서", `${battle.project.name} · ${success ? "완료 보고" : "실패 분석"}`)}
       <section class="screen project-report-screen ${success ? "success" : "failure"} ${battle.project.boss ? "boss-report" : ""}">

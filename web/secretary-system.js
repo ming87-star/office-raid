@@ -45,7 +45,7 @@
 
   const ROADMAP_STAGES = [
     { id: "first-project", label: "첫 프로젝트 완료", detail: "창립 팀으로 첫 성과를 만드세요.", target: 1, metric: "projectClears", rewardCash: 120, rewardReputation: 0 },
-    { id: "first-hire", label: "첫 직원 채용", detail: "면접에서 네 번째 직원을 채용하세요.", target: 4, metric: "employees", rewardCash: 0, rewardReputation: 2 },
+    { id: "first-hire", label: "첫 직원 채용", detail: "채용에서 네 번째 직원을 영입하세요.", target: 4, metric: "employeeJoinSequence", rewardCash: 0, rewardReputation: 2 },
     { id: "three-equipment", label: "장비 3개 장착", detail: "직원들의 업무 장비를 준비하세요.", target: 3, metric: "equipped", rewardCash: 180, rewardReputation: 0 },
     { id: "three-projects", label: "프로젝트 3회 완료", detail: "팀 편성과 긴급 지시에 익숙해지세요.", target: 3, metric: "projectClears", rewardCash: 0, rewardReputation: 3 },
     { id: "medium-office", label: "중형 사무실 확장", detail: "더 많은 직원을 위한 공간을 확보하세요.", target: 1, metric: "companyLevel", rewardCash: 300, rewardReputation: 0 },

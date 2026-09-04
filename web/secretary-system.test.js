@@ -6,6 +6,7 @@ const secretary = require("./secretary-system.js");
 const base = {
   projectClears: 0,
   companyLevel: 0,
+  employeeJoinSequence: 3,
   employees: [
     { id: "a", department: "dev", work: 20, collaboration: 12, speed: 15, equipment: {} },
     { id: "b", department: "planning", work: 13, collaboration: 20, speed: 16, equipment: {} },
@@ -17,8 +18,10 @@ assert.equal(secretary.CANDIDATES.length, 3);
 assert.deepEqual(secretary.CANDIDATES.map(candidate => candidate.id), ["a", "b", "c"]);
 assert.equal(secretary.roadmap(base).current.id, "first-project");
 
-const ready = { ...base, projectClears: 10, companyLevel: 1, employees: Array.from({ length: 6 }, (_, index) => ({ id: `e${index}`, equipment: index < 3 ? { work: { id: `q${index}` } } : {} })) };
+const ready = { ...base, projectClears: 10, companyLevel: 1, employeeJoinSequence: 6, employees: Array.from({ length: 6 }, (_, index) => ({ id: `e${index}`, equipment: index < 3 ? { work: { id: `q${index}` } } : {} })) };
 assert.equal(secretary.roadmap(ready).ready, true);
+const hiredThenTerminated = { ...base, projectClears: 1, employeeJoinSequence: 5, employees: base.employees.slice(0, 3) };
+assert.equal(secretary.roadmap(hiredThenTerminated).stages.find(stage => stage.id === "first-hire").complete, true);
 
 const team = secretary.recommendTeam(base.employees, { recommended: ["planning", "dev"] }, 3);
 assert.deepEqual(team.slice(0, 2).map(member => member.department).sort(), ["dev", "planning"]);

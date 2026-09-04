@@ -1743,9 +1743,11 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .secretary-hire-confirm > p { margin: 0; color: var(--muted); font-size: 8px; font-weight: 900; line-height: 1.45; }
 .secretary-hire-confirm > div { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
-.secretary-welcome { position: absolute; z-index: 90; inset: 0; display: flex; align-items: flex-end; justify-content: center; gap: 10px; overflow: hidden; padding: 30px 18px 22px; background: linear-gradient(145deg,#17364a 0 48%,#1b827f 100%); color: white; }
-.secretary-welcome.tone-bright { background: linear-gradient(145deg,#17364a,#4a70a8 56%,#d6a12c); }
-.secretary-welcome.tone-calm { background: linear-gradient(145deg,#102c40,#33566b 55%,#168c8b); }
+.secretary-welcome { position: absolute; z-index: 90; inset: 0; display: flex; align-items: flex-end; justify-content: center; gap: 10px; overflow: hidden; padding: 30px 18px 22px; background: #17364a; color: white; isolation: isolate; }
+.secretary-welcome::before { position: absolute; z-index: -2; inset: -8px; background: url("assets/office-background.webp?v=20260831-topview") center / cover no-repeat; content: ""; filter: blur(2px) saturate(.82); transform: scale(1.04); }
+.secretary-welcome::after { position: absolute; z-index: -1; inset: 0; background: linear-gradient(145deg,rgba(8,31,46,.7),rgba(22,140,139,.42)); content: ""; }
+.secretary-welcome.tone-bright::after { background: linear-gradient(145deg,rgba(8,31,46,.72),rgba(74,112,168,.42) 56%,rgba(214,161,44,.38)); }
+.secretary-welcome.tone-calm::after { background: linear-gradient(145deg,rgba(8,31,46,.76),rgba(22,140,139,.4)); }
 .secretary-welcome-copy { width: min(53%,270px); padding: 14px; border: 3px solid white; background: rgba(9,35,49,.9); box-shadow: 5px 5px 0 rgba(0,0,0,.28); }
 .secretary-welcome-copy > small { color: var(--mustard); font-size: 7px; font-weight: 1000; letter-spacing: 1px; }
 .secretary-welcome-copy h1 { margin: 4px 0 9px; font-size: 21px; line-height: 1.15; }
@@ -1789,12 +1791,17 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .secretary-hr-button { grid-column: 1/-1; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px; min-height: 30px; padding: 4px 7px; border-left: 4px solid var(--blue); background: #eaf0f7; color: var(--ink); text-align: left; box-shadow: none; }
 .secretary-hr-button small { color: var(--blue); }
 .secretary-hr-button strong { font-size: 8px; }
-.secretary-battle-badge { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; min-height: 38px; overflow: hidden; border: 2px solid var(--ink); background: #e6f3ed; box-shadow: 2px 2px 0 var(--ink); }
+.secretary-battle-badge { width: 100%; display: grid; grid-template-columns: 42px minmax(0,1fr) 28px; align-items: center; min-height: 42px; overflow: hidden; padding: 0; border: 2px solid var(--ink); background: #edf1f6; color: var(--ink); box-shadow: 2px 2px 0 var(--ink); text-align: left; }
+.secretary-battle-badge.active { background: #e6f3ed; border-color: var(--teal); }
 .secretary-battle-badge .secretary-art-slot { width: 42px; height: 42px; border-width: 0 2px 0 0; border-radius: 0; }
 .secretary-battle-badge span { min-width: 0; padding: 3px 7px; }
 .secretary-battle-badge small,.secretary-battle-badge b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .secretary-battle-badge small { color: var(--teal); font-size: 6px; font-weight: 1000; letter-spacing: .8px; }
 .secretary-battle-badge b { margin-top: 1px; font-size: 8px; }
+.secretary-battle-badge > i { position: relative; width: 24px; height: 13px; border: 2px solid var(--ink); border-radius: 8px; background: var(--muted); }
+.secretary-battle-badge > i::after { position: absolute; top: 2px; left: 2px; width: 5px; height: 5px; border-radius: 50%; background: white; content: ""; transition: left .15s ease; }
+.secretary-battle-badge.active > i { background: var(--teal); }
+.secretary-battle-badge.active > i::after { left: 13px; }
 
 .equipment-slot { grid-template-columns: 30px minmax(0,1fr) 58px; }
 .equipment-slot-actions { display: grid; grid-template-columns: 27px 1fr; gap: 2px; }
@@ -1820,6 +1827,72 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .equipment-sale-selection strong { margin-top: 2px; font-size: 10px; }
 .equipment-sale-selection button { min-height: 32px; padding: 4px 6px; font-size: 7px; }
 .equipment-item.sale-selected { outline: 3px solid var(--red); outline-offset: -3px; }
+
+/* Main office A: full-height room with compact HUD and bottom dock. */
+.office-screen-a { gap: 6px; }
+.office-stage { position: relative; min-height: 0; flex: 1 1 auto; overflow: hidden; border: 3px solid var(--ink); background: var(--paper-dark); box-shadow: 4px 4px 0 var(--ink); }
+.office-stage .office-room { width: 100%; height: 100%; padding: 68px 8px 48px; border: 0; box-shadow: inset 0 0 0 2px rgba(255,250,240,.18); }
+.office-stage .office-room.staff-4,
+.office-stage .office-room.staff-5,
+.office-stage .office-room.staff-6 { padding: 68px 7px 48px; }
+.office-stage .office-room.has-executive-seat { padding-bottom: 46px; }
+.office-hud { position: absolute; z-index: 40; top: 0; right: 0; left: 0; display: grid; grid-template-columns: minmax(92px,1fr) auto 42px; align-items: stretch; gap: 4px; min-height: 55px; padding: max(5px,env(safe-area-inset-top)) 5px 5px; border-bottom: 3px solid var(--ink); background: rgba(13,40,56,.94); color: white; box-shadow: 0 3px 0 rgba(23,54,74,.35); }
+.office-company-chip { min-width: 0; min-height: 43px; display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: center; gap: 3px; padding: 2px 5px; border: 2px solid rgba(255,255,255,.72); background: rgba(255,255,255,.08); color: white; box-shadow: none; text-align: left; }
+.office-company-chip img { width: 32px; height: 32px; object-fit: contain; }
+.office-company-chip .office-expand-icon { filter: drop-shadow(1px 1px 0 rgba(255,255,255,.2)); }
+.office-company-chip span,.office-company-chip strong,.office-company-chip small { min-width: 0; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.office-company-chip strong { font-size: 10px; }
+.office-company-chip small { margin-top: 1px; color: #a9d9d5; font-size: 6px; }
+.office-company-chip.expansion-ready { border-color: var(--mustard); box-shadow: inset 0 0 0 2px rgba(214,161,44,.28); }
+.office-hud-resources { display: grid; grid-template-columns: repeat(3,minmax(43px,auto)); align-items: center; gap: 3px; }
+.office-hud-resources > span { min-width: 43px; padding: 3px 4px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.08); text-align: center; }
+.office-hud-resources small,.office-hud-resources b { display: block; white-space: nowrap; }
+.office-hud-resources small { color: #b9cbd2; font-size: 5px; }
+.office-hud-resources b { margin-top: 1px; font-size: 8px; }
+.office-hud-resources i { margin-left: 1px; color: #b9cbd2; font-size: 5px; font-style: normal; }
+.office-mail-icon { position: relative; width: 42px; min-height: 43px; padding: 3px; border: 2px solid rgba(255,255,255,.72); background: rgba(255,255,255,.12); color: white; box-shadow: none; }
+.office-mail-icon.unread { border-color: var(--mustard); background: rgba(214,161,44,.22); }
+.office-mail-icon.completed { border-color: #8ed1ac; }
+.office-mail-icon > b { position: absolute; top: -5px; right: -5px; display: grid; min-width: 17px; height: 17px; place-items: center; padding: 0 3px; border: 2px solid white; border-radius: 9px; background: var(--red); color: white; font-size: 7px; }
+.office-mail-icon > b.complete { background: var(--teal); }
+.office-nav-icon { display: block; width: 32px; height: 32px; margin: 0 auto; object-fit: contain; pointer-events: none; }
+.office-mail-icon .office-nav-icon { width: 30px; height: 30px; }
+.office-stage .office-zone { top: 59px; }
+.office-stage .office-zone em { display: none; }
+.office-status-toast { position: absolute; z-index: 20; right: 7px; bottom: 7px; left: 7px; overflow: hidden; padding: 5px 7px; border-left: 4px solid var(--teal); background: rgba(255,250,240,.9); color: var(--ink); box-shadow: 2px 2px 0 rgba(23,54,74,.55); font-size: 7px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.office-activity-toast { position: absolute; z-index: 22; top: 91px; right: 7px; display: grid; gap: 3px; width: min(52%,176px); }
+.office-activity-toast span { display: grid; grid-template-columns: auto 1fr; gap: 2px 5px; padding: 4px 6px; border: 2px solid var(--ink); border-left: 4px solid var(--teal); background: rgba(255,250,240,.92); box-shadow: 2px 2px 0 rgba(23,54,74,.45); }
+.office-activity-toast span.trip { border-left-color: var(--mustard); }
+.office-activity-toast small { color: var(--muted); font-size: 5px; font-weight: 1000; }
+.office-activity-toast strong { overflow: hidden; font-size: 7px; white-space: nowrap; text-overflow: ellipsis; }
+.office-activity-toast em { grid-column: 1/-1; overflow: hidden; color: var(--teal); font-size: 6px; font-style: normal; font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
+.office-stage > .secretary-goal-note { position: absolute; z-index: 24; right: 7px; bottom: 35px; left: 7px; width: auto; border: 2px solid var(--ink); border-left: 5px solid var(--mustard); background: rgba(255,250,240,.94); box-shadow: 2px 2px 0 var(--ink); }
+.office-stage > .secretary-assist { right: 7px; bottom: 34px; }
+.office-dock { flex: 0 0 70px; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; }
+.office-dock button { position: relative; min-width: 0; min-height: 66px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 3px 1px; color: white; font-size: 7px; }
+.office-dock button b { display: block; overflow: hidden; max-width: 100%; white-space: nowrap; text-overflow: ellipsis; }
+.office-dock button > i { position: absolute; top: 3px; right: 3px; display: grid; min-width: 15px; height: 15px; place-items: center; padding: 0 2px; border: 1px solid white; border-radius: 8px; background: var(--ink); color: white; font-size: 6px; font-style: normal; }
+.office-dock #project { box-shadow: 3px 3px 0 var(--ink),0 0 12px rgba(200,75,60,.35); }
+.office-dock #project .office-nav-icon { width: 36px; height: 36px; margin-top: -2px; margin-bottom: -2px; }
+.office-screen-a .office-equipment-prop { scale: 1.18; }
+.office-screen-a .office-room.staff-4 .office-equipment-prop,
+.office-screen-a .office-room.staff-5 .office-equipment-prop,
+.office-screen-a .office-room.staff-6 .office-equipment-prop { scale: 1.05; }
+.office-screen-a .office-speech { z-index: 45; }
+.office-screen-a .desk:active:not(.office-empty-desk) .office-workspace { filter: brightness(1.06); }
+
+@media (max-height:720px) {
+  .office-stage .office-room,
+  .office-stage .office-room.staff-4,
+  .office-stage .office-room.staff-5,
+  .office-stage .office-room.staff-6 { padding-top: 62px; padding-bottom: 42px; }
+  .office-hud { min-height: 50px; }
+  .office-stage .office-zone { top: 54px; }
+  .office-dock { flex-basis: 61px; }
+  .office-dock button { min-height: 57px; }
+  .office-nav-icon { width: 27px; height: 27px; }
+  .office-dock #project .office-nav-icon { width: 31px; height: 31px; }
+}
 
 @media (max-height:720px) {
   .secretary-welcome { padding: 18px 12px 14px; }

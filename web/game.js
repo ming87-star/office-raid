@@ -333,6 +333,65 @@ const FORMAL_OFFICE_RESPONSES = {
   "회의만 짧으면 가능할 것 같아요.": "회의가 길어지지 않으면 가능할 것 같습니다.",
   "반복 작업부터 묶으면 빨라질 것 같아요.": "반복 작업부터 묶으면 빨라질 것 같습니다."
 };
+
+const EMPLOYEE_TAP_DIALOGUES = {
+  common: [
+    "오늘 할 일부터 차근차근 정리하고 있습니다.", "방금 막 좋은 흐름을 탔습니다.", "필요한 일이 있으면 말씀해주세요.",
+    "일단 급한 것부터 끝내보겠습니다.", "생각보다 오늘 업무가 잘 풀리고 있습니다.", "메모해둔 순서대로 처리하고 있습니다.",
+    "잠깐 막혔지만 금방 해결할 수 있을 것 같습니다.", "지금 하던 부분만 정리하고 다음 업무로 넘어가겠습니다.",
+    "동료들과 진행 상황을 맞춰보고 있습니다.", "오늘은 실수 없이 마무리하고 싶습니다.", "집중이 잘되는 날입니다.",
+    "프로젝트 준비는 계속 진행 중입니다."
+  ],
+  perfectionist: [
+    "마지막 숫자까지 다시 확인하고 있습니다.", "완료 표시를 하기 전에 한 번만 더 보겠습니다.", "작은 오류가 나중에 큰 수정이 될 수 있습니다.",
+    "체크리스트가 한 줄 남았습니다.", "품질은 서두른다고 따라오지 않습니다.", "기준을 지키면서 속도도 맞춰보겠습니다."
+  ],
+  mood: [
+    "분위기가 좋아야 아이디어도 잘 나오죠.", "다들 조금 지쳐 보여서 간식 이야기를 꺼내볼까 합니다.", "오늘도 웃으면서 끝내봅시다.",
+    "회의가 길어지면 제가 분위기를 바꿔보겠습니다.", "좋은 소식 하나쯤은 곧 생길 겁니다.", "퇴근 전까지 팀 분위기는 제가 지키겠습니다."
+  ],
+  realist: [
+    "현재 일정대로면 마감 전에 끝낼 수 있습니다.", "먼저 필요한 자료부터 모으고 있습니다.", "가능한 범위와 어려운 범위를 나눠뒀습니다.",
+    "지금은 새 일보다 진행 중인 일을 끝내는 게 우선입니다.", "문제가 생기면 바로 기록해두겠습니다.", "확실한 것부터 처리하는 편이 안전합니다."
+  ],
+  quiet: [
+    "네. 듣고 있습니다.", "조용히 처리하고 있겠습니다.", "필요하면 먼저 말씀드리겠습니다.",
+    "지금은 집중하는 중입니다.", "진행 상황은 메모해두었습니다.", "괜찮습니다. 계속하겠습니다."
+  ],
+  competitive: [
+    "이번 프로젝트에서는 제가 가장 많이 처리해보겠습니다.", "어려운 일일수록 먼저 손이 갑니다.", "목표보다 조금 더 앞당겨 끝내보죠.",
+    "제 차례가 오면 확실하게 보여드리겠습니다.", "이 정도 업무량은 아직 여유 있습니다.", "다음 성과표는 기대하셔도 좋습니다."
+  ],
+  creative: [
+    "방식을 조금 바꾸면 더 빨라질 것 같습니다.", "방금 재미있는 해결책이 하나 떠올랐습니다.", "익숙한 방법 말고 다른 길도 시험해보고 있습니다.",
+    "아이디어는 있는데 정리할 시간이 조금 필요합니다.", "이 부분은 그림으로 보면 더 쉬울 것 같습니다.", "반복되는 일은 새로운 방식으로 줄여보겠습니다."
+  ],
+  sales: ["요구사항을 다시 한번 확인하고 있습니다.", "말 한마디가 계약 분위기를 바꿀 수 있습니다.", "상대가 정말 원하는 게 무엇인지부터 보겠습니다."],
+  pm: ["일정과 담당자를 다시 맞추고 있습니다.", "막힌 업무가 없는지 팀 전체를 확인하겠습니다.", "순서만 잘 잡으면 생각보다 빨리 끝납니다."],
+  dev: ["반복되는 부분부터 자동화해보겠습니다.", "원인을 찾았으니 이제 해결할 차례입니다.", "지금 수정한 부분을 다시 검증하고 있습니다."],
+  finance: ["비용과 위험을 함께 확인하고 있습니다.", "지출 근거부터 정확히 맞추겠습니다.", "숫자가 맞아야 다음 판단도 정확해집니다."]
+};
+
+const EMPLOYEE_TAP_COMPLAINTS = {
+  perfectionist: ["대표님, 계속 부르시면 검수 흐름이 끊깁니다.", "이 부분만큼은 집중해서 확인하게 해주세요."],
+  mood: ["대표님, 반가운 건 맞는데 업무도 해야죠.", "이렇게 자주 부르시면 오늘 야근할지도 몰라요."],
+  realist: ["대표님, 호출이 반복되면 일정이 늦어집니다.", "지금은 대화보다 업무를 계속하는 편이 좋겠습니다."],
+  quiet: ["대표님… 지금은 조금 집중하고 싶습니다.", "필요한 말씀은 한 번에 해주시면 좋겠습니다."],
+  competitive: ["대표님, 자꾸 부르시면 성과로 보여드릴 시간이 없습니다.", "이제 제 업무에 집중해도 되겠습니까?"],
+  creative: ["대표님, 방금 떠오른 생각을 놓칠 것 같습니다.", "잠깐만 집중할 시간을 주시면 정리해서 말씀드리겠습니다."]
+};
+
+const EMPLOYEE_TAP_FINALS = {
+  perfectionist: ["네. 이제 확인은 그만하고 일하겠습니다."], mood: ["알겠습니다. 이제 정말 일 좀 할게요."],
+  realist: ["이제 업무로 돌아가겠습니다."], quiet: ["…이제 일하겠습니다."],
+  competitive: ["좋습니다. 다음에는 결과로 말씀드리겠습니다."], creative: ["이 생각부터 마무리하겠습니다. 잠시만요."]
+};
+
+const REPRESENTATIVE_TAP_DIALOGUES = [
+  "오늘 우선순위를 다시 확인해보자.", "팀이 막히는 부분부터 살펴봐야겠다.", "다음 프로젝트 준비도 미리 해두자.",
+  "사무실이 조금씩 회사다워지고 있다.", "중요한 판단은 내가 직접 해야 한다.", "성과와 사람, 둘 다 놓치지 말자.",
+  "지출이 커지기 전에 현금을 확인하자.", "직원들의 상태도 가끔 살펴봐야겠다."
+];
 const POSTING_REFRESH_MAX = 2;
 const PAID_POSTING_REFRESH_COST = 200;
 const NORMAL_DAMAGE_VARIANCE = .12;
@@ -346,6 +405,7 @@ const MANAGEMENT = window.OfficeRaidManagement;
 const LABOR = window.OfficeRaidLaborInspection;
 const TEAM_DISPUTE = window.OfficeRaidTeamDispute;
 const SECRETARY = window.OfficeRaidSecretary;
+const OFFICE_TALK = window.OfficeDialogueSystem;
 if (!FEATURES) throw new Error("restored-features.js must load before game.js");
 if (!BALANCE) throw new Error("balance-rules.js must load before game.js");
 if (!ACTIVITIES) throw new Error("employee-activities.js must load before game.js");
@@ -353,6 +413,7 @@ if (!MANAGEMENT) throw new Error("office-management.js must load before game.js"
 if (!LABOR) throw new Error("labor-inspection.js must load before game.js");
 if (!TEAM_DISPUTE) throw new Error("team-dispute.js must load before game.js");
 if (!SECRETARY) throw new Error("secretary-system.js must load before game.js");
+if (!OFFICE_TALK) throw new Error("office-dialogue.js must load before game.js");
 const COMPANY_LEVELS = [
   { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
   { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
@@ -377,6 +438,8 @@ let equipmentSaleTargetIds = [];
 let officePage = 0;
 let officeDialogueTimer = null;
 let recentOfficeDialogueIds = [];
+let officeTapStates = new Map();
+let recentEmployeeTapDialogues = new Map();
 let companyLaunchTimer = null;
 let hrTerminationTargetId = null;
 let activityMiniGamePicks = [];
@@ -1206,6 +1269,77 @@ function scheduleOfficeDialogue(delay = 1400) {
   officeDialogueTimer = window.setTimeout(runOfficeDialogue, delay);
 }
 
+function resetOfficeTapDialogueState() {
+  officeTapStates = new Map();
+  recentEmployeeTapDialogues = new Map();
+}
+
+function employeeTapDialoguePool(member) {
+  if (member.isRepresentative) return [...REPRESENTATIVE_TAP_DIALOGUES];
+  const personality = officePersonality(member);
+  const archetype = departmentArchetype(member.department);
+  const pool = [
+    ...EMPLOYEE_TAP_DIALOGUES.common,
+    ...(EMPLOYEE_TAP_DIALOGUES[personality] || []),
+    ...(EMPLOYEE_TAP_DIALOGUES[archetype] || [])
+  ];
+  if (state.teamIds.includes(member.id)) pool.push(
+    "이번 프로젝트 순서도 확인했습니다.",
+    "팀에 들어간 만큼 제 몫은 확실히 하겠습니다.",
+    "긴급 지시가 오면 바로 대응하겠습니다."
+  );
+  const equipped = Object.values(member.equipment || {}).filter(Boolean);
+  if (equipped.length) pool.push(
+    `${equipped[0].name}, 생각보다 손에 잘 맞습니다.`,
+    `지금 장비 ${equipped.length}개를 업무에 사용하고 있습니다.`
+  );
+  else pool.push("장비가 없어도 맡은 일은 해내겠습니다.");
+  if (state.cash < Math.max(600, totalPayroll())) pool.push("요즘 회사 사정이 빠듯해 보이는데 괜찮으신가요?");
+  if (state.reputation >= 300) pool.push("요즘 우리 회사를 알아보는 사람이 많아졌습니다.");
+  if (state.projectClears >= 10) pool.push("예전보다 훨씬 큰 프로젝트도 익숙해졌습니다.");
+  if (state.companyLevel >= LABOR.UNLOCK_COMPANY_LEVEL && state.laborCompliance.score >= 5) pool.push("최근 일정이 조금 빡빡합니다. 근무 기록도 확인해주세요.");
+  return pool;
+}
+
+function employeeComplaintLine(member, stage) {
+  if (member.isRepresentative) return stage === "final"
+    ? "이제 화면을 그만 보고 업무를 진행하자."
+    : "나부터 집중해야 직원들도 따라오겠지.";
+  const personality = officePersonality(member);
+  const lines = stage === "final" ? EMPLOYEE_TAP_FINALS[personality] : EMPLOYEE_TAP_COMPLAINTS[personality];
+  const tapState = officeTapStates.get(member.id);
+  const index = Math.max(0, (tapState?.count || 1) - 4) % Math.max(1, lines?.length || 1);
+  return lines?.[index] || "대표님, 이제 업무에 집중하겠습니다.";
+}
+
+function finishManualOfficeSpeech() {
+  if (currentView !== "office") return;
+  document.querySelectorAll(".office-speech.show").forEach(bubble => bubble.classList.remove("show"));
+  officeDialogueTimer = window.setTimeout(runOfficeDialogue, 5200 + randomInt(2600));
+}
+
+function handleOfficeEmployeeTap(memberId) {
+  const member = state.employees.find(item => item.id === memberId);
+  if (!member || currentView !== "office") return;
+  clearOfficeDialogue();
+  const tapState = OFFICE_TALK.nextTap(officeTapStates.get(member.id));
+  officeTapStates.set(member.id, tapState);
+  if (tapState.stage === "silent") {
+    officeDialogueTimer = window.setTimeout(runOfficeDialogue, 6200);
+    return;
+  }
+  let line = "";
+  if (tapState.stage === "normal") {
+    const recent = recentEmployeeTapDialogues.get(member.id) || [];
+    line = OFFICE_TALK.pickFresh(employeeTapDialoguePool(member), recent, Math.random());
+    recentEmployeeTapDialogues.set(member.id, [...recent.slice(-4), line]);
+  } else {
+    line = employeeComplaintLine(member, tapState.stage);
+  }
+  if (!showOfficeSpeech(member, line)) return;
+  officeDialogueTimer = window.setTimeout(finishManualOfficeSpeech, tapState.stage === "final" ? 3600 : 3000);
+}
+
 function equipmentArtFor(item) {
   if (item.art) return item.art;
   return EQUIPMENT_CATALOG.find(([name]) => name === item.name)?.[2] || item.slot || "personal";
@@ -1338,14 +1472,11 @@ function officeEquipmentMarkup(member) {
     const rarity = EQUIPMENT_RARITIES[item.rarity];
     return `<canvas class="office-equipment-prop placement-${officeEquipmentPlacement(item)} prop-${escapeHtml(art)} rarity-${item.rarity}" width="24" height="24" data-equipment-icon="${escapeHtml(art)}" data-equipment-rarity="${item.rarity}" style="--rarity-color:${rarity.color}" aria-label="${escapeHtml(item.name)} · ${officeEquipmentUsage(item)}"></canvas>`;
   }).join("");
-  const details = equipped.length
-    ? equipped.map(item => `<span><b style="color:${EQUIPMENT_RARITIES[item.rarity].color}">${escapeHtml(item.name)}</b><small>${officeEquipmentUsage(item)}</small></span>`).join("")
-    : `<span class="office-no-equipment">사용 중인 장비가 없습니다.</span>`;
   return `<div class="office-workspace" aria-hidden="true">
     <div class="office-character"><canvas class="office-portrait" width="24" height="24" data-portrait="${member.id}"></canvas>${props}</div>
     <img class="office-desk-base" src="assets/office-desk-base.webp?v=20260831" alt="">
     <img class="office-monitor-back" src="assets/office-monitor-back.webp?v=20260831" alt="">
-  </div><div class="office-loadout-popover" aria-hidden="true"><em>현재 사용 장비</em>${details}</div>`;
+  </div>`;
 }
 
 
@@ -1452,7 +1583,7 @@ function officeDeskMarkup(member, seatIndex = null, { executive = false, reserve
       <span class="empty-seat-marker">${reserved ? "자리 비움" : "빈 자리"}</span>
     </div>`;
   }
-  return `<div class="desk ${executive ? "executive-desk" : ""}" data-office-worker="${member.id}"${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(member.name)}의 ${executive ? "대표석" : "사용 장비 확인"}">
+  return `<div class="desk ${executive ? "executive-desk" : ""}" data-office-worker="${member.id}"${seatAttribute} role="button" tabindex="0" aria-label="${escapeHtml(member.name)}에게 말 걸기${executive ? "" : ", 길게 눌러 자리 이동"}">
     <span class="office-speech" data-office-speech="${member.id}" aria-live="polite"></span>${officeEquipmentMarkup(member)}<span class="desk-identity"><strong>${escapeHtml(member.name)}</strong><small>${executive ? "대표 전용석" : `${DEPARTMENTS[member.department].short} · ${employeePosition(member)}`}</small></span>
   </div>`;
 }
@@ -1653,8 +1784,8 @@ function secretaryRecommendTeam(projectId, { silent = false } = {}) {
 
 function secretaryRunProject(projectId, riskTier) {
   const project = [...PROJECTS, ...BOSS_PROJECTS].find(item => item.id === projectId);
-  const allowed = state.secretary && state.companyLevel >= 2 && !project?.boss && state.clearedProjectIds.includes(projectId);
-  if (!allowed) return renderProjectBoard("비서 자동 진행은 대형 오피스에서 이미 완료한 일반 프로젝트에만 사용할 수 있습니다.");
+  const allowed = state.secretary && project && state.tutorialBattleCompleted;
+  if (!allowed) return renderProjectBoard("비서 영입 후 프로젝트 자동 진행을 사용할 수 있습니다.");
   if (!secretaryRecommendTeam(projectId, { silent: true })) return renderProjectBoard("프로젝트에 투입할 근무 직원이 부족합니다.");
   secretaryAutoEquipTeam({ silent: true });
   secretaryStartPending = true;
@@ -1736,7 +1867,7 @@ function renderSecretaryWelcome(step = 0) {
   const pages = [
     { kicker: "WELCOME TO THE OFFICE", title: `${candidate.name} 비서가 합류했습니다`, copy: candidate.greeting, detail: "프로젝트 추천 편성, 장비 자동 장착, 중고거래 판매 추천을 맡습니다." },
     { kicker: "ASSIST BUTTON", title: "필요한 화면에서 바로 부르세요", copy: "프로젝트·장비 관리·중고거래·인사 관리 화면에 비서 버튼이 추가됩니다.", detail: "별도의 비서실을 오갈 필요 없이 현재 업무 화면에서 바로 도움을 받을 수 있습니다." },
-    { kicker: "REPRESENTATIVE'S WORK", title: "중요한 판단은 대표가 직접 합니다", copy: "업무 메일, 최초 프로젝트, 보스전, 분쟁과 돌발 사건에는 자동으로 개입하지 않습니다.", detail: "도울 수 없는 업무에서는 가끔 말풍선으로 상황만 알려드립니다." }
+    { kicker: "REPRESENTATIVE'S WORK", title: "중요한 판단은 대표가 직접 합니다", copy: "업무 메일, 분쟁과 돌발 사건에는 자동으로 개입하지 않습니다.", detail: "프로젝트 진행과 스킬 선택은 맡길 수 있지만 대표의 판단이 필요하면 자동 진행을 잠시 멈춥니다." }
   ];
   const safeStep = Math.max(0, Math.min(pages.length - 1, Number(step) || 0));
   const page = pages[safeStep];
@@ -1751,8 +1882,10 @@ function renderSecretaryWelcome(step = 0) {
   });
 }
 
-function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트 팀을 편성하세요.", animateEntry = false) {
+function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트 팀을 편성하세요.", animateEntry = false) {
+  const enteringOffice = currentView !== "office";
   currentView = "office";
+  if (enteringOffice) resetOfficeTapDialogueState();
   clearCompanyLaunchTimer();
   clearBattleTimer();
   if (state.secretary && !state.secretary.introSeen) return renderSecretaryWelcome(0);
@@ -1761,11 +1894,7 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const roadmapReward = syncSecretaryRoadmapRewards();
   saveGame();
   const tutorialPending = !state.tutorialBattleCompleted;
-  const officeNotice = tutorialPending ? "창립팀으로 첫 프로젝트를 완료해 면접 기능을 해금하세요." : roadmapReward || notice;
-  const teamNames = orderedBattleTeam().map(member => escapeHtml(member.name)).join(" → ");
-  const specialRecruitment = state.specialRecruitmentTickets > 0
-    ? `이용권 ${state.specialRecruitmentTickets}장 보유`
-    : specialRecruitmentProgress();
+  const officeNotice = tutorialPending ? "창립팀으로 첫 프로젝트를 완료해 채용 기능을 해금하세요." : roadmapReward || notice;
   repairOfficeSeats();
   const maximumOfficePages = MANAGEMENT.maximumOfficePages(state.capacity, state.companyLevel);
   const occupiedOfficePages = MANAGEMENT.occupiedOfficePages(state.officeSeats, state.companyLevel);
@@ -1775,23 +1904,18 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const assignedMemberCount = visibleSeatIndices.filter(index => state.officeSeats[index]).length
     + (MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? 1 : 0);
   const equippedCount = equippedEquipmentCount();
-  const activeMail = state.workMail;
   const dailyMail = state.dailyMissions;
   const pendingMail = dailyMail?.items?.find(item => item.arrived && !item.completed);
   const allMailCompleted = Boolean(dailyMail?.items?.length && dailyMail.items.every(item => item.completed));
-  const pendingSender = state.employees.find(member => member.id === pendingMail?.senderId);
   const mailStateClass = pendingMail ? "unread" : allMailCompleted ? "completed" : "waiting";
-  const mailKicker = pendingMail ? "NEW WORK MAIL" : allMailCompleted ? "TODAY'S TASK COMPLETE" : "MAILBOX";
-  const mailTitle = pendingMail ? `${escapeHtml(pendingSender?.name || activeMail?.problem?.senderName || "직원")}의 검토 요청` : allMailCompleted ? "오늘의 임무 완료!" : "다음 업무 메일 대기 중";
-  const mailAction = pendingMail ? "답변" : "확인";
-  const mailMarkup = tutorialPending ? "" : `<button class="office-mail ${mailStateClass}" id="work-mail"><span aria-hidden="true">✉</span><div><small>${mailKicker}</small><strong>${mailTitle}</strong><em>정확도 ${workMailAccuracyLabel()}</em></div><b>${mailAction}</b></button>`;
+  const unreadMailCount = dailyMail?.items?.filter(item => item.arrived && !item.completed).length || 0;
+  const mailMarkup = tutorialPending ? "" : `<button class="office-mail-icon ${mailStateClass}" id="work-mail" aria-label="업무 메일${unreadMailCount ? ` ${unreadMailCount}건 도착` : allMailCompleted ? ", 오늘 업무 완료" : ", 대기 중"}"><img class="office-nav-icon" src="assets/ui/office-nav-mail.webp?v=20260904-nav-v1" alt="">${unreadMailCount ? `<b>${unreadMailCount}</b>` : allMailCompleted ? `<b class="complete">✓</b>` : ""}</button>`;
   const industry = currentIndustry();
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
   const expansionReady = nextCompany && state.projectClears >= nextCompany.requiredClears && state.cash >= nextCompany.cost;
-  const laborBand = LABOR.riskBand(state.laborCompliance.score);
   const activeActivities = [state.training, state.businessTrip].filter(Boolean);
-  const activityMarkup = activeActivities.length ? `<div class="office-activities panel">${activeActivities.map(activity => {
+  const activityMarkup = activeActivities.length ? `<div class="office-activity-toast">${activeActivities.map(activity => {
     const member = state.employees.find(item => item.id === activity.employeeId);
     return `<span class="${activity.type}"><small>${activity.type === "training" ? "교육 중" : "출장 중"}</small><strong>${escapeHtml(member?.name || "직원")}</strong><em>${escapeHtml(activityStatusText(activity))}</em></span>`;
   }).join("")}</div>` : "";
@@ -1804,36 +1928,30 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   const secretaryAssist = secretaryAssistMarkup("office");
   const officeZone = `<div class="office-zone"><span>${company.grade} · 근무 구역 ${officePage + 1}/${officePageCount}</span><em>길게 눌러 자리 이동</em>${officePageCount > 1 ? `<button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button>` : ""}</div>`;
   const desks = officePageDesks(officePage);
-  app.innerHTML = `${header(company.name, officeNotice)}
-    <section class="screen">
-      <div class="office-room panel company-level-${company.id} staff-${assignedMemberCount} ${MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? "has-executive-seat" : ""}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 배정 직원 ${assignedMemberCount}명">${officeZone}${desks}</div>
+  app.innerHTML = `<section class="screen office-screen-a">
+      <div class="office-stage">
+        <div class="office-hud" aria-label="회사 현황">
+          <button class="office-company-chip ${expansionReady ? "expansion-ready" : ""}" id="expand" ${tutorialPending ? "disabled" : ""} aria-label="${escapeHtml(state.companyName)}, ${company.name}${nextCompany ? ", 회사 확장 확인" : ", 확장 완료"}">
+            <img class="office-expand-icon" src="assets/ui/office-nav-expand.webp?v=20260904-nav-v1" alt=""><span><strong>${escapeHtml(state.companyName)}</strong><small>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</small></span>
+          </button>
+          <div class="office-hud-resources">
+            <span><small>현금</small><b>${state.cash}<i>만</i></b></span><span><small>평판</small><b>${state.reputation}</b></span><span><small>직원</small><b>${state.employees.length}<i>/${state.capacity}</i></b></span>
+          </div>
+          ${mailMarkup}
+        </div>
+        <div class="office-room company-level-${company.id} staff-${assignedMemberCount} ${MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? "has-executive-seat" : ""}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 배정 직원 ${assignedMemberCount}명">${officeZone}${desks}</div>
+        <div class="office-status-toast" role="status">${escapeHtml(officeNotice)}</div>
       ${activityMarkup}
-      ${mailMarkup}
-      <div class="company-card panel">
-        <div class="company-card-head"><div><small>COMPANY FILE · ${company.grade}</small><h2>${escapeHtml(state.companyName)}</h2></div><b>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1}</b></div>
-        <div class="company-stats" aria-label="회사 현황">
-          <span><small>직원</small><strong>${state.employees.length}<i>/ ${state.capacity}</i></strong></span>
-          <span><small>현금</small><strong>${state.cash}<i>만원</i></strong></span>
-          <span><small>평판</small><strong>${state.reputation}<i>점</i></strong></span>
-        </div>
-        <div class="company-notes">
-          <p><b>ACTION ORDER</b><span>${teamNames}</span></p>
-          <p><b>성과 ${state.projectClears}회 · 급여 D-${projectsUntilPayroll()}</b><span>월급 ${totalPayroll()} · 특별채용 ${specialRecruitment}</span></p>
-          ${tutorialPending ? "" : `<p><b>업무 정확도</b><span>${workMailAccuracyLabel()} · 연속 ${state.workMailStats.streak}회</span></p>`}
-          ${state.companyLevel >= LABOR.UNLOCK_COMPANY_LEVEL ? `<p class="labor-risk-note risk-${laborBand.id}" style="--labor-tone:${laborBand.color}"><b>노무 위험도</b><span>${state.laborCompliance.score} · ${laborBand.label}</span></p>` : ""}
-          ${secretaryGoal}
-          ${tutorialPending ? `<p class="onboarding-note"><b>FIRST MISSION</b><span>첫 프로젝트 성공 시 면접 기능 해금</span></p>` : ""}
-        </div>
+        ${secretaryGoal}
+        ${secretaryAssist}
       </div>
-      <div class="actions office-actions">
-        <button class="blue ${tutorialPending ? "tutorial-locked" : ""}" id="interview" ${tutorialPending ? "disabled" : ""}>${tutorialPending ? "면접 잠김" : "면접"}</button>
-        <button class="teal" id="team">팀 편성</button>
-        <button class="mustard" id="equipment" aria-label="장착 장비 ${equippedCount}개, 보관 장비 ${state.equipment.length}개">장착 ${equippedCount} · 보관 ${state.equipment.length}</button>
-        <button class="ink" id="hr">인사 관리</button>
-        <button class="blue ${expansionReady ? "expansion-ready" : ""}" id="expand" ${tutorialPending ? "disabled" : ""}>${tutorialPending ? "확장 잠김" : nextCompany ? expansionReady ? "확장 가능" : "회사 확장" : "확장 완료"}</button>
-        <button class="red ${tutorialPending ? "tutorial-next" : ""}" id="project">${tutorialPending ? "첫 프로젝트 시작" : "프로젝트"}</button>
-      </div>
-      ${secretaryAssist}
+      <nav class="office-dock" aria-label="주요 메뉴">
+        <button class="blue ${tutorialPending ? "tutorial-locked" : ""}" id="interview" ${tutorialPending ? "disabled" : ""}><img class="office-nav-icon" src="assets/ui/office-nav-hire.webp?v=20260904-nav-v1" alt=""><b>${tutorialPending ? "잠김" : "채용"}</b></button>
+        <button class="teal" id="team"><img class="office-nav-icon" src="assets/ui/office-nav-team.webp?v=20260904-nav-v1" alt=""><b>팀 편성</b></button>
+        <button class="mustard" id="equipment" aria-label="장착 장비 ${equippedCount}개, 보관 장비 ${state.equipment.length}개"><img class="office-nav-icon" src="assets/ui/office-nav-equipment.webp?v=20260904-nav-v1" alt=""><b>장비</b><i>${equippedCount}</i></button>
+        <button class="ink" id="hr"><img class="office-nav-icon" src="assets/ui/office-nav-hr.webp?v=20260904-nav-v1" alt=""><b>인사</b></button>
+        <button class="red ${tutorialPending ? "tutorial-next" : ""}" id="project"><img class="office-nav-icon" src="assets/ui/office-nav-project.webp?v=20260904-nav-v1" alt=""><b>${tutorialPending ? "첫 프로젝트" : "프로젝트"}</b></button>
+      </nav>
     </section>`;
   mountPortraits();
   mountEquipmentIcons();
@@ -1849,23 +1967,14 @@ function renderOffice(notice = "면접으로 동료를 채용하고 프로젝트
   document.querySelector("#office-page-prev")?.addEventListener("click", () => { officePage -= 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
   document.querySelector("#office-page-next")?.addEventListener("click", () => { officePage += 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
   document.querySelectorAll("[data-office-worker]:not(.office-empty-desk)").forEach(desk => {
-    const toggleLoadout = () => {
-      const willOpen = !desk.classList.contains("loadout-open");
-      document.querySelectorAll("[data-office-worker].loadout-open").forEach(openDesk => {
-        openDesk.classList.remove("loadout-open");
-        openDesk.querySelector(".office-loadout-popover")?.setAttribute("aria-hidden", "true");
-      });
-      desk.classList.toggle("loadout-open", willOpen);
-      desk.querySelector(".office-loadout-popover")?.setAttribute("aria-hidden", willOpen ? "false" : "true");
-    };
     desk.addEventListener("click", () => {
       if (Date.now() < officeSuppressClickUntil) return;
-      toggleLoadout();
+      handleOfficeEmployeeTap(desk.dataset.officeWorker);
     });
     desk.addEventListener("keydown", event => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      toggleLoadout();
+      handleOfficeEmployeeTap(desk.dataset.officeWorker);
     });
   });
   document.querySelectorAll(".office-empty-desk").forEach(desk => desk.addEventListener("click", () => {
@@ -2942,8 +3051,8 @@ function projectCard(project, locked = false) {
   const riskTone = project.riskTone || (project.boss ? "boss" : "stable");
   const secretaryTeam = state.secretary && !locked
     ? `<button class="blue secretary-team-button" data-secretary-team="${project.id}">비서 추천 팀</button>` : "";
-  const secretaryRun = state.secretary && state.companyLevel >= 2 && !project.boss && !locked && state.clearedProjectIds.includes(project.id)
-    ? `<button class="mustard secretary-run-button" data-secretary-run="${project.id}" data-secretary-risk="${project.riskTier || "stable"}">비서에게 맡기기 · 3배속</button>` : "";
+  const secretaryRun = state.secretary && !locked && state.tutorialBattleCompleted
+    ? `<button class="mustard secretary-run-button" data-secretary-run="${project.id}" data-secretary-risk="${project.riskTier || "stable"}">비서 자동 진행 · 3배속</button>` : "";
   return `<article class="project-card panel ${project.boss ? "boss-project" : ""} risk-${riskTone} ${locked ? "locked" : ""}">
     <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><b class="project-risk-badge risk-${riskTone}">${escapeHtml(riskLabel)}</b><strong>${escapeHtml(project.name)}</strong><small>EP.${episode.chapter} ${escapeHtml(episode.name)}</small></div>
     <p>${escapeHtml(project.summary)}</p>
@@ -2967,8 +3076,7 @@ function renderProjectBoard(notice = "") {
   const boardNotice = notice || (tutorialPending
     ? `${industry?.name || "회사"} 창립팀 첫 임무 · 전투 규칙을 배우고 면접을 해금하세요.`
     : `${industry?.name || "회사"} · EP.${episode.chapter} ${episode.name} · ${episode.description}`);
-  const largeOffice = state.companyLevel >= 2;
-  const secretaryControls = state.secretary && !tutorialPending ? `<div class="secretary-inline-controls panel"><div><small>비서 프로젝트 지원</small><strong>추천 편성 · 완료 프로젝트 자동 진행</strong></div><button class="secretary-toggle ${state.secretary.autoDirective && largeOffice ? "active" : ""}" id="toggle-secretary-directive" aria-pressed="${Boolean(state.secretary.autoDirective && largeOffice)}" ${largeOffice ? "" : "disabled"}><i></i><span>${largeOffice ? `긴급 지시 자동 ${state.secretary.autoDirective ? "ON" : "OFF"}` : "대형 오피스에서 자동 지시 해금"}</span></button></div>` : "";
+  const secretaryControls = state.secretary && !tutorialPending ? `<div class="secretary-inline-controls panel"><div><small>비서 프로젝트 지원</small><strong>추천 편성 · 전투와 스킬 선택 자동 진행</strong></div><button class="secretary-toggle ${state.secretary.autoDirective ? "active" : ""}" id="toggle-secretary-directive" aria-pressed="${Boolean(state.secretary.autoDirective)}"><i></i><span>자동 진행 기본값 ${state.secretary.autoDirective ? "ON" : "OFF"}</span></button></div>` : "";
   const secretaryAssist = secretaryAssistMarkup("projects", state.secretary ? "각 프로젝트의 추천 편성 버튼을 누르면 바로 팀을 정리해드릴게요." : "");
   app.innerHTML = `${header(tutorialPending ? "첫 프로젝트" : "프로젝트 선택", boardNotice)}
     <section class="screen project-board">
@@ -2981,9 +3089,8 @@ function renderProjectBoard(notice = "") {
   document.querySelectorAll("[data-secretary-team]").forEach(button => button.addEventListener("click", () => secretaryRecommendTeam(button.dataset.secretaryTeam)));
   document.querySelectorAll("[data-secretary-run]").forEach(button => button.addEventListener("click", () => secretaryRunProject(button.dataset.secretaryRun, button.dataset.secretaryRisk)));
   document.querySelector("#toggle-secretary-directive")?.addEventListener("click", () => {
-    if (!largeOffice) return;
     state.secretary.autoDirective = !state.secretary.autoDirective;
-    queueSecretaryAssist("projects", `긴급 지시 자동 선택을 ${state.secretary.autoDirective ? "켰습니다" : "껐습니다"}.`, "smile");
+    queueSecretaryAssist("projects", `프로젝트 자동 진행 기본값을 ${state.secretary.autoDirective ? "켰습니다" : "껐습니다"}.`, "smile");
     saveGame();
     renderProjectBoard();
   });
@@ -3313,7 +3420,7 @@ function startBattle(projectId, riskTier = "stable") {
   const project = tutorialMode || source.boss ? scaled : projectWithRisk(scaled, riskTier);
   const coverage = BALANCE.recommendedCoverage(orderedBattleTeam(), project);
   const pressure = BALANCE.eventProfile({ project, missingRecommended: coverage.missing });
-  const secretaryManaged = Boolean(secretaryStartPending);
+  const secretaryManaged = Boolean(secretaryStartPending || (!tutorialMode && state.secretary?.autoDirective));
   secretaryStartPending = false;
   battle = {
     project, coverage, pressure,
@@ -3557,7 +3664,7 @@ function openDirective() {
     battle.tutorialPage = 3;
   }
   renderBattle();
-  if (state.secretary && state.companyLevel >= 2 && (battle.secretaryManaged || state.secretary.autoDirective)) {
+  if (state.secretary && (battle.secretaryManaged || state.secretary.autoDirective)) {
     battleTimer = window.setTimeout(secretarySelectDirectivePlan, battleDelay(420));
   }
 }
@@ -4150,6 +4257,22 @@ function confirmBattleLeave() {
   renderOffice("프로젝트를 중단하고 사무실로 돌아왔습니다.");
 }
 
+function toggleSecretaryBattleAutomation() {
+  if (!battle || !state.secretary || battle.tutorialMode || battle.result || battle.skillFx?.phase === "calculating") return;
+  clearBattleTimer();
+  battle.secretaryManaged = !battle.secretaryManaged;
+  state.secretary.autoDirective = battle.secretaryManaged;
+  battle.log = battle.secretaryManaged
+    ? `${secretaryCandidate()?.name || "비서"}가 전투 진행과 스킬 선택을 맡았습니다.`
+    : "비서 자동 진행을 멈췄습니다. 대표가 직접 프로젝트를 진행합니다.";
+  saveGame();
+  renderBattle();
+  if (battle.secretaryManaged && battle.awaitingDirective && !battle.teamDispute && !battle.skillFx) {
+    clearBattleTimer();
+    battleTimer = window.setTimeout(secretarySelectDirectivePlan, battleDelay(420));
+  }
+}
+
 function renderBattle() {
   const team = orderedBattleTeam();
   const preview = activeDirectivePreview(team);
@@ -4200,7 +4323,9 @@ function renderBattle() {
       : battle.secretaryManaged ? `${secretaryCandidate()?.name || "비서"}가 프로젝트를 3배속으로 진행하고 있습니다.`
         : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요."
           : "아군은 아래에서 위쪽의 프로젝트를 공략합니다.";
-  const secretaryBattleBadge = battle.secretaryManaged ? `<div class="secretary-battle-badge">${secretaryArt(state.secretary.candidateId, "face", "focus")}<span><small>SECRETARY MODE</small><b>${escapeHtml(secretaryCandidate()?.name || "비서")} · 3배속 자동 진행</b></span></div>` : "";
+  const secretaryBattleBadge = state.secretary && !battle.tutorialMode && !battle.result
+    ? `<button class="secretary-battle-badge ${battle.secretaryManaged ? "active" : ""}" id="toggle-secretary-battle" aria-pressed="${battle.secretaryManaged}" ${battle.skillFx?.phase === "calculating" ? "disabled" : ""}>${secretaryArt(state.secretary.candidateId, "face", battle.secretaryManaged ? "focus" : "smile")}<span><small>SECRETARY MODE</small><b>${battle.secretaryManaged ? `${escapeHtml(secretaryCandidate()?.name || "비서")} · 3배속 자동 진행 중` : "비서 자동 진행 켜기 · 스킬 선택 포함"}</b></span><i aria-hidden="true"></i></button>`
+    : "";
   app.innerHTML = `${header("프로젝트 돌입", battleNotice)}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">
       ${secretaryBattleBadge}
@@ -4219,6 +4344,7 @@ function renderBattle() {
   document.querySelectorAll("[data-directive-member]").forEach(button => button.addEventListener("click", () => selectDirectiveMember(button.dataset.directiveMember)));
   document.querySelectorAll("[data-directive-skill]").forEach(button => button.addEventListener("click", () => selectDirectiveSkill(button.dataset.memberId, button.dataset.directiveSkill)));
   document.querySelector("#execute-directive")?.addEventListener("click", executeDirective);
+  document.querySelector("#toggle-secretary-battle")?.addEventListener("click", toggleSecretaryBattleAutomation);
   document.querySelectorAll("[data-dispute-choice]").forEach(button => button.addEventListener("click", () => resolveTeamDispute(button.dataset.disputeChoice)));
   document.querySelector("#battle-help")?.addEventListener("click", openBattleHelp);
   document.querySelector("#leave-battle").addEventListener("click", requestBattleLeave);

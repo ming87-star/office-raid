@@ -75,6 +75,31 @@
     return '<g data-layer="hair-front"><path d="' + paths[look.hair % 8] + '" fill="' + hair + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/><path d="M58 33 Q70 23 82 24 M91 26 Q102 30 108 38" fill="none" stroke="' + shade(hair, 44) + '" stroke-width="3" stroke-linecap="round" opacity=".7"/><path d="M62 28 Q70 22 78 23 M88 24 Q98 27 104 34" fill="none" stroke="' + shade(hair, 68) + '" stroke-width="1.7" stroke-linecap="round" opacity=".4"/></g>';
   }
 
+  function femaleHairBack(look, hair) {
+    const style = look.hair % 8;
+    const shapes = [
+      "M42 57 C36 31 53 15 79 15 C107 15 124 33 118 63 L115 104 Q102 115 93 104 L63 104 Q48 111 44 96Z",
+      "M42 57 C36 30 53 15 79 15 C107 15 124 32 118 62 Q115 83 104 99 Q98 108 91 99 L66 99 Q55 108 47 94Z",
+      "M43 58 C36 33 52 16 78 16 C106 15 122 32 118 60 Q126 71 119 88 Q111 98 100 91 L62 99 Q47 92 44 76Z",
+      "M43 56 C38 31 54 16 80 16 C108 16 122 34 117 61 L113 91 Q103 107 93 98 L65 98 Q51 105 45 91Z"
+    ];
+    let extra = "";
+    if (style === 2 || style === 6) extra = '<path d="M111 47 Q133 59 121 91 Q116 104 105 96 Q113 76 103 56Z" fill="' + hair + '" stroke="' + INK + '" stroke-width="4"/>';
+    if (style === 3 || style === 7) extra = '<circle cx="109" cy="31" r="15" fill="' + hair + '" stroke="' + INK + '" stroke-width="4"/><path d="M101 28 Q110 20 118 29" fill="none" stroke="' + shade(hair, 42) + '" stroke-width="3"/>';
+    return '<g data-layer="hair-back">' + extra + '<path d="' + shapes[Math.floor(style / 2) % 4] + '" fill="' + hair + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/><path d="M53 39 Q70 20 105 36" fill="none" stroke="' + shade(hair, 44) + '" stroke-width="3" stroke-linecap="round" opacity=".62"/></g>';
+  }
+
+  function femaleHairFront(look, hair) {
+    const paths = [
+      "M43 55 C38 31 55 16 79 16 C104 16 121 31 117 54 C105 47 97 39 92 31 C87 46 78 57 67 62 C66 49 61 41 54 37 C52 47 49 54 43 60Z",
+      "M43 55 C38 31 55 16 80 16 C106 16 122 31 117 55 C105 51 95 42 87 31 C82 46 69 58 48 62Z",
+      "M43 56 C37 35 51 18 77 16 C104 14 121 30 118 54 C108 45 98 39 88 35 C82 49 72 58 58 62Z",
+      "M44 54 C41 30 57 16 81 17 C105 17 120 31 116 54 C105 48 96 42 89 34 C84 48 75 57 64 61 C63 49 57 42 50 40Z"
+    ];
+    const fringe = paths[Math.floor((look.hair % 8) / 2) % 4];
+    return '<g data-layer="hair-front"><path d="' + fringe + '" fill="' + hair + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/><path d="M57 32 Q70 21 83 23 M91 25 Q101 29 108 37" fill="none" stroke="' + shade(hair, 48) + '" stroke-width="3" stroke-linecap="round" opacity=".68"/></g>';
+  }
+
   function eyebrows(look, hair) {
     const color = shade(hair, -20);
     const variants = [
@@ -145,6 +170,16 @@
     return '<g data-layer="body"><path d="M58 174 L76 174 L74 222 L51 222 Q50 214 55 207Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4"/><path d="M84 174 L102 174 L109 207 Q112 215 109 222 L86 222Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4"/><path d="M48 220 Q60 214 75 219 L74 231 L46 231 Q43 226 48 220Z" fill="#18242b" stroke="' + INK + '" stroke-width="4"/><path d="M86 219 Q101 214 112 220 Q117 227 112 231 L86 231Z" fill="#18242b" stroke="' + INK + '" stroke-width="4"/><path d="M49 226 Q61 222 71 225 M89 225 Q101 222 111 226" fill="none" stroke="#526a77" stroke-width="2" opacity=".7"/><path d="M61 103 Q46 107 42 127 L36 170 Q39 178 49 176 L57 143 L59 180 Q80 187 101 180 L103 143 L111 176 Q121 178 124 170 L118 127 Q114 107 99 103Z" fill="' + top + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/>' + detail + '<path d="M52 126 Q48 145 48 163 M108 126 Q112 145 112 163 M62 176 Q80 181 98 176" fill="none" stroke="' + light + '" stroke-width="2.2" stroke-linecap="round" opacity=".58"/><path d="M37 166 Q42 163 50 167 L49 181 Q40 186 34 177Z M110 167 Q118 163 123 168 L126 177 Q120 186 111 181Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3"/><path d="M38 174 Q42 177 47 175 M113 175 Q118 177 122 173" fill="none" stroke="' + skin.shade + '" stroke-width="1.7" opacity=".75"/><path d="M69 96 L70 110 Q80 118 90 110 L91 96Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/></g>';
   }
 
+  function femaleFrontBody(look, skin) {
+    const top = TOPS[look.top % TOPS.length];
+    const dark = shade(top, -32), light = shade(top, 36), bottom = BOTTOMS[look.bottom % BOTTOMS.length];
+    const skirt = look.bottom % 3 === 1;
+    const legs = skirt
+      ? '<path d="M58 167 Q80 177 102 167 L108 194 L85 194 L84 219 L98 219 L99 231 L82 231 Q78 226 80 219 L78 194 L60 194 L60 219 Q63 225 58 231 L42 231 L43 220 L57 219Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/><path d="M61 194 L60 218 M84 194 L84 218" stroke="' + skin.base + '" stroke-width="10"/>'
+      : '<path d="M59 171 L77 171 L75 220 L51 220 Q49 211 55 204Z M83 171 L101 171 L107 204 Q112 213 108 220 L85 220Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4"/><path d="M47 219 Q61 214 75 219 L74 231 L45 231Z M85 219 Q101 214 113 221 L111 231 L86 231Z" fill="#18242b" stroke="' + INK + '" stroke-width="4"/>';
+    return '<g data-layer="body">' + legs + '<path d="M62 103 Q49 107 45 126 L39 167 Q42 176 51 173 L59 143 L61 175 Q80 182 99 175 L101 143 L109 173 Q118 176 121 167 L115 126 Q111 107 98 103Z" fill="' + top + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/><path d="M67 106 Q80 121 93 106 M80 121 V171" fill="none" stroke="' + light + '" stroke-width="3"/><path d="M72 107 L80 120 L88 107" fill="' + (look.top % 2 ? dark : "#fff2d5") + '" stroke="' + INK + '" stroke-width="2"/><path d="M40 165 Q45 162 52 166 L50 180 Q42 185 36 176Z M108 166 Q116 162 122 167 L125 176 Q119 185 110 180Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3"/><path d="M70 96 L71 109 Q80 116 89 109 L90 96Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/></g>';
+  }
+
   function backBody(look, skin) {
     const top = TOPS[look.top % TOPS.length];
     const light = shade(top, 34);
@@ -152,12 +187,23 @@
     return '<g data-layer="body"><path d="M58 174 L76 174 L74 222 L51 222 Q50 214 55 207Z M84 174 L102 174 L109 207 Q112 215 109 222 L86 222Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4"/><path d="M48 220 Q60 214 75 219 L74 231 L46 231 Q43 226 48 220Z M86 219 Q101 214 112 220 Q117 227 112 231 L86 231Z" fill="#18242b" stroke="' + INK + '" stroke-width="4"/><path d="M61 103 Q46 107 42 127 L36 170 Q39 178 49 176 L57 143 L59 180 Q80 187 101 180 L103 143 L111 176 Q121 178 124 170 L118 127 Q114 107 99 103Z" fill="' + top + '" stroke="' + INK + '" stroke-width="4"/><path d="M60 108 Q80 118 100 108 M57 126 Q51 146 50 164 M103 126 Q109 146 110 164 M60 174 Q80 181 100 174" fill="none" stroke="' + light + '" stroke-width="2.3" stroke-linecap="round" opacity=".62"/><path d="M37 166 Q42 163 50 167 L49 181 Q40 186 34 177Z M110 167 Q118 163 123 168 L126 177 Q120 186 111 181Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3"/><path d="M69 94 L70 110 Q80 117 90 110 L91 94Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/></g>';
   }
 
-  function frontHead(look, skin, hair) {
-    return hairBack(look, hair) + '<g data-layer="face"><ellipse cx="47" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><ellipse cx="113" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><path d="' + facePath(look.face) + '" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/><path d="M53 49 Q59 36 79 34 Q99 35 107 50" fill="none" stroke="' + skin.light + '" stroke-width="8" stroke-linecap="round" opacity=".5"/><path d="M104 47 Q112 67 104 84 Q98 95 86 99 Q105 99 111 83 Q116 64 110 48Z" fill="' + skin.shade + '" opacity=".16"/>' + eyebrows(look, hair) + eyes(look) + nose(look, skin) + mouth(look) + '</g>' + hairFront(look, hair) + cosmetic(look, skin, false);
+  function femaleBackBody(look, skin) {
+    const top = TOPS[look.top % TOPS.length], light = shade(top, 34), bottom = BOTTOMS[look.bottom % BOTTOMS.length];
+    const skirt = look.bottom % 3 === 1;
+    const legs = skirt
+      ? '<path d="M58 168 Q80 177 102 168 L108 194 L85 194 L84 220 L98 220 L99 231 L82 231 L78 194 L60 194 L60 220 L58 231 L42 231 L43 220 L57 220Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4"/>'
+      : '<path d="M59 171 L77 171 L75 220 L51 220 Q49 211 55 204Z M83 171 L101 171 L107 204 Q112 213 108 220 L85 220Z" fill="' + bottom + '" stroke="' + INK + '" stroke-width="4"/><path d="M47 219 Q61 214 75 219 L74 231 L45 231Z M85 219 Q101 214 113 221 L111 231 L86 231Z" fill="#18242b" stroke="' + INK + '" stroke-width="4"/>';
+    return '<g data-layer="body">' + legs + '<path d="M62 103 Q49 107 45 126 L39 167 Q42 176 51 173 L59 143 L61 175 Q80 182 99 175 L101 143 L109 173 Q118 176 121 167 L115 126 Q111 107 98 103Z" fill="' + top + '" stroke="' + INK + '" stroke-width="4"/><path d="M62 110 Q80 119 98 110 M61 171 Q80 178 99 171" fill="none" stroke="' + light + '" stroke-width="2.5" opacity=".62"/><path d="M40 165 Q45 162 52 166 L50 180 Q42 185 36 176Z M108 166 Q116 162 122 167 L125 176 Q119 185 110 180Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3"/><path d="M70 95 L71 109 Q80 116 89 109 L90 95Z" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/></g>';
   }
 
-  function backHead(look, skin, hair) {
-    return '<g data-layer="face-back"><ellipse cx="47" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><ellipse cx="113" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><path d="' + facePath(look.face) + '" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/></g>' + hairBack(look, hair) + cosmetic(look, skin, true);
+  function frontHead(look, skin, hair, female) {
+    const backHair = female ? femaleHairBack(look, hair) : hairBack(look, hair);
+    const frontHair = female ? femaleHairFront(look, hair) : hairFront(look, hair);
+    return backHair + '<g data-layer="face"><ellipse cx="47" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><ellipse cx="113" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><path d="' + facePath(look.face) + '" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/><path d="M53 49 Q59 36 79 34 Q99 35 107 50" fill="none" stroke="' + skin.light + '" stroke-width="8" stroke-linecap="round" opacity=".5"/><path d="M104 47 Q112 67 104 84 Q98 95 86 99 Q105 99 111 83 Q116 64 110 48Z" fill="' + skin.shade + '" opacity=".16"/>' + eyebrows(look, hair) + eyes(look) + nose(look, skin) + mouth(look) + '</g>' + frontHair + cosmetic(look, skin, false);
+  }
+
+  function backHead(look, skin, hair, female) {
+    return '<g data-layer="face-back"><ellipse cx="47" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><ellipse cx="113" cy="67" rx="8" ry="12" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="3.5"/><path d="' + facePath(look.face) + '" fill="' + skin.base + '" stroke="' + INK + '" stroke-width="4"/></g>' + (female ? femaleHairBack(look, hair) : hairBack(look, hair)) + cosmetic(look, skin, true);
   }
 
   function render(member, direction, faceCrop) {
@@ -165,7 +211,10 @@
     const skin = SKINS[look.skin];
     const hair = HAIRS[Math.floor(look.hair / 3) % HAIRS.length];
     const back = direction === "back";
-    const contents = back ? backBody(look, skin) + backHead(look, skin, hair) : frontBody(look, skin) + frontHead(look, skin, hair);
+    const female = member?.gender === "female";
+    const contents = back
+      ? (female ? femaleBackBody(look, skin) : backBody(look, skin)) + backHead(look, skin, hair, female)
+      : (female ? femaleFrontBody(look, skin) : frontBody(look, skin)) + frontHead(look, skin, hair, female);
     const viewBox = faceCrop ? "34 18 92 104" : "22 10 116 228";
     renderId += 1;
     return '<svg class="character-svg" width="48" height="48" viewBox="' + viewBox + '" preserveAspectRatio="xMidYMid meet" role="img" data-render-id="' + renderId + '">' + contents + '</svg>';

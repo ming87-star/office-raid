@@ -36,6 +36,10 @@ jobs:
           node --check web/office-management.js
           node --check web/labor-inspection.js
           node --check web/team-dispute.js
+          node --check web/company-identity.js
+          node --check web/team-rules.js
+          node --check web/secretary-system.js
+          node --check web/illustrated-character.js
           node --check web/project-report-rules.js
           node --check web/game.js
           node --check web/project-report.js
@@ -53,6 +57,9 @@ jobs:
           node web/work-mail-layout.test.js
           node web/battle-lineup.test.js
           node web/office-identity.test.js
+          node web/company-identity.test.js
+          node web/team-rules.test.js
+          node web/customization-integration.test.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

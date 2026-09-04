@@ -36,7 +36,9 @@ assert.match(canonical, /id="secretary-market-recommend"/);
 assert.match(canonical, /secretaryMailAssistMarkup\(mail\.id\)/);
 assert.match(canonical, /secretary-sale-recommended/);
 assert.match(css, /equipment-lock-toggle\.locked/);
-assert.match(css, /secretary-office-workspace \.secretary-art-slot \{[^}]*width: 42%/);
+assert.match(css, /secretary-office-workspace \.secretary-art-slot \{[^}]*width: 34%/);
+assert.match(game, /data-office-secretary=/);
+assert.match(game, /function handleOfficeSecretaryTap\(\)/);
 assert.doesNotMatch(css, /secretary-[abc]\.webp/);
 
 const expressions = ["neutral", "smile", "confident", "worried", "surprised", "sorry"];

@@ -20,8 +20,9 @@ assert.match(office, /office-nav-team\.webp/);
 assert.match(office, /office-nav-equipment\.webp/);
 assert.match(office, /office-nav-hr\.webp/);
 assert.match(office, /office-nav-project\.webp/);
-assert.match(office, /office-nav-mail\.webp/);
-assert.match(office, /office-nav-expand\.webp/);
+assert.match(office, /office-mail-glyph/);
+assert.match(office, /companyLogoMarkup\("office-company-logo"/);
+assert.doesNotMatch(office, /office-page-prev|office-page-next/);
 assert.doesNotMatch(office, /placeholder-icon/);
 assert.match(office, /"잠김" : "채용"/);
 for (const icon of ["hire", "team", "equipment", "hr", "project", "mail", "expand"]) {
@@ -38,7 +39,7 @@ assert.doesNotMatch(game.slice(game.indexOf("function officeEquipmentMarkup"), g
 assert.match(style, /\.office-stage\s*\{[^}]*flex:\s*1 1 auto/s);
 assert.match(style, /\.office-dock\s*\{[^}]*grid-template-columns:\s*repeat\(5/s);
 assert.match(style, /\.office-screen-a \.office-equipment-prop\s*\{[^}]*scale:\s*1\s*;/s);
-assert.match(style, /\.office-monitor-back\s*\{[^}]*top:\s*60%/s);
+assert.match(style, /\.office-monitor-back\s*\{[^}]*top:\s*53%/s);
 assert.match(style, /\.prop-laptop\s*\{[^}]*top:\s*43%[^}]*left:\s*18%/s);
 assert.match(style, /\.hr-profile-tile\s*\{[^}]*aspect-ratio:\s*1/s);
 assert.match(style, /data-equipment-rarity="4"\]\s*\{[^}]*background:\s*#ffedac/s);

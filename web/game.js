@@ -199,7 +199,11 @@ const DEFAULT_REPRESENTATIVE_APPEARANCE = {
 };
 
 const FAMILY = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"];
-const GIVEN = ["서준", "민서", "지우", "도윤", "하린", "예준", "서연", "현우", "유진", "수빈", "지훈", "예린", "시우", "채원"];
+const GIVEN_NAMES = {
+  male: ["서준", "도윤", "예준", "현우", "지훈", "시우", "민준", "준호", "태윤", "건우"],
+  female: ["민서", "지우", "하린", "서연", "유진", "수빈", "예린", "채원", "다온", "보람"]
+};
+const FEMALE_NAME_MARKERS = new Set([...GIVEN_NAMES.female, "정밀", "혜인", "예진", "소희", "은지", "지민", "아린", "나연"]);
 const TRAITS = ["분위기 메이커", "완벽주의", "위기 전문가", "아이디어 뱅크", "침착한 조율자", "빠른 손", "꼼꼼한 기록가", "발표 체질"];
 const OFFICE_DIALOGUES = [
   {
@@ -408,6 +412,8 @@ const LABOR = window.OfficeRaidLaborInspection;
 const TEAM_DISPUTE = window.OfficeRaidTeamDispute;
 const SECRETARY = window.OfficeRaidSecretary;
 const OFFICE_TALK = window.OfficeDialogueSystem;
+const COMPANY_IDENTITY = window.OfficeRaidCompanyIdentity;
+const TEAM_RULES = window.OfficeRaidTeamRules;
 if (!FEATURES) throw new Error("restored-features.js must load before game.js");
 if (!BALANCE) throw new Error("balance-rules.js must load before game.js");
 if (!ACTIVITIES) throw new Error("employee-activities.js must load before game.js");
@@ -416,6 +422,8 @@ if (!LABOR) throw new Error("labor-inspection.js must load before game.js");
 if (!TEAM_DISPUTE) throw new Error("team-dispute.js must load before game.js");
 if (!SECRETARY) throw new Error("secretary-system.js must load before game.js");
 if (!OFFICE_TALK) throw new Error("office-dialogue.js must load before game.js");
+if (!COMPANY_IDENTITY) throw new Error("company-identity.js must load before game.js");
+if (!TEAM_RULES) throw new Error("team-rules.js must load before game.js");
 const COMPANY_LEVELS = [
   { id: "small", name: "소형 사무실", grade: "STARTUP", capacity: 6, teamLimit: 3, requiredClears: 0, cost: 0 },
   { id: "medium", name: "중형 사무실", grade: "GROWTH", capacity: 9, teamLimit: 4, requiredClears: 5, cost: 2500 },
@@ -432,7 +440,7 @@ let teamDraft = [];
 let battleTimer = null;
 let battle = null;
 let nextId = 10;
-let representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
+let representativeDraft = { name: "서대표", gender: "male", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
 let representativeMode = "basic";
 let openingPage = 0;
 let equipmentTargetId = null;
@@ -461,6 +469,7 @@ function createInitialState() {
   return {
     industry: "",
     companyName: "",
+    companyLogo: null,
     cash: 1200,
     reputation: 0,
     companyLevel: 0,
@@ -533,10 +542,22 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
 
+function inferGenderFromName(name = "") {
+  const given = String(name).slice(1);
+  return [...FEMALE_NAME_MARKERS].some(marker => given.includes(marker)) ? "female" : "male";
+}
+
+function randomEmployeeName(gender = Math.random() < .5 ? "female" : "male") {
+  const safeGender = gender === "female" ? "female" : "male";
+  const pool = GIVEN_NAMES[safeGender];
+  return FAMILY[randomInt(FAMILY.length)] + pool[randomInt(pool.length)];
+}
+
 function normalizeSavedMember(member, fallbackIndex = 0) {
   if (!member || typeof member !== "object" || typeof member.id !== "string") return null;
   return {
     ...member,
+    gender: member.gender === "female" ? "female" : member.gender === "male" ? "male" : inferGenderFromName(member.name),
     growthPotential: Math.max(0, Math.min(2, Number.isInteger(member.growthPotential) ? member.growthPotential : 1)),
     trainingCount: Math.max(0, Number(member.trainingCount) || 0),
     projectParticipation: Math.max(0, Number(member.projectParticipation) || 0),
@@ -565,6 +586,7 @@ function normalizeSavedState(savedState) {
   return {
     ...initial,
     ...savedState,
+    companyLogo: COMPANY_IDENTITY.normalize(savedState.companyLogo, savedState.industry, savedState.companyName),
     employees,
     teamIds,
     officeSeats,
@@ -655,7 +677,7 @@ function applySavedGame(payload) {
   nextId = Math.max(Number(payload.nextId) || 10, savedIdCeiling(payload));
   teamDraft = [];
   battle = null;
-  representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
+  representativeDraft = { name: "서대표", gender: "male", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
   representativeMode = "basic";
   openingPage = 0;
   equipmentTargetId = state.employees[0]?.id || null;
@@ -692,7 +714,7 @@ function resetGameState() {
   teamDraft = [];
   battle = null;
   nextId = 10;
-  representativeDraft = { name: "서대표", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
+  representativeDraft = { name: "서대표", gender: "male", appearance: { ...DEFAULT_REPRESENTATIVE_APPEARANCE } };
   representativeMode = "basic";
   openingPage = 0;
   equipmentTargetId = null;
@@ -712,11 +734,12 @@ function resetGameState() {
   window.localStorage.removeItem(SAVE_KEY);
 }
 
-function appearance(seed = randomInt(10000)) {
+function appearance(seed = randomInt(10000), gender = "male") {
+  const female = gender === "female";
   return {
     face: seed % 8,
     skin: Math.floor(seed / 3) % 6,
-    hair: Math.floor(seed / 5) % 16,
+    hair: (Math.floor(seed / 5) + (female ? 4 : 0)) % 16,
     eyes: Math.floor(seed / 7) % 10,
     eyebrows: Math.floor(seed / 11) % 8,
     nose: Math.floor(seed / 13) % 8,
@@ -728,11 +751,11 @@ function appearance(seed = randomInt(10000)) {
   };
 }
 
-function employee(name, department, trait, work, collaboration, speed, look, rank = 0) {
+function employee(name, department, trait, work, collaboration, speed, look, rank = 0, gender = inferGenderFromName(name)) {
   const employeeNumber = nextId++;
   return {
     id: `employee-${employeeNumber}`,
-    name, department, trait, work, collaboration, speed,
+    name, gender, department, trait, work, collaboration, speed,
     focus: Math.round((work + collaboration) / 2),
     salary: 120 + rank * 72,
     rank, isRepresentative: false, joinedAt: 0, retentionCount: 0,
@@ -741,23 +764,25 @@ function employee(name, department, trait, work, collaboration, speed, look, ran
     projectParticipation: 0,
     joinOrder: 0,
     equipment: { work: null, support: null, personal: null },
-    appearance: appearance(look)
+    appearance: appearance(look, gender)
   };
 }
 
 function effectiveStats(member) {
   const equipped = Object.values(member.equipment || {}).filter(Boolean);
+  const passive = TEAM_RULES.stats(member);
   return {
-    work: member.work + equipped.reduce((sum, item) => sum + item.workBonus, 0),
-    collaboration: member.collaboration + equipped.reduce((sum, item) => sum + item.collaborationBonus, 0)
+    work: member.work + equipped.reduce((sum, item) => sum + item.workBonus, 0) + passive.work,
+    collaboration: member.collaboration + equipped.reduce((sum, item) => sum + item.collaborationBonus, 0) + passive.collaboration
   };
 }
 
+function effectiveSpeed(member) {
+  return Math.max(1, Number(member?.speed || 0) + TEAM_RULES.stats(member).speed);
+}
+
 function departmentArchetype(department) {
-  if (["sales", "md", "marketing", "design"].includes(department)) return "sales";
-  if (["dev", "product", "production"].includes(department)) return "dev";
-  if (["quality", "procurement", "finance"].includes(department)) return "finance";
-  return "pm";
+  return TEAM_RULES.archetype(department);
 }
 
 function hasProjectAffinity(member, project) {
@@ -969,13 +994,36 @@ function selectIndustry(industryId) {
   if (!INDUSTRIES[industryId]) return;
   state.industry = industryId;
   state.companyName = generateCompanyName(industryId);
+  state.companyLogo = COMPANY_IDENTITY.random(industryId);
   renderSetup();
+}
+
+function companyLogoMarkup(className = "company-logo", size = 96) {
+  const logo = COMPANY_IDENTITY.normalize(state.companyLogo, state.industry, state.companyName);
+  return `<canvas class="${className}" width="${size}" height="${size}" data-company-logo data-logo-palette="${logo.palette}" data-logo-frame="${logo.frame}" data-logo-symbol="${logo.symbol}" aria-label="${escapeHtml(state.companyName || "회사")} 로고"></canvas>`;
+}
+
+function mountCompanyLogos() {
+  document.querySelectorAll("[data-company-logo]").forEach(canvas => {
+    COMPANY_IDENTITY.draw(canvas, {
+      palette: Number(canvas.dataset.logoPalette),
+      frame: Number(canvas.dataset.logoFrame),
+      symbol: Number(canvas.dataset.logoSymbol)
+    }, state.industry);
+  });
 }
 
 function renderSetup() {
   currentView = "setup";
   const industry = currentIndustry();
   if (!industry) return renderIndustrySelection();
+  state.companyLogo = COMPANY_IDENTITY.normalize(state.companyLogo, state.industry, state.companyName);
+  const logo = state.companyLogo;
+  const logoRows = [
+    ["palette", "배경", COMPANY_IDENTITY.PALETTES[logo.palette].name],
+    ["frame", "테두리", COMPANY_IDENTITY.FRAMES[logo.frame].name],
+    ["symbol", "업종 심볼", COMPANY_IDENTITY.symbolName(logo, state.industry)]
+  ].map(([part, label, value]) => `<div class="logo-custom-row"><span><small>${label}</small><strong>${escapeHtml(value)}</strong></span><button data-logo-part="${part}" data-logo-delta="-1" aria-label="${label} 이전">◀</button><button data-logo-part="${part}" data-logo-delta="1" aria-label="${label} 다음">▶</button></div>`).join("");
   app.innerHTML = `${header("회사 이름 정하기", `${industry.name} · ${industry.tagline}`)}
     <section class="screen"><div class="setup panel">
       <figure class="setup-story-preview">
@@ -986,9 +1034,23 @@ function renderSetup() {
       <span class="genre-tag">${escapeHtml(industry.name)} · 창립 준비</span>
       <label class="sr-only" for="company-name">회사 이름</label>
       <div class="input-with-button"><input id="company-name" maxlength="18" value="${escapeHtml(state.companyName || generateCompanyName(state.industry))}" autocomplete="organization"><button id="random-company" class="mustard">랜덤 생성</button></div>
+      <div class="company-logo-builder"><div class="company-logo-preview">${companyLogoMarkup("company-logo-large", 128)}<span>${escapeHtml(state.companyName)}</span></div><div class="company-logo-controls">${logoRows}<button class="logo-randomize" id="random-company-logo">로고 랜덤 조합</button></div></div>
       <div class="setup-actions"><button id="back-industry" class="ink">← 업종</button><button id="create-company" class="teal">다음 · 대표 만들기</button></div>
     </div></section>`;
+  mountCompanyLogos();
   document.querySelector("#random-company").addEventListener("click", randomizeCompanyName);
+  document.querySelector("#random-company-logo").addEventListener("click", () => {
+    const input = document.querySelector("#company-name");
+    state.companyName = input?.value.trim() || state.companyName;
+    state.companyLogo = COMPANY_IDENTITY.random(state.industry);
+    renderSetup();
+  });
+  document.querySelectorAll("[data-logo-part]").forEach(button => button.addEventListener("click", () => {
+    const input = document.querySelector("#company-name");
+    state.companyName = input?.value.trim() || state.companyName;
+    state.companyLogo = COMPANY_IDENTITY.cycle(state.companyLogo, button.dataset.logoPart, Number(button.dataset.logoDelta), state.industry);
+    renderSetup();
+  }));
   document.querySelector("#back-industry").addEventListener("click", renderIndustrySelection);
   document.querySelector("#create-company").addEventListener("click", openRepresentativeSetup);
   document.querySelector("#company-name").addEventListener("keydown", event => { if (event.key === "Enter") openRepresentativeSetup(); });
@@ -1002,12 +1064,13 @@ function generateCompanyName(industryId = state.industry) {
 function randomizeCompanyName() {
   const name = generateCompanyName();
   state.companyName = name;
-  document.querySelector("#company-name").value = name;
+  renderSetup();
 }
 
 function openRepresentativeSetup() {
   const input = document.querySelector("#company-name");
   state.companyName = input.value.trim() || "이름 없는 회사";
+  state.companyLogo = COMPANY_IDENTITY.normalize(state.companyLogo, state.industry, state.companyName);
   renderRepresentativeSetup();
 }
 
@@ -1025,6 +1088,7 @@ function renderRepresentativeSetup() {
     <section class="screen"><div class="representative panel">
       <canvas id="representative-preview" class="${representativeMode === "detail" ? "face-zoom" : ""}" width="48" height="48" aria-label="${representativeMode === "detail" ? "대표 얼굴 확대 미리보기" : "대표 전신 미리보기"}"></canvas>
       ${representativeMode === "detail" ? '<small class="preview-mode-label">얼굴 확대 미리보기</small>' : ""}
+      <div class="representative-gender" role="group" aria-label="대표 성별"><button data-representative-gender="male" class="${representativeDraft.gender === "male" ? "active" : ""}" aria-pressed="${representativeDraft.gender === "male"}">남성</button><button data-representative-gender="female" class="${representativeDraft.gender === "female" ? "active" : ""}" aria-pressed="${representativeDraft.gender === "female"}">여성</button></div>
       <label class="sr-only" for="representative-name">대표 이름</label>
       <div class="input-with-button"><input id="representative-name" maxlength="10" value="${escapeHtml(representativeDraft.name)}"><button id="random-representative-name" class="mustard">이름 랜덤</button></div>
       <button id="random-appearance" class="blue full-button">외형 전체 랜덤</button>
@@ -1032,16 +1096,23 @@ function renderRepresentativeSetup() {
       <div class="custom-list">${rows}</div>
     </div>
     <div class="footer-actions"><button class="ink" id="back-company">← 회사 이름</button><button class="teal" id="finish-company">회사 시작</button></div></section>`;
-  const previewMember = { department: "management", appearance: look };
+  const previewMember = { department: "management", gender: representativeDraft.gender, appearance: look };
   if (representativeMode === "detail") drawFacePreview(document.querySelector("#representative-preview"), previewMember);
   else drawPortrait(document.querySelector("#representative-preview"), previewMember);
   document.querySelector("#random-representative-name").addEventListener("click", () => {
-    representativeDraft.name = FAMILY[randomInt(FAMILY.length)] + GIVEN[randomInt(GIVEN.length)];
+    representativeDraft.name = randomEmployeeName(representativeDraft.gender);
     renderRepresentativeSetup();
   });
+  document.querySelectorAll("[data-representative-gender]").forEach(button => button.addEventListener("click", () => {
+    saveRepresentativeName();
+    representativeDraft.gender = button.dataset.representativeGender === "female" ? "female" : "male";
+    representativeDraft.appearance = appearance(randomInt(100000), representativeDraft.gender);
+    representativeDraft.name = randomEmployeeName(representativeDraft.gender);
+    renderRepresentativeSetup();
+  }));
   document.querySelector("#random-appearance").addEventListener("click", () => {
     saveRepresentativeName();
-    representativeDraft.appearance = appearance(randomInt(100000));
+    representativeDraft.appearance = appearance(randomInt(100000), representativeDraft.gender);
     renderRepresentativeSetup();
   });
   document.querySelector("#basic-parts").addEventListener("click", () => switchRepresentativeMode("basic"));
@@ -1075,12 +1146,12 @@ function createCompany() {
   saveRepresentativeName();
   const industry = currentIndustry();
   if (!industry) return renderIndustrySelection();
-  const representative = employee(representativeDraft.name, "management", "침착한 조율자", 17, 18, 14, 1103);
+  const representative = employee(representativeDraft.name, "management", "침착한 조율자", 17, 18, 14, 1103, 0, representativeDraft.gender);
   representative.isRepresentative = true;
   representative.appearance = { ...representativeDraft.appearance };
   state.employees = [
     representative,
-    ...industry.starters.map(member => employee(member.name, member.department, member.trait, member.work, member.collaboration, member.speed, member.look))
+    ...industry.starters.map(member => employee(member.name, member.department, member.trait, member.work, member.collaboration, member.speed, member.look, 0, member.gender || inferGenderFromName(member.name)))
   ];
   state.employees.forEach(member => {
     state.employeeJoinSequence += 1;
@@ -1111,6 +1182,7 @@ function renderCompanyLaunch() {
     <div class="launch-grid" aria-hidden="true"></div>
     <img class="launch-logo" src="assets/office-raid-logo-ui.webp?v=20260831" alt="OFFICE RAID">
     <article class="launch-card panel">
+      <div class="launch-company-logo">${companyLogoMarkup("company-logo-launch", 112)}</div>
       <div class="launch-stamp"><span>COMPANY FOUNDED</span><b>설립 완료</b></div>
       <p class="launch-kicker">FIRST RAID TEAM</p>
       <h1>${escapeHtml(state.companyName)}</h1>
@@ -1122,6 +1194,7 @@ function renderCompanyLaunch() {
     <button id="enter-office" class="mustard">사무실로 출근</button>
   </section>`;
   mountPortraits();
+  mountCompanyLogos();
   document.querySelector("#enter-office").addEventListener("click", enterOfficeFromLaunch);
   companyLaunchTimer = window.setTimeout(() => document.querySelector("#enter-office")?.classList.add("ready"), 1300);
 }
@@ -1169,11 +1242,22 @@ function projectTeamLimit() {
 
 function orderedBattleTeam(members = currentTeam(), formationIds = state.teamIds) {
   const formationOrder = new Map(formationIds.map((id, index) => [id, index]));
-  return [...members].sort((left, right) => right.speed - left.speed || (formationOrder.get(left.id) ?? 99) - (formationOrder.get(right.id) ?? 99));
+  return [...members].sort((left, right) => effectiveSpeed(right) - effectiveSpeed(left) || (formationOrder.get(left.id) ?? 99) - (formationOrder.get(right.id) ?? 99));
 }
 
 function directiveChargeFor(member) {
-  return Math.min(14, Math.max(10, 8 + Math.floor((member?.speed || 0) / 4)));
+  return Math.min(16, Math.max(10, 8 + Math.floor(effectiveSpeed(member) / 4) + TEAM_RULES.directiveCharge(member)));
+}
+
+function traitDamageMultiplier(member) {
+  return TEAM_RULES.damageMultiplier(member, {
+    badStatus: Boolean(battle?.status && battle.status.tone === "bad"),
+    remainingRatio: battle?.max ? battle.workload / battle.max : 1
+  });
+}
+
+function traitDirectiveValue(member, value) {
+  return Math.round(Math.max(0, Number(value) || 0) * TEAM_RULES.directiveMultiplier(member));
 }
 
 function tutorialProjectSource() {
@@ -1233,7 +1317,7 @@ function showOfficeSpeech(member, line) {
   bubble.replaceChildren();
   const speaker = document.createElement("b");
   const message = document.createElement("span");
-  speaker.textContent = `${member.name} · ${employeePosition(member)}`;
+  speaker.textContent = `${member.name} · ${member.roleLabel || employeePosition(member)}`;
   message.textContent = line;
   bubble.append(speaker, message);
   bubble.classList.add("show");
@@ -1345,6 +1429,33 @@ function handleOfficeEmployeeTap(memberId) {
   }
   if (!showOfficeSpeech(member, line)) return;
   officeDialogueTimer = window.setTimeout(finishManualOfficeSpeech, tapState.stage === "final" ? 3600 : 3000);
+}
+
+function handleOfficeSecretaryTap() {
+  const candidate = secretaryCandidate();
+  if (!candidate || currentView !== "office") return;
+  clearOfficeDialogue();
+  const stateKey = `secretary-${candidate.id}`;
+  const tapState = OFFICE_TALK.nextTap(officeTapStates.get(stateKey));
+  officeTapStates.set(stateKey, tapState);
+  if (tapState.stage === "silent") {
+    officeDialogueTimer = window.setTimeout(runOfficeDialogue, 6200);
+    return;
+  }
+  let line;
+  if (tapState.stage === "normal") {
+    const rare = Math.random() < .035;
+    const pool = rare ? SECRETARY.rareTapDialogues(candidate.id) : SECRETARY.tapDialoguePool(candidate.id);
+    const recent = recentEmployeeTapDialogues.get(stateKey) || [];
+    line = OFFICE_TALK.pickFresh(pool, recent, Math.random());
+    recentEmployeeTapDialogues.set(stateKey, [...recent.slice(-7), line]);
+  } else if (tapState.stage === "complaint") {
+    line = SECRETARY.tapComplaint(candidate.id, tapState.count - 4);
+  } else {
+    line = SECRETARY.tapFinal(candidate.id);
+  }
+  if (!showOfficeSpeech({ id: stateKey, name: candidate.name, roleLabel: "비서", isRepresentative: false, rank: 0 }, line)) return;
+  officeDialogueTimer = window.setTimeout(finishManualOfficeSpeech, tapState.stage === "final" ? 3800 : 3200);
 }
 
 function equipmentArtFor(item) {
@@ -1598,7 +1709,8 @@ function officeDeskMarkup(member, seatIndex = null, { executive = false, reserve
 function officeSecretaryDeskMarkup() {
   const candidate = secretaryCandidate();
   if (!candidate) return "";
-  return `<div class="desk secretary-office-desk" aria-label="${escapeHtml(candidate.name)} 비서 자리"><div class="secretary-office-workspace">${secretaryArt(candidate.id, "office", "neutral")}<img class="office-desk-base" src="assets/office-desk-base.webp?v=20260831" alt=""><img class="office-monitor-back" src="assets/office-monitor-back.webp?v=20260831" alt=""></div><span class="desk-identity"><strong>${escapeHtml(candidate.name)}</strong><small>경영지원 · 비서</small></span></div>`;
+  const speechId = `secretary-${candidate.id}`;
+  return `<div class="desk secretary-office-desk" data-office-secretary="${candidate.id}" role="button" tabindex="0" aria-label="${escapeHtml(candidate.name)} 비서에게 말 걸기"><span class="office-speech" data-office-speech="${speechId}" aria-live="polite"></span><div class="secretary-office-workspace">${secretaryArt(candidate.id, "office", "neutral")}<img class="office-desk-base" src="assets/office-desk-base.webp?v=20260831" alt=""><img class="office-monitor-back" src="assets/office-monitor-back.webp?v=20260831" alt=""></div><span class="desk-identity"><strong>${escapeHtml(candidate.name)}</strong><small>경영지원 · 비서</small></span></div>`;
 }
 
 function officePageDesks(page) {
@@ -1915,9 +2027,9 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
   const dailyMail = state.dailyMissions;
   const pendingMail = dailyMail?.items?.find(item => item.arrived && !item.completed);
   const allMailCompleted = Boolean(dailyMail?.items?.length && dailyMail.items.every(item => item.completed));
-  const mailStateClass = pendingMail ? "unread" : allMailCompleted ? "completed" : "waiting";
+  const mailStateClass = pendingMail ? "unread" : "waiting";
   const unreadMailCount = dailyMail?.items?.filter(item => item.arrived && !item.completed).length || 0;
-  const mailMarkup = tutorialPending ? "" : `<button class="office-mail-icon ${mailStateClass}" id="work-mail" aria-label="업무 메일${unreadMailCount ? ` ${unreadMailCount}건 도착` : allMailCompleted ? ", 오늘 업무 완료" : ", 대기 중"}"><img class="office-nav-icon" src="assets/ui/office-nav-mail.webp?v=20260904-nav-v1" alt="">${unreadMailCount ? `<b>${unreadMailCount}</b>` : allMailCompleted ? `<b class="complete">✓</b>` : ""}</button>`;
+  const mailMarkup = tutorialPending ? "" : `<button class="office-mail-icon ${mailStateClass}" id="work-mail" aria-label="업무 메일${unreadMailCount ? ` ${unreadMailCount}건 도착` : allMailCompleted ? ", 모두 확인함" : ", 대기 중"}"><span class="office-mail-glyph" aria-hidden="true"><i></i></span>${unreadMailCount ? `<b aria-hidden="true"></b>` : ""}</button>`;
   const industry = currentIndustry();
   const company = currentCompanyLevel();
   const nextCompany = nextCompanyLevel();
@@ -1929,20 +2041,19 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
       ? `<button class="secretary-goal-note ready" id="secretary-goal"><b>경영지원실 준비 완료</b><span>비서 후보 3명 면접 가능</span></button>`
       : `<button class="secretary-goal-note" id="secretary-goal"><b>비서 채용 목표 ${roadmap.completed}/${roadmap.total}</b><span>${escapeHtml(roadmap.current.label)} ${roadmap.current.value}/${roadmap.current.target}</span></button>`;
   const secretaryAssist = secretaryAssistMarkup("office");
-  const officeZone = officePageCount > 1 ? `<div class="office-zone"><button id="office-page-prev" aria-label="이전 근무 구역" ${officePage === 0 ? "disabled" : ""}>‹</button><button id="office-page-next" aria-label="다음 근무 구역" ${officePage >= officePageCount - 1 ? "disabled" : ""}>›</button></div>` : "";
   const desks = officePageDesks(officePage);
   app.innerHTML = `<section class="screen office-screen-a">
       <div class="office-stage">
         <div class="office-hud" aria-label="회사 현황">
           <button class="office-company-chip ${expansionReady ? "expansion-ready" : ""}" id="expand" ${tutorialPending ? "disabled" : ""} aria-label="${escapeHtml(state.companyName)}, ${company.name}${nextCompany ? ", 회사 확장 확인" : ", 확장 완료"}">
-            <img class="office-expand-icon" src="assets/ui/office-nav-expand.webp?v=20260904-nav-v1" alt=""><span><span class="office-company-title"><strong>${escapeHtml(state.companyName)}</strong><em>${company.grade}</em></span><small>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1} · 근무 ${officePage + 1}/${officePageCount}</small></span>
+            <span class="office-company-logo-wrap">${companyLogoMarkup("office-company-logo", 80)}${expansionReady ? '<i class="office-expansion-ready" aria-hidden="true">↑</i>' : ""}</span><span><span class="office-company-title"><strong>${escapeHtml(state.companyName)}</strong><em>${company.grade}</em></span><small>${escapeHtml(industry?.short || "운영")} · LV.${state.companyLevel + 1} · 근무 ${officePage + 1}/${officePageCount}</small></span>
           </button>
           <div class="office-hud-resources">
             <span><small>현금</small><b>${state.cash}<i>만</i></b></span><span><small>평판</small><b>${state.reputation}</b></span><span><small>직원</small><b>${state.employees.length}<i>/${state.capacity}</i></b></span>
           </div>
           ${mailMarkup}
         </div>
-        <div class="office-room company-level-${company.id} staff-${assignedMemberCount} ${MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? "has-executive-seat" : ""}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 배정 직원 ${assignedMemberCount}명">${officeZone}${desks}</div>
+        <div class="office-room company-level-${company.id} staff-${assignedMemberCount} ${MANAGEMENT.hasExecutiveSeat(state.companyLevel) && officePage === 0 ? "has-executive-seat" : ""}${animateEntry ? " office-entry" : ""}" aria-label="${company.name} 근무 구역 ${officePage + 1}, 배정 직원 ${assignedMemberCount}명">${desks}</div>
         <div class="office-status-toast" role="status">${escapeHtml(officeNotice)}</div>
         ${secretaryGoal}
         ${secretaryAssist}
@@ -1957,6 +2068,7 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
     </section>`;
   mountPortraits();
   mountEquipmentIcons();
+  mountCompanyLogos();
   mountSecretaryAssist();
   document.querySelector("#work-mail")?.addEventListener("click", () => openWorkMail());
   document.querySelector("#interview").addEventListener("click", () => openInterview());
@@ -1966,8 +2078,6 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
   document.querySelector("#secretary-goal")?.addEventListener("click", openSecretary);
   document.querySelector("#expand").addEventListener("click", openCompanyExpansion);
   document.querySelector("#project").addEventListener("click", renderProjectBoard);
-  document.querySelector("#office-page-prev")?.addEventListener("click", () => { officePage -= 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
-  document.querySelector("#office-page-next")?.addEventListener("click", () => { officePage += 1; renderOffice(`근무 구역 ${officePage + 1}/${officePageCount}을 확인합니다.`); });
   document.querySelectorAll("[data-office-worker]:not(.office-empty-desk)").forEach(desk => {
     desk.addEventListener("click", () => {
       if (Date.now() < officeSuppressClickUntil) return;
@@ -1978,6 +2088,12 @@ function renderOffice(notice = "채용으로 동료를 영입하고 프로젝트
       event.preventDefault();
       handleOfficeEmployeeTap(desk.dataset.officeWorker);
     });
+  });
+  document.querySelector("[data-office-secretary]")?.addEventListener("click", handleOfficeSecretaryTap);
+  document.querySelector("[data-office-secretary]")?.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleOfficeSecretaryTap();
   });
   document.querySelectorAll(".office-empty-desk").forEach(desk => desk.addEventListener("click", () => {
     if (Date.now() < officeSuppressClickUntil) return;
@@ -2310,8 +2426,8 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
   const selectedRank = selectedMember?.isRepresentative ? { name: "대표", color: "#d6a12c" } : RANKS[selectedMember?.rank || 0];
   const detail = selectedMember ? `<article class="hr-detail panel ${selectedMember.isRepresentative ? "is-representative" : ""}">
     <div class="hr-detail-title"><small>EMPLOYEE FILE</small><h2>${escapeHtml(selectedMember.name)} <span style="background:${selectedRank.color}">${selectedRank.name}</span></h2><p>${DEPARTMENTS[selectedMember.department].name} · ${employeePosition(selectedMember)}</p></div>
-    <p class="hr-trait">${escapeHtml(selectedMember.trait)}</p>
-    <div class="hr-stat-grid"><span><small>실무</small><b>${stats.work}</b></span><span><small>협업</small><b>${stats.collaboration}</b></span><span><small>속도</small><b>${selectedMember.speed}</b></span></div>
+    <button class="hr-trait" data-trait-info="${escapeHtml(selectedMember.trait)}">${escapeHtml(selectedMember.trait)} <i>?</i></button>
+    <div class="hr-stat-grid"><span><small>실무</small><b>${stats.work}</b></span><span><small>협업</small><b>${stats.collaboration}</b></span><span><small>속도</small><b>${effectiveSpeed(selectedMember)}</b></span></div>
     <div class="hr-record-grid"><span><small>월급</small><b>${selectedMember.salary}만원</b></span><span><small>근속</small><b>${tenure}건</b></span><span><small>프로젝트 참여</small><b>${selectedMember.projectParticipation || 0}회</b></span><span><small>${selectedMember.isRepresentative ? "직책" : "성장성·교육"}</small><b>${selectedMember.isRepresentative ? "창업 대표" : `${potential.label} · ${selectedMember.trainingCount || 0}/3`}</b></span></div>
     <div class="hr-equipment-line"><small>사용 장비 ${equippedItems.length}/3</small><span>${equippedItems.length ? escapeHtml(equippedItems.map(item => item.name).join(" · ")) : "장착한 장비 없음"}</span></div>
     ${activity ? `<p class="hr-detail-activity">${escapeHtml(activityStatusText(activity))}</p>` : ""}
@@ -2334,8 +2450,10 @@ function renderHumanResources(notice = "직원 계약과 급여 현황을 관리
     <button class="ink" id="back-from-hr">← 사무실</button>
     ${confirm}
     ${secretaryAssist}
+    ${teamInfoModalMarkup()}
   </section>`;
   mountPortraits();
+  mountTeamInfoControls();
   const profileGrid = document.querySelector(".hr-profile-grid");
   if (profileGrid) profileGrid.scrollTop = hrProfileScrollTop;
   document.querySelectorAll("[data-hr-member]").forEach(button => button.addEventListener("click", () => {
@@ -2734,6 +2852,7 @@ function renderTrainingCourses(memberId, notice = "3프로젝트 동안 진행�
   const member = state.employees.find(item => item.id === memberId);
   const eligibility = trainingEligibility(member);
   if (!member || !eligibility.allowed) return renderHumanResources(member ? `${member.name}: ${eligibility.reason}` : "교육 대상을 찾을 수 없습니다.");
+  const trainingStats = effectiveStats(member);
   const potential = ACTIVITIES.growthLevel(member.growthPotential);
   const courses = Object.values(ACTIVITIES.TRAINING_COURSES).map(course => {
     const baseScore = ACTIVITIES.trainingBaseScore(member, course.id);
@@ -2748,7 +2867,7 @@ function renderTrainingCourses(memberId, notice = "3프로젝트 동안 진행�
     </article>`;
   }).join("");
   app.innerHTML = `${header("장기 교육", `${member.name} · 성장성 ${potential.label} · ${notice}`)}<section class="screen training-screen">
-    <article class="training-member panel"><canvas width="24" height="24" data-portrait="${member.id}"></canvas><div><small>TRAINING CANDIDATE</small><strong>${escapeHtml(member.name)}</strong><span>${DEPARTMENTS[member.department].name} · 실무 ${member.work} · 협업 ${member.collaboration} · 속도 ${member.speed}</span></div></article>
+    <article class="training-member panel"><canvas width="24" height="24" data-portrait="${member.id}"></canvas><div><small>TRAINING CANDIDATE</small><strong>${escapeHtml(member.name)}</strong><span>${DEPARTMENTS[member.department].name} · 실무 ${trainingStats.work} · 협업 ${trainingStats.collaboration} · 속도 ${effectiveSpeed(member)}</span></div></article>
     <div class="training-course-list">${courses}</div>
     <button class="ink" id="back-from-training">← 인사 관리</button>
   </section>`;
@@ -3299,6 +3418,7 @@ function rollRank(mode = "regular") {
 function generateCandidate(mode = "regular") {
   const rank = rollRank(mode);
   const bonus = RANKS[rank].bonus;
+  const gender = Math.random() < .5 ? "female" : "male";
   const industryDepartments = currentIndustry()?.departments || RECRUITABLE_DEPARTMENTS;
   const outsideDepartments = RECRUITABLE_DEPARTMENTS.filter(department => !industryDepartments.includes(department) && !COMMON_DEPARTMENTS.includes(department));
   const departmentRoll = randomInt(100);
@@ -3306,9 +3426,9 @@ function generateCandidate(mode = "regular") {
     ? industryDepartments
     : departmentRoll < 90 ? COMMON_DEPARTMENTS : outsideDepartments.length ? outsideDepartments : industryDepartments;
   const candidate = employee(
-    FAMILY[randomInt(FAMILY.length)] + GIVEN[randomInt(GIVEN.length)],
+    randomEmployeeName(gender),
     departments[randomInt(departments.length)], TRAITS[randomInt(TRAITS.length)],
-    8 + bonus + randomInt(7), 8 + bonus + randomInt(7), 8 + bonus + randomInt(7), randomInt(100000), rank
+    8 + bonus + randomInt(7), 8 + bonus + randomInt(7), 8 + bonus + randomInt(7), randomInt(100000), rank, gender
   );
   candidate.signingCost = candidate.salary + 100 + rank * 100;
   return candidate;
@@ -3358,11 +3478,12 @@ function renderInterview(notice) {
     const department = DEPARTMENTS[candidate.department];
     const rank = RANKS[candidate.rank];
     const potential = ACTIVITIES.growthLevel(candidate.growthPotential);
+    const stats = effectiveStats(candidate);
     return `<article class="candidate">
       <canvas width="24" height="24" data-candidate="${candidate.id}"></canvas>
       <div><h3>${escapeHtml(candidate.name)} <span class="rank" style="background:${rank.color}">${rank.name}</span></h3>
       <p class="dept">${department.name} · ${employeePosition(candidate)} · ${escapeHtml(candidate.trait)}</p>
-      <p>실무 ${candidate.work}　협업 ${candidate.collaboration}　속도 ${candidate.speed}</p>
+      <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${effectiveSpeed(candidate)}</p>
       <p>성장성 <b style="color:${potential.color}">${potential.label}</b> · 전 직급 장기 교육 가능</p>
       <p>계약금 ${candidate.signingCost} · 월급 ${candidate.salary}</p></div>
       <button class="teal" data-hire="${candidate.id}">채용</button>
@@ -3426,35 +3547,80 @@ function openTeam() {
   renderTeam(`참가할 직원 3~${projectTeamLimit()}명을 선택하세요. 속도가 높은 직원부터 행동합니다.`);
 }
 
+function teamRoleBadge(member) {
+  const role = TEAM_RULES.role(member.department);
+  return `<button class="team-role-badge role-${role.id}" data-role-info="${departmentArchetype(member.department)}" style="--role-color:${role.color}" aria-label="${escapeHtml(role.name)} 역할 설명"><i aria-hidden="true"></i><span>${escapeHtml(role.name)}</span></button>`;
+}
+
+function teamInfoModalMarkup() {
+  return `<div class="team-info-backdrop" id="team-info-backdrop" hidden><article class="team-info-modal panel" role="dialog" aria-modal="true" aria-labelledby="team-info-title"><button class="team-info-close" id="team-info-close" aria-label="설명 닫기">×</button><small id="team-info-kicker">TEAM GUIDE</small><h2 id="team-info-title">역할 안내</h2><p id="team-info-description"></p><strong id="team-info-effect"></strong></article></div>`;
+}
+
+function openTeamInfo({ kicker = "TEAM GUIDE", title, description, effect = "" }) {
+  const backdrop = document.querySelector("#team-info-backdrop");
+  if (!backdrop) return;
+  document.querySelector("#team-info-kicker").textContent = kicker;
+  document.querySelector("#team-info-title").textContent = title;
+  document.querySelector("#team-info-description").textContent = description;
+  const effectNode = document.querySelector("#team-info-effect");
+  effectNode.textContent = effect;
+  effectNode.hidden = !effect;
+  backdrop.hidden = false;
+}
+
+function mountTeamInfoControls() {
+  document.querySelector("#team-role-help")?.addEventListener("click", () => openTeamInfo({
+    title: "부서 역할은 네 종류입니다",
+    description: "빨강은 직접 처리, 청록은 조율 지원, 노랑은 협상과 마무리, 파랑은 위험 방어를 뜻합니다. 프로젝트 추천 부서는 별도로 상성 보너스를 받습니다.",
+    effect: "직원별 역할 배지를 눌러 자세한 전투 방식을 확인하세요."
+  }));
+  document.querySelectorAll("[data-role-info]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    const role = TEAM_RULES.ROLES[button.dataset.roleInfo];
+    if (role) openTeamInfo({ kicker: "DEPARTMENT ROLE", title: role.name, description: role.description, effect: "부서는 역할의 기본 전투 방식과 긴급 지시 스킬을 결정합니다." });
+  }));
+  document.querySelectorAll("[data-trait-info]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    const trait = TEAM_RULES.trait(button.dataset.traitInfo);
+    openTeamInfo({ kicker: "PASSIVE TRAIT", title: button.dataset.traitInfo, description: trait.description, effect: trait.effect });
+  }));
+  const close = () => { const backdrop = document.querySelector("#team-info-backdrop"); if (backdrop) backdrop.hidden = true; };
+  document.querySelector("#team-info-close")?.addEventListener("click", close);
+  document.querySelector("#team-info-backdrop")?.addEventListener("click", event => { if (event.target.id === "team-info-backdrop") close(); });
+}
+
 function renderTeam(notice) {
   const teamLimit = projectTeamLimit();
   const selectedMembers = teamDraft.map(id => state.employees.find(member => member.id === id)).filter(Boolean);
   const actionOrder = orderedBattleTeam(selectedMembers, teamDraft);
   const actionOrderIds = actionOrder.map(member => member.id);
   const actionOrderSummary = actionOrder.length
-    ? actionOrder.map((member, index) => `<figure class="team-order-member"><i>${index + 1}</i><canvas width="24" height="24" data-portrait="${member.id}" aria-hidden="true"></canvas><figcaption><b>${escapeHtml(member.name)}</b><small>속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></figcaption></figure>`).join("")
+    ? actionOrder.map((member, index) => `<figure class="team-order-member"><i>${index + 1}</i><canvas width="24" height="24" data-portrait="${member.id}" aria-hidden="true"></canvas><figcaption><b>${escapeHtml(member.name)}</b><small>속도 ${effectiveSpeed(member)} · 지시 +${directiveChargeFor(member)}</small></figcaption></figure>`).join("")
     : `<em>직원을 선택하면 예상 행동 순서가 표시됩니다.</em>`;
   const cards = state.employees.map(member => {
     const activity = employeeActivity(member.id);
     const selectedIndex = teamDraft.indexOf(member.id);
     const actionIndex = actionOrderIds.indexOf(member.id);
     const stats = effectiveStats(member);
+    const role = teamRoleBadge(member);
     const unavailableText = activity ? "현재 부재 중 · 인사 관리에서 확인" : "";
     return `<article class="team-card ${selectedIndex >= 0 ? "selected" : ""} ${activity ? "employee-away" : ""}">
       <canvas width="24" height="24" data-portrait="${member.id}"></canvas>
       <div><h3>${actionIndex >= 0 ? `<span class="order">${actionIndex + 1}</span>` : ""}${escapeHtml(member.name)}</h3>
-      <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)} · ${escapeHtml(member.trait)}</p>
-      <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${member.speed}</p>
+      <p class="dept">${DEPARTMENTS[member.department].name} · ${employeePosition(member)}</p><div class="team-tags">${role}<button class="team-trait-button" data-trait-info="${escapeHtml(member.trait)}">${escapeHtml(member.trait)} <i>?</i></button></div>
+      <p>실무 ${stats.work}　협업 ${stats.collaboration}　속도 ${effectiveSpeed(member)}</p>
       <p class="team-speed-effect">${activity ? unavailableText : actionIndex >= 0 ? `행동 ${actionIndex + 1}순위 · 긴급 지시 +${directiveChargeFor(member)}` : `긴급 지시 +${directiveChargeFor(member)}`}</p></div>
       <button class="${selectedIndex >= 0 ? "red" : activity ? "ink" : "teal"}" data-toggle="${member.id}" ${activity ? "disabled" : ""}>${activity ? "자리 비움" : selectedIndex >= 0 ? "제외" : "선택"}</button>
     </article>`;
   }).join("");
   app.innerHTML = `${header("프로젝트 팀 편성", `선택 ${teamDraft.length}/${teamLimit} · ${notice}`)}<section class="screen">
+    <div class="team-role-guide panel"><span><small>부서 역할</small><strong>색과 모양으로 전투 방식을 확인하세요.</strong></span><div class="team-role-legend"><i class="role-dealer"></i><i class="role-support"></i><i class="role-burst"></i><i class="role-guard"></i></div><button id="team-role-help" aria-label="부서 역할 도움말">?</button></div>
     <div class="team-order-preview panel"><small>예상 행동 순서</small><div>${actionOrderSummary}</div></div>
     <div class="card-list">${cards}</div>
     <div class="footer-actions"><button class="ink" id="cancel-team">취소</button><button class="mustard" id="save-team">편성 저장</button></div>
-  </section>`;
+    ${teamInfoModalMarkup()}</section>`;
   mountPortraits();
+  mountTeamInfoControls();
   document.querySelectorAll("[data-toggle]").forEach(button => button.addEventListener("click", () => toggleTeam(button.dataset.toggle)));
   document.querySelector("#cancel-team").addEventListener("click", () => renderOffice());
   document.querySelector("#save-team").addEventListener("click", saveTeam);
@@ -3593,6 +3759,7 @@ function battleStep() {
   if (battle.status) {
     damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
   }
+  damage = Math.round(damage * traitDamageMultiplier(member));
   const expectedDamage = Math.max(1, damage);
   const expectedRange = damageRange(expectedDamage);
   damage = battle.tutorialMode ? expectedDamage : rollDamage(expectedDamage);
@@ -3811,6 +3978,7 @@ function directivePlanEstimate(team) {
   const skills = team.map(member => battle.directiveSelections[member.id]).filter(Boolean);
   directiveExecutionTeam(team).forEach(member => {
     const stats = effectiveStats(member);
+    const contributionBefore = total;
     const skill = battle.directiveSelections[member.id];
     if (skill === "requirement-brief") { requirements = true; total += 8 + Math.floor(stats.collaboration / 2); }
     else if (skill === "client-persuasion") total += 6 + Math.floor(stats.collaboration / 2);
@@ -3821,9 +3989,10 @@ function directivePlanEstimate(team) {
     else if (skill === "focus-development") total += 16 + stats.work + (requirements ? 8 : 0);
     else if (skill === "automation-deploy") total += 8;
     else if (skill === "night-shift") total += 24 + stats.work;
-    else if (skill === "budget-approval") total += 6 + Math.floor(member.speed / 2);
+    else if (skill === "budget-approval") total += 6 + Math.floor(effectiveSpeed(member) / 2);
     else if (skill === "cost-defense") total += 7 + Math.floor(stats.collaboration / 2);
-    else if (skill === "emergency-approval") { if (deadlineBonus < 2) deadlineBonus += 1; total += 12 + member.speed; }
+    else if (skill === "emergency-approval") { if (deadlineBonus < 2) deadlineBonus += 1; total += 12 + effectiveSpeed(member); }
+    total = contributionBefore + traitDirectiveValue(member, total - contributionBefore);
   });
   let combo = "";
   if (skills.includes("requirement-brief") && skills.includes("focus-development")) { total += 18; combo = "명확한 목표"; }
@@ -3890,7 +4059,7 @@ function directiveSkillPreview(member, skillId) {
     return withDirectiveRange({ icon: "⚡", tone: "damage", target: "project", primary: damageRangeText(damage), secondary: "강력한 단일 처리", damage });
   }
   if (skillId === "budget-approval") {
-    const damage = 6 + Math.floor(member.speed / 2);
+    const damage = 6 + Math.floor(effectiveSpeed(member) / 2);
     return withDirectiveRange({ icon: "×", tone: "boost", target: "team", primary: "전체 ×1.2", secondary: `모든 지시 강화 · ${damageRangeText(damage)}`, damage });
   }
   if (skillId === "cost-defense") {
@@ -3898,7 +4067,7 @@ function directiveSkillPreview(member, skillId) {
     return withDirectiveRange({ icon: "▣", tone: "cleanse", target: badStatus ? "status" : "project", primary: badStatus ? "상태 제거" : damageRangeText(damage), secondary: `불리한 효과 해제 · ${damageRangeText(damage)}`, damage });
   }
   if (skillId === "emergency-approval") {
-    const damage = 12 + member.speed;
+    const damage = 12 + effectiveSpeed(member);
     const available = battle.deadlineBonus < 2;
     return withDirectiveRange({ icon: "＋", tone: "time", target: "deadline", primary: available ? "마감 +1턴" : damageRangeText(damage), secondary: `${damageRangeText(damage)}${available ? " · 마감 연장" : " · 연장 한도"}`, damage, deadline: available ? 1 : 0 });
   }
@@ -4049,9 +4218,10 @@ function resolveDirective() {
     else if (skill === "focus-development") total += 16 + stats.work + (battle.requirements ? 8 : 0);
     else if (skill === "automation-deploy") { battle.automationDamage = 8 + Math.floor(stats.work / 2); battle.automationTurns = 2; battle.automationSourceId = member.id; total += 8; }
     else if (skill === "night-shift") total += 24 + stats.work;
-    else if (skill === "budget-approval") total += 6 + Math.floor(member.speed / 2);
+    else if (skill === "budget-approval") total += 6 + Math.floor(effectiveSpeed(member) / 2);
     else if (skill === "cost-defense") { cleared = clearNegativeBattleStatus() || cleared; total += 7 + Math.floor(stats.collaboration / 2); }
-    else if (skill === "emergency-approval") { if (battle.deadlineBonus < 2) { battle.deadline += 1; battle.deadlineBonus += 1; } total += 12 + member.speed; }
+    else if (skill === "emergency-approval") { if (battle.deadlineBonus < 2) { battle.deadline += 1; battle.deadlineBonus += 1; } total += 12 + effectiveSpeed(member); }
+    total = contributionBefore + traitDirectiveValue(member, total - contributionBefore);
     directiveParts.push({ memberId: member.id, value: Math.max(0, total - contributionBefore) });
   });
   let combo = "";
@@ -4227,12 +4397,13 @@ function normalDamagePreview(member) {
   else if (archetype === "finance") damage += 4;
   if (hasProjectAffinity(member, battle.project)) damage = Math.round(damage * 1.18);
   if (battle.status) damage = Math.round(damage * battle.status.efficiency) + battle.status.flat;
+  damage = Math.round(damage * traitDamageMultiplier(member));
   if (battle.tutorialMode) return { min: Math.max(1, damage), max: Math.max(1, damage) };
   return damageRange(Math.max(1, damage), NORMAL_DAMAGE_VARIANCE);
 }
 
 function battleTutorialPages(team) {
-  const actionOrder = team.map((member, index) => `<span><i>${index + 1}</i><b>${escapeHtml(member.name)}</b><small>${DEPARTMENTS[member.department].short} · 속도 ${member.speed} · 지시 +${directiveChargeFor(member)}</small></span>`).join("");
+  const actionOrder = team.map((member, index) => `<span><i>${index + 1}</i><b>${escapeHtml(member.name)}</b><small>${DEPARTMENTS[member.department].short} · 속도 ${effectiveSpeed(member)} · 지시 +${directiveChargeFor(member)}</small></span>`).join("");
   return [
     {
       kicker: "BATTLE GUIDE 1",
@@ -4495,6 +4666,37 @@ function mountEquipmentIcons() {
 
 function drawEquipmentIcon(canvas, art, rarity = 0) {
   if (!canvas) return;
+  const wearableHeadset = art === "headset" && canvas.classList.contains("placement-wearable");
+  if (wearableHeadset) {
+    const context = canvas.getContext("2d");
+    const accent = EQUIPMENT_RARITIES[Math.max(0, Math.min(EQUIPMENT_RARITIES.length - 1, rarity))].color;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingEnabled = true;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.strokeStyle = COLORS.ink;
+    context.lineWidth = 7;
+    context.beginPath();
+    context.arc(32, 30, 22, Math.PI * 1.08, Math.PI * 1.92);
+    context.stroke();
+    context.strokeStyle = accent;
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(32, 30, 22, Math.PI * 1.1, Math.PI * 1.9);
+    context.stroke();
+    [[8, 29], [48, 29]].forEach(([x, y]) => {
+      context.fillStyle = COLORS.ink;
+      context.beginPath(); context.roundRect(x, y, 10, 23, 5); context.fill();
+      context.fillStyle = accent;
+      context.beginPath(); context.roundRect(x + 2, y + 3, 6, 17, 3); context.fill();
+    });
+    context.strokeStyle = COLORS.ink;
+    context.lineWidth = 3;
+    context.beginPath(); context.moveTo(52, 46); context.quadraticCurveTo(51, 56, 41, 56); context.stroke();
+    context.fillStyle = accent;
+    context.beginPath(); context.arc(39, 56, 3, 0, Math.PI * 2); context.fill();
+    return;
+  }
   if (EQUIPMENT_ART_KEYS.has(art)) {
     const context = canvas.getContext("2d");
     const image = new Image();
@@ -4516,7 +4718,6 @@ function drawEquipmentIcon(canvas, art, rarity = 0) {
   const outline = COLORS.ink;
   const accent = EQUIPMENT_RARITIES[Math.max(0, Math.min(EQUIPMENT_RARITIES.length - 1, rarity))].color;
   const light = rarity >= 3 ? "#ffe6a1" : COLORS.paper;
-  const wearableHeadset = art === "headset" && canvas.classList.contains("placement-wearable");
   if (rarity >= 2 && !wearableHeadset) {
     pixel(accent, 1, 10, 3, 3); pixel(accent, 20, 5, 2, 2); pixel(accent, 19, 19, 3, 3);
     pixel(light, 2, 3, 2, 2); pixel(light, 21, 13, 2, 2);

@@ -36,5 +36,9 @@ assert.equal(normalized.battleSpeed, 3);
 assert.equal(normalized.introSeen, true);
 assert.deepEqual(normalized.hintKeys, ["projects"]);
 assert.equal(secretary.normalizeSecretary({ candidateId: "unknown" }), null);
+for (const candidate of secretary.CANDIDATES) {
+  assert.ok(secretary.tapDialoguePool(candidate.id).length >= 84, `${candidate.name} needs at least three times the general employee dialogue volume`);
+  assert.ok(secretary.rareTapDialogues(candidate.id).length >= 4);
+}
 
 console.log("Secretary system checks passed: candidates, roadmap, recommendations, and save normalization.");

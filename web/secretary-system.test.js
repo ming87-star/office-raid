@@ -18,8 +18,9 @@ assert.equal(secretary.CANDIDATES.length, 3);
 assert.deepEqual(secretary.CANDIDATES.map(candidate => candidate.id), ["a", "b", "c"]);
 assert.equal(secretary.roadmap(base).current.id, "first-project");
 
-const ready = { ...base, projectClears: 10, companyLevel: 1, employeeJoinSequence: 6, employees: Array.from({ length: 6 }, (_, index) => ({ id: `e${index}`, equipment: index < 3 ? { work: { id: `q${index}` } } : {} })) };
+const ready = { ...base, projectClears: 20, companyLevel: 1, employeeJoinSequence: 7, employees: Array.from({ length: 7 }, (_, index) => ({ id: `e${index}`, equipment: index < 4 ? { work: { id: `q${index}` } } : {} })) };
 assert.equal(secretary.roadmap(ready).ready, true);
+assert.equal(secretary.roadmap({ ...ready, projectClears: 19 }).ready, false);
 const hiredThenTerminated = { ...base, projectClears: 1, employeeJoinSequence: 5, employees: base.employees.slice(0, 3) };
 assert.equal(secretary.roadmap(hiredThenTerminated).stages.find(stage => stage.id === "first-hire").complete, true);
 
@@ -35,7 +36,7 @@ const equipment = [
 ];
 assert.deepEqual(secretary.saleRecommendationIds(equipment, ["5"]), ["4"]);
 const normalized = secretary.normalizeSecretary({ candidateId: "b", battleSpeed: 3, introSeen: true, hintKeys: ["projects", "projects", 3] });
-assert.equal(normalized.battleSpeed, 3);
+assert.equal(normalized.battleSpeed, 2);
 assert.equal(normalized.introSeen, true);
 assert.deepEqual(normalized.hintKeys, ["projects"]);
 assert.equal(secretary.normalizeSecretary({ candidateId: "unknown" }), null);

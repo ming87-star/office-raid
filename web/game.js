@@ -2004,7 +2004,7 @@ function hireSecretary(candidateId) {
   const candidate = SECRETARY.candidate(candidateId);
   if (!candidate || !secretaryRoadmap().ready || state.secretary) return renderSecretaryCenter("채용 조건을 다시 확인해 주세요.");
   preloadSecretaryCandidateAssets(candidateId, true);
-  state.secretary = SECRETARY.normalizeSecretary({ candidateId, hiredAt: state.projectClears, autoDirective: false, battleSpeed: 1, introSeen: false, hintKeys: [] });
+  state.secretary = SECRETARY.normalizeSecretary({ candidateId, hiredAt: state.projectClears, autoDirective: false, battleSpeed: 2, introSeen: false, hintKeys: [] });
   secretaryHireCandidateId = null;
   saveGame();
   renderSecretaryWelcome(0);
@@ -3232,7 +3232,8 @@ function generateEquipmentReward(minimumRarity = 0) {
 function scaledProject(project) {
   return BALANCE.scaleProject(project, {
     clears: state.projectClears,
-    tutorial: !state.tutorialBattleCompleted
+    tutorial: !state.tutorialBattleCompleted,
+    teamLimit: projectTeamLimit()
   });
 }
 
@@ -3285,7 +3286,7 @@ function projectCard(project, locked = false) {
   const secretaryTeam = state.secretary && !locked
     ? `<button class="blue secretary-team-button" data-secretary-team="${project.id}">비서 추천 팀</button>` : "";
   const secretaryRun = state.secretary && !locked && state.tutorialBattleCompleted
-    ? `<button class="mustard secretary-run-button" data-secretary-run="${project.id}" data-secretary-risk="${project.riskTier || "stable"}">비서 자동 진행 · 3배속</button>` : "";
+    ? `<button class="mustard secretary-run-button" data-secretary-run="${project.id}" data-secretary-risk="${project.riskTier || "stable"}">비서 자동 진행 · 2배속</button>` : "";
   return `<article class="project-card panel ${project.boss ? "boss-project" : ""} risk-${riskTone} ${locked ? "locked" : ""}">
     <div class="project-card-head"><span>${escapeHtml(project.difficulty)}</span><b class="project-risk-badge risk-${riskTone}">${escapeHtml(riskLabel)}</b><strong>${escapeHtml(project.name)}</strong><small>EP.${episode.chapter} ${escapeHtml(episode.name)}</small></div>
     <p>${escapeHtml(project.summary)}</p>
@@ -3695,7 +3696,7 @@ function saveTeam() {
 }
 
 function battleDelay(milliseconds) {
-  return battle?.secretaryManaged ? Math.max(90, Math.round(milliseconds / 3)) : milliseconds;
+  return battle?.secretaryManaged ? Math.max(120, Math.round(milliseconds / (state.secretary?.battleSpeed || 2))) : milliseconds;
 }
 
 function startBattle(projectId, riskTier = "stable") {
@@ -4615,11 +4616,11 @@ function renderBattle() {
   const disputePanel = teamDisputePanel();
   const battleNotice = battle.result ? "프로젝트 결과를 확인하세요."
     : battle.teamDispute ? "자동 진행 일시 정지 · 두 직원의 의견을 직접 조율하세요."
-      : battle.secretaryManaged ? `${secretaryCandidate()?.name || "비서"}가 프로젝트를 3배속으로 진행하고 있습니다.`
+      : battle.secretaryManaged ? `${secretaryCandidate()?.name || "비서"}가 프로젝트를 2배속으로 진행하고 있습니다.`
         : battle.awaitingDirective ? "자동 전투 일시 정지 · 직원 아래에서 스킬을 선택하세요."
           : "아군은 아래에서 위쪽의 프로젝트를 공략합니다.";
   const secretaryBattleBadge = state.secretary && !battle.tutorialMode && !battle.result
-    ? `<button class="secretary-battle-badge ${battle.secretaryManaged ? "active" : ""}" id="toggle-secretary-battle" aria-pressed="${battle.secretaryManaged}" ${battle.skillFx?.phase === "calculating" ? "disabled" : ""}>${secretaryArt(state.secretary.candidateId, "face", battle.secretaryManaged ? "focus" : "smile")}<span><small>SECRETARY MODE</small><b>${battle.secretaryManaged ? `${escapeHtml(secretaryCandidate()?.name || "비서")} · 3배속 자동 진행 중` : "비서 자동 진행 켜기 · 스킬 선택 포함"}</b></span><i aria-hidden="true"></i></button>`
+    ? `<button class="secretary-battle-badge ${battle.secretaryManaged ? "active" : ""}" id="toggle-secretary-battle" aria-pressed="${battle.secretaryManaged}" ${battle.skillFx?.phase === "calculating" ? "disabled" : ""}>${secretaryArt(state.secretary.candidateId, "face", battle.secretaryManaged ? "focus" : "smile")}<span><small>SECRETARY MODE</small><b>${battle.secretaryManaged ? `${escapeHtml(secretaryCandidate()?.name || "비서")} · 2배속 자동 진행 중` : "비서 자동 진행 켜기 · 스킬 선택 포함"}</b></span><i aria-hidden="true"></i></button>`
     : "";
   app.innerHTML = `${header("프로젝트 돌입", battleNotice)}
     <section class="screen battle-screen ${battle.awaitingDirective ? "directive-active" : ""}">

@@ -1899,9 +1899,9 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-company-chip { min-width: 0; min-height: 43px; display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: center; gap: 3px; padding: 2px 5px; border: 2px solid rgba(255,255,255,.72); background: rgba(255,255,255,.08); color: white; box-shadow: none; text-align: left; }
 .office-company-logo-wrap { position:relative;display:grid;width:32px;height:32px;place-items:center;overflow:visible; }
 .office-company-logo { display:block;width:30px;height:30px;border-radius:3px;box-shadow:1px 1px 0 rgba(255,255,255,.28); }
-.office-expansion-ready { position:absolute;top:-5px;right:-5px;display:grid;width:14px;height:14px;place-items:center;border:1px solid white;border-radius:50%;background:var(--mustard);color:var(--ink);font-size:10px;font-style:normal;font-weight:1000;animation:office-expansion-pulse 1s ease-in-out infinite; }
+.office-expansion-ready { position:absolute;top:-3px;right:-3px;display:grid;width:15px;height:15px;place-items:center;border:1px solid white;border-radius:50%;background:var(--mustard);color:var(--ink);font-size:10px;font-style:normal;font-weight:1000;line-height:1;animation:office-expansion-pulse 1s ease-in-out infinite; }
 @keyframes office-expansion-pulse { 50% { translate:0 -2px;filter:brightness(1.25); } }
-.office-company-chip span,.office-company-chip strong,.office-company-chip small { min-width: 0; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.office-company-chip > span:last-child,.office-company-chip strong,.office-company-chip small { min-width: 0; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .office-company-chip .office-company-title { display: flex; align-items: center; gap: 3px; }
 .office-company-title strong { flex: 0 1 auto; }
 .office-company-title em { flex: 0 0 auto; padding: 1px 3px; border: 1px solid var(--mustard); background: rgba(214,161,44,.18); color: var(--mustard); font-size: 5px; font-style: normal; font-weight: 1000; letter-spacing: .3px; }
@@ -1916,7 +1916,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .office-hud-resources i { margin-left: 1px; color: #b9cbd2; font-size: 5px; font-style: normal; }
 .office-mail-icon { position: relative; width: 42px; min-height: 43px; padding: 3px; border: 2px solid rgba(255,255,255,.72); background: rgba(255,255,255,.12); color: white; box-shadow: none; }
 .office-mail-icon.unread { border-color: var(--mustard); background: rgba(214,161,44,.22); }
-.office-mail-icon > b { position: absolute; top: 4px; right: 4px; display: block; width: 8px; min-width: 8px; height: 8px; padding:0; border: 2px solid white; border-radius: 50%; background: var(--red); }
+.office-mail-icon > b { position: absolute; top: 4px; right: 4px; display: block; width: 9px; min-width: 9px; height: 9px; padding:0; border:0; border-radius:50%; background:var(--red); box-shadow:none; animation:office-mail-unread-pulse 1.05s steps(2,end) infinite; }
+@keyframes office-mail-unread-pulse { 50% { opacity:.32;scale:.78; } }
 .office-mail-glyph { position:relative;display:block;width:25px;height:18px;margin:auto;border:2px solid white;border-radius:2px;background:transparent; }
 .office-mail-glyph::before,.office-mail-glyph::after { position:absolute;top:2px;width:15px;height:2px;background:white;content:"";transform-origin:center; }
 .office-mail-glyph::before { left:0;rotate:34deg; }.office-mail-glyph::after { right:0;rotate:-34deg; }
@@ -1962,4 +1963,5 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 @media (prefers-reduced-motion: reduce) {
   .secretary-goal-note.ready { animation: none; }
   .office-expansion-ready { animation: none; }
+  .office-mail-icon > b { animation: none; }
 }

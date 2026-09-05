@@ -29,6 +29,8 @@ assert.match(game, /function toggleSecretaryBattleAutomation\(\)/);
 assert.match(game, /전투 진행과 스킬 선택을 맡았습니다/);
 assert.doesNotMatch(game, /이미 완료한 일반 프로젝트에만/);
 assert.match(game, /battleDelay\(900\)/);
+assert.match(game, /비서 자동 진행 · 2배속/);
+assert.doesNotMatch(game, /3배속/);
 assert.match(game, /data-equipment-lock=/);
 assert.match(canonical, /data-market-mode="sale"/);
 assert.match(canonical, /data-sale-select=/);

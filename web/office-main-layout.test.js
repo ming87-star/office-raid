@@ -50,5 +50,8 @@ assert.match(style, /\.hr-profile-tile\s*\{[^}]*aspect-ratio:\s*1/s);
 assert.match(style, /data-equipment-rarity="4"\]\s*\{[^}]*background:\s*#ffedac/s);
 assert.doesNotMatch(canonical, /away \? escapeHtml\(activityStatusText/);
 assert.match(style, /\.secretary-welcome::before\s*\{[^}]*office-background\.webp/s);
+assert.match(style, /\.office-company-chip > span:last-child/);
+assert.doesNotMatch(style, /\.office-company-chip span,/);
+assert.match(style, /\.office-mail-icon > b\s*\{[^}]*border:0[^}]*office-mail-unread-pulse/s);
 
 console.log("Office A layout checks passed: full-height room, compact HUD, mail icon, dock, dialogue taps, and visible equipment.");

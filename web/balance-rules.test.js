@@ -19,7 +19,9 @@ assert.equal(stable.dropChance, .40);
 assert.equal(challenge.dropChance, .50);
 assert.equal(high.dropChance, .60);
 assert.ok(high.max > challenge.max && challenge.max > stable.max);
-assert.ok(high.cash > stable.cash);
+assert.ok(high.cash > challenge.cash && challenge.cash > stable.cash);
+assert.ok(stable.cash < scaled.cash / 2, "Stable contracts must not fund growth when farmed exclusively.");
+assert.equal(challenge.cash, scaled.cash, "Challenge contracts are the baseline business reward.");
 assert.equal(high.deadline, 4);
 
 const lateBase = { chapter: 4, workload: 505, deadline: 12, cash: 1720, reputation: 35 };

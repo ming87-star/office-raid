@@ -5,39 +5,40 @@
 })(typeof window !== "undefined" ? window : globalThis, function createOfficeRaidRecruitmentRules() {
   "use strict";
 
-  const GROWTH_COMPENSATION = [
-    { id: 0, label: "C", salaryMultiplier: .9, hiringPremium: 0 },
-    { id: 1, label: "B", salaryMultiplier: 1, hiringPremium: 30 },
-    { id: 2, label: "A", salaryMultiplier: 1.15, hiringPremium: 80 }
+  const TALENT_COMPENSATION = [
+    { id: 0, label: "일반", salaryMultiplier: .9, hiringPremium: 0 },
+    { id: 1, label: "유망", salaryMultiplier: 1, hiringPremium: 30 },
+    { id: 2, label: "특급", salaryMultiplier: 1.15, hiringPremium: 90 },
+    { id: 3, label: "천재", salaryMultiplier: 1.35, hiringPremium: 180 }
   ];
 
-  function clampGrowth(value) {
-    return Math.max(0, Math.min(GROWTH_COMPENSATION.length - 1, Math.round(Number(value) || 0)));
+  function clampTalent(value) {
+    return Math.max(0, Math.min(TALENT_COMPENSATION.length - 1, Math.round(Number(value) || 0)));
   }
 
   function roundTen(value) {
     return Math.max(0, Math.round((Number(value) || 0) / 10) * 10);
   }
 
-  function monthlySalary(rank = 0, growthPotential = 1) {
+  function monthlySalary(rank = 0, talentGrade = 0) {
     const safeRank = Math.max(0, Math.round(Number(rank) || 0));
-    const growth = GROWTH_COMPENSATION[clampGrowth(growthPotential)];
-    return roundTen((120 + safeRank * 72) * growth.salaryMultiplier);
+    const talent = TALENT_COMPENSATION[clampTalent(talentGrade)];
+    return roundTen((120 + safeRank * 72) * talent.salaryMultiplier);
   }
 
-  function hiringCost(rank = 0, growthPotential = 1, salary) {
+  function hiringCost(rank = 0, talentGrade = 0, salary) {
     const safeRank = Math.max(0, Math.round(Number(rank) || 0));
-    const growth = GROWTH_COMPENSATION[clampGrowth(growthPotential)];
-    const safeSalary = Number.isFinite(Number(salary)) ? Number(salary) : monthlySalary(safeRank, growthPotential);
-    return roundTen(safeSalary + 100 + safeRank * 90 + growth.hiringPremium);
+    const talent = TALENT_COMPENSATION[clampTalent(talentGrade)];
+    const safeSalary = Number.isFinite(Number(salary)) ? Number(salary) : monthlySalary(safeRank, talentGrade);
+    return roundTen(safeSalary + 100 + safeRank * 90 + talent.hiringPremium);
   }
 
   function candidateHiringCost(candidate = {}) {
     const migrated = Number(candidate.recruitmentCost ?? candidate.signingCost);
     return Number.isFinite(migrated) && migrated > 0
       ? roundTen(migrated)
-      : hiringCost(candidate.rank, candidate.growthPotential, candidate.salary);
+      : hiringCost(candidate.rank, candidate.talentGrade, candidate.salary);
   }
 
-  return { GROWTH_COMPENSATION, monthlySalary, hiringCost, candidateHiringCost };
+  return { TALENT_COMPENSATION, GROWTH_COMPENSATION: TALENT_COMPENSATION, monthlySalary, hiringCost, candidateHiringCost };
 });

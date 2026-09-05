@@ -10,10 +10,11 @@
   const TRIP_COOLDOWN_MIN = 5;
   const TRIP_COOLDOWN_VARIANCE = 3;
 
-  const GROWTH_LEVELS = [
-    { id: 0, label: "C", score: 46, color: "#6d7c8c" },
-    { id: 1, label: "B", score: 58, color: "#4a70a8" },
-    { id: 2, label: "A", score: 70, color: "#168c8b" }
+  const TALENT_LEVELS = [
+    { id: 0, label: "일반", score: 46, color: "#6d7c8c" },
+    { id: 1, label: "유망", score: 58, color: "#168c8b" },
+    { id: 2, label: "특급", score: 70, color: "#7160a8" },
+    { id: 3, label: "천재", score: 78, color: "#d6a12c" }
   ];
 
   const TRAINING_COURSES = {
@@ -74,13 +75,13 @@
     };
   }
 
-  function growthLevel(value) {
-    return GROWTH_LEVELS[clamp(Math.round(Number(value) || 0), 0, GROWTH_LEVELS.length - 1)];
+  function talentLevel(value) {
+    return TALENT_LEVELS[clamp(Math.round(Number(value) || 0), 0, TALENT_LEVELS.length - 1)];
   }
 
   function trainingBaseScore(member = {}, courseId = "work") {
     const course = TRAINING_COURSES[courseId] || TRAINING_COURSES.work;
-    const potential = growthLevel(member.growthPotential);
+    const potential = talentLevel(member.talentGrade);
     const stats = [Number(member.work) || 0, Number(member.collaboration) || 0, Number(member.speed) || 0];
     const selected = Number(member[course.stat]) || 0;
     const weakest = selected <= Math.min(...stats);
@@ -186,10 +187,12 @@
   return {
     DURATION,
     TRIP_REFUSAL_REPUTATION,
-    GROWTH_LEVELS,
+    TALENT_LEVELS,
+    GROWTH_LEVELS: TALENT_LEVELS,
     TRAINING_COURSES,
     DEPARTMENT_TRIPS,
-    growthLevel,
+    talentLevel,
+    growthLevel: talentLevel,
     trainingBaseScore,
     tripDefinition,
     tripPrimaryStat,

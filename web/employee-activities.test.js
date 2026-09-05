@@ -7,10 +7,10 @@ const activities = require("./employee-activities.js");
 
 const rookieB = {
   id: "employee-20", department: "quality", rank: 0,
-  work: 9, collaboration: 12, speed: 11, growthPotential: 1, trainingCount: 0,
+  work: 9, collaboration: 12, speed: 11, talentGrade: 1, trainingCount: 0,
   equipment: { work: null, support: null, personal: null }
 };
-const rookieA = { ...rookieB, growthPotential: 2 };
+const rookieA = { ...rookieB, talentGrade: 2 };
 
 assert.equal(activities.DURATION, 3);
 assert.equal(activities.TRIP_REFUSAL_REPUTATION, 15);
@@ -69,5 +69,6 @@ assert.match(gameSource, /function acceptBusinessTrip[\s\S]*returnMemberEquipmen
 assert.match(gameSource, /function maybeQueueBusinessTripOffer[\s\S]*effectiveStatsWithoutEquipment\(member\)/);
 assert.ok(indexSource.indexOf("employee-activities.js") < indexSource.indexOf("game.js"));
 assert.ok(indexSource.indexOf("recruitment-rules.js") < indexSource.indexOf("game.js"));
+assert.ok(indexSource.indexOf("talent-system.js") < indexSource.indexOf("game.js"));
 
-console.log("Employee activity checks passed: three-project training, designated trips, graded mini-game influence.");
+console.log("Employee activity checks passed: three-project training, designated trips, talent-grade and mini-game influence.");

@@ -351,6 +351,15 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .representative-gender { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .representative-gender button { min-height: 34px; background: var(--paper-dark); color: var(--ink); font-size: 10px; }
 .representative-gender button.active { background: var(--teal); color: white; }
+.representative-talent { padding:6px; border:2px solid var(--ink); background:rgba(214,161,44,.1); box-shadow:2px 2px 0 rgba(23,54,74,.2); }
+.representative-talent > div:first-child { display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px; }
+.representative-talent > div:first-child small { color:var(--teal);font-size:6px;font-weight:1000; }
+.representative-talent > div:first-child strong { font-size:8px; }
+.representative-talent > div:last-child { display:grid;grid-template-columns:1fr 1fr;gap:4px; }
+.representative-talent-choice { min-height:38px;padding:4px;border:2px solid rgba(23,54,74,.55);background:var(--paper-dark);color:var(--ink);box-shadow:none;text-align:left; }
+.representative-talent-choice small,.representative-talent-choice strong,.representative-talent-choice span { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.representative-talent-choice small { color:var(--muted);font-size:5px; }.representative-talent-choice strong { margin-top:1px;font-size:8px; }.representative-talent-choice span { margin-top:1px;color:var(--teal);font-size:5px;font-weight:800; }
+.representative-talent-choice.active { border-color:var(--teal);background:#dff1ea;box-shadow:inset 0 0 0 2px rgba(22,140,139,.18); }
 .custom-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .custom-tabs button { min-height: 36px; background: var(--paper-dark); color: var(--ink); font-size: 12px; }
 .custom-tabs button.active { background: var(--teal); color: white; }
@@ -756,7 +765,8 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .team-role-legend i { display: block; width: 12px; height: 12px; border: 2px solid var(--ink); border-radius: 3px; }
 .team-role-legend .role-dealer { background:#c84b3c }.team-role-legend .role-support { background:#168c8b }.team-role-legend .role-burst { background:#d6a12c }.team-role-legend .role-guard { background:#4a70a8 }
 .team-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin: 3px 0; }
-.team-card .team-role-badge,.team-card .team-trait-button { display: inline-flex; width: auto; min-height: 23px; align-items: center; gap: 3px; padding: 2px 5px; border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink); color: var(--ink); font-size: 6px; }
+.team-card .team-role-badge,.team-card .team-trait-button,.team-card .team-talent-badge { display: inline-flex; width: auto; min-height: 23px; align-items: center; gap: 3px; padding: 2px 5px; border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink); color: var(--ink); font-size: 6px; }
+.team-card .team-talent-badge { background:color-mix(in srgb,var(--talent-color) 22%,white);font-weight:1000; }
 .team-role-badge,.candidate-role-badge { background: color-mix(in srgb,var(--role-color) 28%,white); }
 :is(.team-role-badge,.candidate-role-badge) > i { position: relative; display: block; width: 11px; height: 11px; flex: 0 0 auto; background: var(--role-color); }
 :is(.team-role-badge,.candidate-role-badge).role-dealer > i { clip-path: polygon(52% 0,100% 0,68% 39%,100% 39%,35% 100%,48% 55%,13% 55%); }
@@ -819,6 +829,13 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .hr-detail-title p { margin: 0; color: var(--teal); font-size: 8px; font-weight: 1000; }
 .hr-trait { width:100%; min-height:29px; margin: 6px 0; padding: 5px 6px; border:0; border-left: 4px solid var(--mustard); background: rgba(214,161,44,.12); box-shadow:none; color:var(--ink); font-size: 8px; font-weight: 900; text-align:left; }
 .hr-trait i { float:right;display:grid;width:14px;height:14px;place-items:center;border-radius:50%;background:var(--ink);color:white;font-size:7px;font-style:normal; }
+.hr-talent { display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;gap:5px;margin:0 0 6px;padding:5px;border-left:4px solid var(--talent-color);background:color-mix(in srgb,var(--talent-color) 10%,white); }
+.hr-talent > div { display:grid;min-width:48px;place-content:center;padding:4px;background:var(--talent-color);color:white;text-align:center; }
+.hr-talent small,.hr-talent strong,.hr-talent p,.hr-talent b,.hr-talent span { display:block; }
+.hr-talent > div small { font-size:5px; }.hr-talent > div strong { margin-top:1px;font-size:10px; }
+.hr-talent p { min-width:0;margin:0;padding:3px 4px;background:rgba(255,255,255,.56); }
+.hr-talent p small { color:var(--talent-color);font-size:5px;font-weight:1000; }.hr-talent p b { margin-top:1px;font-size:8px; }.hr-talent p span { margin-top:1px;overflow:hidden;color:var(--muted);font-size:6px;line-height:1.25;text-overflow:ellipsis; }
+.hr-talent p.locked { filter:saturate(.7); }
 .hr-stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
 .hr-stat-grid span,.hr-record-grid span { min-width: 0; padding: 5px; border: 1px solid rgba(23,54,74,.48); background: rgba(255,255,255,.58); }
 .hr-stat-grid small,.hr-stat-grid b,.hr-record-grid small,.hr-record-grid b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -844,6 +861,19 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .hr-confirm button { min-height: 46px; color: white; font-size: 11px; }
 
 .turnover-screen { gap: 9px; }
+.talent-reveal-screen { justify-content:center;gap:10px; }
+.talent-reveal-card { padding:16px 13px;border-color:var(--talent-color);background:linear-gradient(145deg,#fffaf0,color-mix(in srgb,var(--talent-color) 15%,white));text-align:center; }
+.talent-reveal-card > small { color:var(--talent-color);font-size:7px;font-weight:1000;letter-spacing:1.2px; }
+.talent-reveal-card > :is(canvas,.character-svg) { width:124px;height:124px;margin:0 auto -8px; }
+.talent-reveal-card h2 { margin:0;font-size:20px; }.talent-reveal-card > span { display:block;margin-top:2px;color:var(--talent-color);font-size:9px;font-weight:1000; }
+.talent-promotion { margin:7px 0 0;padding:5px;background:var(--mustard);font-size:8px;font-weight:900; }
+.talent-skill-change { display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;margin-top:9px; }
+.talent-skill-change p { margin:0;padding:8px 4px;border:2px solid var(--ink);background:rgba(255,255,255,.7); }
+.talent-skill-change small,.talent-skill-change del,.talent-skill-change strong { display:block; }.talent-skill-change small { color:var(--muted);font-size:6px; }.talent-skill-change del,.talent-skill-change strong { margin-top:2px;font-size:10px; }.talent-skill-change strong { color:var(--talent-color); }
+.talent-skill-change > i { color:var(--talent-color);font-size:18px;font-style:normal;font-weight:1000; }
+.talent-reveal-card blockquote { margin:9px 0 0;padding:9px;border-left:4px solid var(--talent-color);background:rgba(255,255,255,.72);font-size:9px;font-weight:900;line-height:1.45;text-align:left; }
+.talent-reveal-guide { margin:7px 0 0;color:var(--muted);font-size:7px;font-weight:800; }
+.talent-reveal-screen > button { min-height:48px; }
 .turnover-card { position: relative; flex: 0 0 auto; padding: 16px 14px 13px; text-align: center; }
 .turnover-stamp { position: absolute; top: 8px; right: 9px; padding: 3px 5px; border: 2px solid var(--red); color: var(--red); font-size: 6px; font-weight: 1000; rotate: -3deg; }
 .turnover-card :is(canvas, .character-svg) { width: 116px; height: 116px; margin: 2px auto -7px; }
@@ -1078,6 +1108,7 @@ button:disabled { cursor: default; filter: grayscale(.6); opacity: .55; }
 .skill-option { position: relative; min-height: 70px; padding: 4px 3px 14px; overflow: hidden; background: white; color: var(--ink); text-align: center; }
 .skill-option strong, .skill-option span { display: block; }
 .skill-option strong { font-size: 9px; }
+.skill-option strong > i { display:inline-block;margin-left:2px;padding:1px 3px;border:1px solid currentColor;border-radius:5px;background:var(--mustard);color:var(--ink);font-size:5px;font-style:normal;vertical-align:1px; }
 .skill-option span { margin-top: 3px; font-size: 7px; font-weight: 700; line-height: 1.2; }
 .skill-option em { display: none; }
 .skill-option.selected { background: #e0f1e9; outline: 3px solid var(--teal); outline-offset: -5px; }

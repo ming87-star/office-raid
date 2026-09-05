@@ -8,7 +8,9 @@ const recruitment = require("./recruitment-rules.js");
 assert.equal(recruitment.monthlySalary(0, 0), 110);
 assert.equal(recruitment.monthlySalary(0, 1), 120);
 assert.equal(recruitment.monthlySalary(0, 2), 140);
+assert.equal(recruitment.monthlySalary(0, 3), 160);
 assert.ok(recruitment.monthlySalary(3, 2) > recruitment.monthlySalary(3, 1));
+assert.ok(recruitment.monthlySalary(3, 3) > recruitment.monthlySalary(3, 2));
 assert.ok(recruitment.hiringCost(2, 2) > recruitment.hiringCost(2, 1));
 assert.ok(recruitment.hiringCost(2, 1) > recruitment.hiringCost(2, 0));
 assert.equal(recruitment.candidateHiringCost({ signingCost: 387 }), 390);
@@ -21,4 +23,4 @@ assert.match(gameSource, /candidate-role-badge/);
 assert.match(gameSource, /채용 비용은 공고·검증·온보딩에 드는 1회성 비용/);
 assert.doesNotMatch(gameSource, /채용 계약금|면접 기능 해금/);
 
-console.log("Recruitment compensation checks passed: growth potential changes salary and one-time hiring cost.");
+console.log("Recruitment compensation checks passed: talent grade changes salary and one-time hiring cost.");

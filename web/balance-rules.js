@@ -6,9 +6,9 @@
   "use strict";
 
   const RISK_TIERS = {
-    stable: { id: "stable", label: "안정", tone: "stable", workload: 1, deadline: 0, cash: 1, reputation: 1, dropChance: .40, eventPressure: 0 },
-    challenge: { id: "challenge", label: "도전", tone: "challenge", workload: 1.16, deadline: -1, cash: 1.18, reputation: 1.15, dropChance: .50, eventPressure: .16 },
-    high: { id: "high", label: "고위험", tone: "high", workload: 1.34, deadline: -2, cash: 1.35, reputation: 1.30, dropChance: .60, eventPressure: .32 }
+    stable: { id: "stable", label: "안정", tone: "stable", workload: 1, deadline: 0, cash: .42, reputation: 1, dropChance: .40, eventPressure: 0 },
+    challenge: { id: "challenge", label: "도전", tone: "challenge", workload: 1.16, deadline: -1, cash: 1, reputation: 1.15, dropChance: .50, eventPressure: .16 },
+    high: { id: "high", label: "고위험", tone: "high", workload: 1.34, deadline: -2, cash: 1.45, reputation: 1.30, dropChance: .60, eventPressure: .32 }
   };
   const REGULAR_MULTIPLIERS = [1.55, 1.82, 2.08, 2.36];
   const REGULAR_DEADLINE_CUTS = [2, 3, 4, 5];
